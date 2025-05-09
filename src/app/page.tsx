@@ -1,37 +1,37 @@
 import Link from "next/link";
+import { Paperclip, ArrowUp, ChevronDown, Search } from 'lucide-react';
 
 export default function HomePage() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-[#2e026d] to-[#15162c] text-white">
-      <div className="container flex flex-col items-center justify-center gap-12 px-4 py-16">
-        <h1 className="text-5xl font-extrabold tracking-tight text-white sm:text-[5rem]">
-          Create <span className="text-[hsl(280,100%,70%)]">T3</span> App
-        </h1>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-8">
-          <Link
-            className="flex max-w-xs flex-col gap-4 rounded-xl bg-white/10 p-4 text-white hover:bg-white/20"
-            href="https://create.t3.gg/en/usage/first-steps"
-            target="_blank"
-          >
-            <h3 className="text-2xl font-bold">First Steps →</h3>
-            <div className="text-lg">
-              Just the basics - Everything you need to know to set up your
-              database and authentication.
+    <div className="flex h-screen bg-[#171719] font-sans text-gray-300">
+      <div className="flex w-full flex-1 flex-col items-center justify-between p-4 md:p-8">
+        <div className="mt-8 w-full max-w-lg"></div>
+        <div className="mb-3 w-full max-w-lg">
+          <div className="flex items-center rounded-xl border border-gray-700/40 bg-[#252528] p-2 shadow-sm transition-all duration-150 focus-within:border-[#7E22CE]/70">
+            <input
+              type="text"
+              placeholder="Type your message here..."
+              className="flex-grow bg-transparent px-2.5 py-1 text-sm text-gray-200 placeholder-gray-500 focus:outline-none" // Adjusted padding
+            />
+            <button className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-[#303033] hover:text-gray-200">
+              <Paperclip className="h-4 w-4" />
+            </button>
+            <button className="ml-1.5 rounded-lg bg-[#7E22CE] p-1.5 text-gray-100 transition-colors hover:bg-[#8F33D6]">
+              <ArrowUp className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="mt-1.5 flex items-center justify-between px-2 text-[0.6875rem] text-gray-500">
+            <div className="flex items-center space-x-1">
+              <span>Gemini 2.5 Flash</span>
+              <ChevronDown className="h-2.5 w-2.5 text-gray-500" />
             </div>
-          </Link>
-          <Link
-            className="flex max-w-xs flex-col gap-4 rounded-xl bg-white/10 p-4 text-white hover:bg-white/20"
-            href="https://create.t3.gg/en/introduction"
-            target="_blank"
-          >
-            <h3 className="text-2xl font-bold">Documentation →</h3>
-            <div className="text-lg">
-              Learn more about Create T3 App, the libraries it uses, and how to
-              deploy it.
+            <div className="flex cursor-pointer items-center space-x-1 hover:text-gray-300">
+              <Search className="h-3 w-3" />
+              <span>Search</span>
             </div>
-          </Link>
+          </div>
         </div>
       </div>
-    </main>
+    </div>
   );
 }
