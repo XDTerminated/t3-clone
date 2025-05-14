@@ -3,9 +3,7 @@
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState, useMemo } from "react";
 
-interface ParsedDataRow {
-  [key: string]: any;
-}
+type ParsedDataRow = Record<string, string>;
 
 interface DataDisplayPopupProps {
   isOpen: boolean;
@@ -14,7 +12,7 @@ interface DataDisplayPopupProps {
   data: ParsedDataRow[];
 }
 
-const ROWS_PER_PAGE = 20; // Number of rows to display per page
+const ROWS_PER_PAGE = 20;
 
 export default function DataDisplayPopup({
   isOpen,

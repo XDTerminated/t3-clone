@@ -1,7 +1,7 @@
 "use client";
 
 import { Search, Upload, X } from "lucide-react";
-import { useState, useRef } from "react";
+import { useRef } from "react";
 
 interface DatasetPopupProps {
   isOpen: boolean;

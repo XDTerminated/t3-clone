@@ -9,9 +9,7 @@ import Sidebar from "~/components/HomePage/Sidebar";
 import DataDisplayPopup from "~/components/HomePage/DataDisplayPopup"; // Import DataDisplayPopup
 
 // Define a generic type for parsed data rows
-interface ParsedDataRow {
-  [key: string]: any;
-}
+type ParsedDataRow = Record<string, string>;
 
 // Define the structure for an imported dataset item
 interface DatasetItem {
@@ -24,7 +22,6 @@ export default function HomePage() {
   const [isDatasetImportPopupOpen, setIsDatasetImportPopupOpen] =
     useState(true); // Renamed for clarity
   const [importedDatasets, setImportedDatasets] = useState<DatasetItem[]>([]);
-  const [parsingError, setParsingError] = useState<string | null>(null);
 
   // State for Data Display Popup
   const [isDataDisplayPopupOpen, setIsDataDisplayPopupOpen] = useState(false);
@@ -38,7 +35,6 @@ export default function HomePage() {
   };
 
   const handleDatasetSelectAndParse = (file: File) => {
-    setParsingError(null);
     if (file.type === "text/csv" || file.name.endsWith(".csv")) {
       Papa.parse(file, {
         header: true,
@@ -54,12 +50,10 @@ export default function HomePage() {
         },
         error: (error) => {
           console.error("Error parsing CSV:", error);
-          setParsingError("Failed to parse CSV file: " + error.message);
         },
       });
     } else {
       console.warn("Selected file is not a CSV. Please upload a CSV file.");
-      setParsingError("Invalid file type. Please upload a CSV file.");
     }
   };
 
@@ -76,6 +70,12 @@ export default function HomePage() {
     setIsDataDisplayPopupOpen(false);
     setSelectedDatasetForDisplay(null);
   };
+
+  // Compose a single dataset for the chatbot (e.g., the first imported dataset)
+  const parsedData: ParsedDataRow[] =
+    importedDatasets.length > 0 && importedDatasets[0]?.parsedData
+      ? importedDatasets[0].parsedData
+      : [];
 
   return (
     <div className="flex h-screen bg-[#171719] font-sans text-gray-300">
@@ -94,7 +94,7 @@ export default function HomePage() {
             <Plus className="h-5 w-5" />
           </button>
         )}
-        <MainContent />
+        <MainContent parsedData={parsedData} />
       </div>
 
       {isDatasetImportPopupOpen && (

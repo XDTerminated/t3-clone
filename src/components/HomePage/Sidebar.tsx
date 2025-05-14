@@ -1,10 +1,8 @@
 "use client";
 
-import { Database } from "lucide-react"; // Example icon
+import { Database } from "lucide-react";
 
-interface ParsedDataRow {
-  [key: string]: any;
-}
+type ParsedDataRow = Record<string, string>;
 
 interface DatasetItem {
   id: string;
