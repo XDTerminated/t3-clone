@@ -52,7 +52,7 @@ export function AppSidebar() {
   const darkBgState = isMobile ? !openMobile : !open;
   // Updated logic for shouldShowPlusButton
   const shouldShowPlusButton =
-    (sidebarFullyClosed && !isMobile && !open) || (openMobile && isMobile);
+    (sidebarFullyClosed && !isMobile && !open) || isMobile; // Changed (openMobile && isMobile) to isMobile
 
   return (
     <>
