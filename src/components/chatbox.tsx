@@ -4,9 +4,9 @@ import { ChevronDown, ArrowUp } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
 import { useSidebar } from "~/components/ui/sidebar";
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useLayoutEffect } from "react";
 
-const INITIAL_TEXTAREA_HEIGHT = 48;
+const INITIAL_TEXTAREA_HEIGHT = 40; // slightly reduced initial textarea height
 
 export function Chatbox() {
   const sidebar = useSidebar();
@@ -56,8 +56,8 @@ export function Chatbox() {
     setSendDisabled(true);
   };
 
-  // initialize height once
-  useEffect(() => {
+  // initialize height before paint to avoid layout shift
+  useLayoutEffect(() => {
     resizeTextarea();
   }, []);
 
@@ -68,53 +68,52 @@ export function Chatbox() {
         isSidebarOpenDesktop ? "pl-[18rem]" : "",
       )}
     >
-      {/* Only top + sides */}
-      <div className="w-full max-w-3xl rounded-t-xl border-x-8 border-t-8 border-[#26202a] bg-[#2c2532] p-4"> {/* Increased padding and border size */}
-        <form className="flex flex-col gap-2" onSubmit={onSubmit}>
-          <textarea
-            ref={textareaRef}
-            name="input"
-            id="chat-input"
-            placeholder="Type your message here..."
-            className="w-full resize-none bg-transparent text-white outline-none placeholder:text-slate-400"
-            aria-label="Message input"
-            defaultValue=""
-            onInput={onInput}
-            style={{ height: `${INITIAL_TEXTAREA_HEIGHT}px` }}
-          />
+      {/* Outer thin border wrapper */}
+      <div className="w-full max-w-3xl rounded-t-2xl p-[1px] ring-1 ring-[#302435]">
+        {/* Only top + sides */}
+        <div className="w-full max-w-3xl rounded-t-2xl border-x-8 border-t-8 border-[#26202a] bg-gradient-to-b from-[#2c2532] to-[#2b2430] p-3 ring-1 ring-[#3a2532] ring-inset">
+          <form className="flex flex-col gap-1" onSubmit={onSubmit}>
+            <textarea
+              ref={textareaRef}
+              name="input"
+              id="chat-input"
+              placeholder="Type your message here..."
+              className="min-h-[40px] max-h-[200px] w-full resize-none overflow-y-auto bg-transparent px-1 text-white outline-none placeholder:text-slate-400"
+              aria-label="Message input"
+              defaultValue=""
+              onInput={onInput}
+            />
 
-          <div className="flex items-end justify-between"> {/* Changed items-center to items-end */}
-            {/* Left: model dropdown + search */}
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-slate-300 hover:text-slate-100"
-              >
-                <span className="text-sm font-medium">Gemini 2.5 Flash</span>
-                <ChevronDown className="h-4 w-4" />
-              </Button>
+            <div className="flex items-start justify-between">
+              <div className="-ml-2 flex items-center">
+                <button
+                  className="flex translate-y-1 transform items-center gap-2 rounded-md bg-transparent px-3 py-2 text-slate-300 transition-colors hover:bg-[#332d39] hover:text-slate-100"
+                  type="button"
+                >
+                  <span className="text-sm font-medium">Gemini 2.5 Flash</span>
+                  <ChevronDown className="h-4 w-4" />
+                </button>
+              </div>
+              {/* Right: send button */}
+              <div className="flex items-center gap-2">
+                <Button
+                  type="submit"
+                  size="sm"
+                  aria-label="Send message"
+                  disabled={sendDisabled}
+                  className={cn(
+                    "flex h-9 w-9 items-center justify-center rounded-md border border-[#7f2d52] p-2 text-white", // Added border and border-[#7f2d52]
+                    sendDisabled
+                      ? "bg-[#3a2134] hover:bg-[#4f2c46]"
+                      : "bg-[#451e35] hover:bg-[#7e1c48]",
+                  )}
+                >
+                  <ArrowUp className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-
-            {/* Right: send button */}
-            <div className="flex items-center gap-2">
-              <Button
-                type="submit"
-                size="sm"
-                aria-label="Send message"
-                disabled={sendDisabled}
-                className={cn(
-                  "rounded-md p-2 text-white h-9 w-9 flex items-center justify-center border border-[#7f2d52]", // Added border and border-[#7f2d52]
-                  sendDisabled
-                    ? "bg-[#3a2134] hover:bg-[#4f2c46]"
-                    : "bg-[#451e35] hover:bg-[#7e1c48]",
-                )}
-              >
-                <ArrowUp className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </form>
+          </form>
+        </div>
       </div>
     </div>
   );

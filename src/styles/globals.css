@@ -152,6 +152,25 @@
   ); /* Sidebar focus ring - matched to general focus ring */
 }
 
+/* Style custom scrollbar for Chatbox textarea */
+#chat-input {
+  scrollbar-width: thin;
+  scrollbar-color: #3a2532 transparent;
+}
+#chat-input::-webkit-scrollbar {
+  width: 6px;
+}
+#chat-input::-webkit-scrollbar-track {
+  background: transparent;
+}
+#chat-input::-webkit-scrollbar-thumb {
+  background-color: #3a2532;
+  border-radius: 3px;
+}
+#chat-input::-webkit-scrollbar-thumb:hover {
+  background-color: #2b2430;
+}
+
 @layer base {
   /* ...existing base styles... */
 }
