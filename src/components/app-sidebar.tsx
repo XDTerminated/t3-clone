@@ -16,14 +16,7 @@ import { Separator } from "~/components/ui/separator";
 import { cn } from "~/lib/utils";
 import { buttonVariants } from "~/components/ui/button";
 
-const olderThreads = [
-  { title: "Greeting a friend", id: "2" },
-  { title: "Invert Binary Search Tree in P...", id: "3" },
-  { title: "Chess engine vs Stockfish lib...", id: "4" },
-  { title: "Understanding trpc and its fu...", id: "5" },
-  { title: "Refactoring Code to Separate...", id: "6" },
-  { title: "Creating a FastAPI Langchain...", id: "7" },
-];
+const olderThreads = [{ title: "chess_dataset.csv", id: "2" }];
 
 export function AppSidebar() {
   const { isMobile, open, openMobile } = useSidebar();
