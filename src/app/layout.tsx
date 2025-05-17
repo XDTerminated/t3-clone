@@ -1,7 +1,7 @@
 import "~/styles/globals.css";
 
 import { type Metadata } from "next";
-import { Roboto } from "next/font/google";
+import { Inter } from "next/font/google";
 import { SidebarProvider } from "~/components/ui/sidebar";
 import ContentWrapper from "~/components/content-wrapper";
 
@@ -10,16 +10,19 @@ export const metadata: Metadata = {
   icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
 
-const roboto = Roboto({
+const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-roboto",
+  variable: "--font-inter",
 });
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="dark">
+      <head>
+        {/* Removed Adobe Fonts embed code placeholder */}
+      </head>
       <body
-        className={`${roboto.className} text-foreground min-h-screen bg-[radial-gradient(ellipse_at_center,var(--background)_20%,oklch(0.235_0.017_290)_100%)]`}
+        className={`${inter.variable} text-foreground min-h-screen bg-[radial-gradient(ellipse_at_center,var(--background)_20%,oklch(0.235_0.017_290)_100%)]`}
       >
         <SidebarProvider>
           <ContentWrapper>{children}</ContentWrapper>
