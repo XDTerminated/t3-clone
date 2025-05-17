@@ -83,7 +83,7 @@ export function AppSidebar() {
           <Plus className="h-5 w-5" /> {/* Icon size changed from h-6 w-6 */}
         </button>
       </div>
-      <Sidebar className="border-sidebar-border bg-sidebar text-sidebar-foreground flex h-screen w-72 flex-col border-r">
+      <Sidebar className="bg-sidebar text-sidebar-foreground flex h-screen w-72 flex-col">
         <SidebarHeader className="relative flex h-32 flex-col items-center justify-center p-4">
           {/* Changed items-start to items-center and specific padding to p-4 */}
           <h2 className="text-sidebar-foreground mb-2 text-xl font-semibold">

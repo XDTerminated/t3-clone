@@ -3,7 +3,7 @@ import "~/styles/globals.css";
 import { type Metadata } from "next";
 import { Roboto } from "next/font/google";
 import { SidebarProvider } from "~/components/ui/sidebar";
-import { AppSidebar } from "~/components/app-sidebar";
+import ContentWrapper from "~/components/content-wrapper";
 
 export const metadata: Metadata = {
   title: "Anygraph",
@@ -22,8 +22,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         className={`${roboto.className} text-foreground min-h-screen bg-[radial-gradient(ellipse_at_center,var(--background)_20%,oklch(0.235_0.017_290)_100%)]`}
       >
         <SidebarProvider>
-          <AppSidebar />
-          <main>{children}</main>
+          <ContentWrapper>{children}</ContentWrapper>
         </SidebarProvider>
       </body>
     </html>
