@@ -5,10 +5,13 @@ import { useState, useRef } from "react";
 import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
 import { UploadIcon } from "lucide-react";
+import { parse } from "papaparse";
+import { useData } from "~/contexts/DataContext";
 
 export default function FileUploadModal() {
   const [open, setOpen] = useState(true);
   const [exiting, setExiting] = useState(false);
+  const { addDataset } = useData();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleUploadClick = () => {
@@ -18,9 +21,21 @@ export default function FileUploadModal() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // trigger exit animation then unmount
-      setExiting(true);
-      setTimeout(() => setOpen(false), 300);
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const csvText = event.target?.result as string;
+        parse<Record<string, string>>(csvText, {
+          header: true,
+          skipEmptyLines: true,
+          complete: (results) => {
+            addDataset(file.name, results.data);
+            // animate exit
+            setExiting(true);
+            setTimeout(() => setOpen(false), 300);
+          },
+        });
+      };
+      reader.readAsText(file);
     }
   };
 

@@ -171,6 +171,48 @@
   background-color: #2b2430;
 }
 
+/* Custom scrollbar for data preview modal */
+.data-scrollbar {
+  /* Reserve gutter space, hide thumb by default */
+  scrollbar-gutter: stable both-edges;
+  /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  /* Thumb opacity var for WebKit and Firefox (if supported) */
+  --thumb-opacity: 0;
+  transition: scrollbar-color 0.5s ease;
+}
+.data-scrollbar.scroll-active,
+.data-scrollbar:hover {
+  /* Show thumb */
+  --thumb-opacity: 1;
+  /* Firefox themed color */
+  scrollbar-color: #3a2532 transparent;
+}
+/* WebKit scrolling */
+.data-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.data-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.data-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #3a2532;
+  border-radius: 3px;
+  opacity: var(--thumb-opacity);
+  transition: opacity 0.5s ease;
+}
+
+/* Remove spinner arrows on number inputs */
+.no-spinner::-webkit-outer-spin-button,
+.no-spinner::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.no-spinner {
+  -moz-appearance: textfield;
+}
+
 @layer base {
   /* ...existing base styles... */
 }

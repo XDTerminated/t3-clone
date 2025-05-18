@@ -5,6 +5,8 @@ import { Inter } from "next/font/google";
 import { SidebarProvider } from "~/components/ui/sidebar";
 import ContentWrapper from "~/components/content-wrapper";
 import FileUploadModal from "~/components/file-upload-modal";
+import DataViewModal from "~/components/data-view-modal";
+import { DataProvider } from "~/contexts/DataContext";
 
 export const metadata: Metadata = {
   title: "Anygraph",
@@ -24,8 +26,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         className={`${inter.variable} text-foreground min-h-screen bg-[radial-gradient(ellipse_at_center,var(--background)_20%,oklch(0.235_0.017_290)_100%)]`}
       >
         <SidebarProvider>
-          <FileUploadModal />
-          <ContentWrapper>{children}</ContentWrapper>
+          <DataProvider>
+            <FileUploadModal />
+            <ContentWrapper>{children}</ContentWrapper>
+            <DataViewModal />
+          </DataProvider>
         </SidebarProvider>
       </body>
     </html>

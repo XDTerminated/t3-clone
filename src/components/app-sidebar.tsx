@@ -15,11 +15,14 @@ import {
 import { Separator } from "~/components/ui/separator";
 import { cn } from "~/lib/utils";
 import { buttonVariants } from "~/components/ui/button";
-
-const olderThreads = [{ title: "chess_dataset.csv", id: "2" }];
+import { useData, type Dataset } from "~/contexts/DataContext";
 
 export function AppSidebar() {
   const { isMobile, open, openMobile } = useSidebar();
+  // retrieve data context values
+  const dataContext = useData();
+  const datasets: Dataset[] = dataContext.datasets;
+  const selectDataset = dataContext.selectDataset;
   const [sidebarFullyClosed, setSidebarFullyClosed] = React.useState(!open); // Initialize based on initial 'open' state
 
   React.useEffect(() => {
@@ -104,13 +107,14 @@ export function AppSidebar() {
 
         <SidebarContent className="scrollbar-thin scrollbar-thumb-muted-foreground/50 scrollbar-track-transparent flex-grow space-y-1 overflow-y-auto px-2">
           <SidebarMenu className="px-2">
-            {olderThreads.map((thread) => (
-              <SidebarMenuItem key={thread.id} className="py-0.5">
+            {datasets.map((ds: Dataset, idx: number) => (
+              <SidebarMenuItem key={`${ds.name}-${idx}`} className="py-0.5">
                 <SidebarMenuButton
                   variant="default"
                   className="hover:bg-sidebar-accent text-sidebar-foreground h-8 w-full justify-start bg-transparent px-2 text-sm"
+                  onClick={() => selectDataset(idx)}
                 >
-                  {thread.title}
+                  {ds.name}
                 </SidebarMenuButton>
               </SidebarMenuItem>
             ))}
