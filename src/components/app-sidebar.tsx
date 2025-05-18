@@ -26,7 +26,12 @@ export function AppSidebar() {
   const { datasets, selectDataset, addDataset } = dataContext;
   // file input for direct uploads
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const handleInsertClick = () => fileInputRef.current?.click();
+  const handleInsertClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+      fileInputRef.current.click();
+    }
+  };
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -71,6 +76,14 @@ export function AppSidebar() {
 
   return (
     <>
+      {/* Hidden file input always mounted */}
+      <input
+        type="file"
+        accept=".csv"
+        ref={fileInputRef}
+        className="hidden"
+        onChange={handleFileChange}
+      />
       <div
         className={cn(
           "absolute top-3 left-4 z-20 flex items-center rounded-md p-1", // Changed top-4 to top-3
@@ -117,13 +130,6 @@ export function AppSidebar() {
           >
             Insert New File
           </SidebarMenuButton>
-          <input
-            type="file"
-            accept=".csv"
-            ref={fileInputRef}
-            className="hidden"
-            onChange={handleFileChange}
-          />
           <div className="w-full pt-4">
             {" "}
             {/* Changed from w-65 to w-full */}

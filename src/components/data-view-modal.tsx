@@ -6,6 +6,8 @@ import { XIcon, ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function DataViewModal() {
   const { datasets, selectedIndex: index, clearSelection } = useData();
+  // 'exiting' controls both entry (true->false) and exit animations
+  const [exiting, setExiting] = useState(true);
   // pagination
   const [page, setPage] = useState(1);
   useEffect(() => setPage(1), [index]);
@@ -19,6 +21,20 @@ export default function DataViewModal() {
     // Hide scrollbar after 1s of inactivity
     hideTimer.current = setTimeout(() => setScrollActive(false), 1000);
   };
+  // trigger entry animation when a dataset is selected
+  useEffect(() => {
+    if (index !== null) {
+      setExiting(true);
+      // wait for next frame to start animation
+      requestAnimationFrame(() => {
+        setExiting(false);
+      });
+    }
+  }, [index]);
+  const handleClose = () => {
+    setExiting(true);
+    setTimeout(() => clearSelection(), 300);
+  };
   // early exit if no valid selection
   if (index === null || index < 0 || index >= datasets.length) return null;
   const selected = datasets[index];
@@ -31,11 +47,15 @@ export default function DataViewModal() {
   const columns = currentRows.length > 0 ? Object.keys(currentRows[0]!) : [];
 
   return (
-    <div className="fixed inset-0 z-[998] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-popover text-popover-foreground border-border max-h-[80vh] w-full max-w-4xl overflow-hidden rounded-lg border p-6 shadow-xl">
+    <div
+      className={`fixed inset-0 z-[998] flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${exiting ? "opacity-0" : "opacity-100"}`}
+    >
+      <div
+        className={`bg-popover text-popover-foreground border-border max-h-[80vh] w-full max-w-4xl overflow-hidden rounded-lg border p-6 shadow-xl transition-all duration-300 ${exiting ? "scale-95 opacity-0" : "scale-100 opacity-100"}`}
+      >
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-foreground text-lg font-semibold">{name}</h2>
-          <Button variant="ghost" size="icon" onClick={() => clearSelection()}>
+          <Button variant="ghost" size="icon" onClick={handleClose}>
             <XIcon className="size-4" />
             <span className="sr-only">Close</span>
           </Button>
