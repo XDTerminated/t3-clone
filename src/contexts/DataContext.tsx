@@ -13,6 +13,9 @@ interface DataContextType {
   addDataset: (name: string, data: Record<string, string>[]) => void;
   selectDataset: (index: number) => void;
   clearSelection: () => void;
+  uploadOpen: boolean;
+  openUpload: () => void;
+  closeUpload: () => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -20,6 +23,7 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   const [datasets, setDatasets] = useState<Dataset[]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [uploadOpen, setUploadOpen] = useState<boolean>(true);
 
   const addDataset = (name: string, data: Record<string, string>[]) => {
     setDatasets((prev) => [...prev, { name, data }]);
@@ -33,6 +37,9 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     setSelectedIndex(null);
   };
 
+  const openUpload = () => setUploadOpen(true);
+  const closeUpload = () => setUploadOpen(false);
+
   return (
     <DataContext.Provider
       value={{
@@ -41,6 +48,9 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         addDataset,
         selectDataset,
         clearSelection,
+        uploadOpen,
+        openUpload,
+        closeUpload,
       }}
     >
       {children}

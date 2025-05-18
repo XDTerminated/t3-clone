@@ -1,6 +1,7 @@
 "use client";
 
-import * as React from "react"; // Import React for useEffect and useState
+import * as React from "react"; // Import React for useEffect, useState
+import { useRef } from "react";
 import { Plus } from "lucide-react";
 import {
   Sidebar,
@@ -15,14 +16,32 @@ import {
 import { Separator } from "~/components/ui/separator";
 import { cn } from "~/lib/utils";
 import { buttonVariants } from "~/components/ui/button";
+import { parse } from "papaparse";
 import { useData, type Dataset } from "~/contexts/DataContext";
 
 export function AppSidebar() {
   const { isMobile, open, openMobile } = useSidebar();
   // retrieve data context values
   const dataContext = useData();
-  const datasets: Dataset[] = dataContext.datasets;
-  const selectDataset = dataContext.selectDataset;
+  const { datasets, selectDataset, addDataset } = dataContext;
+  // file input for direct uploads
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const handleInsertClick = () => fileInputRef.current?.click();
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const csv = event.target?.result as string;
+      parse<Record<string, string>>(csv, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (res) => addDataset(file.name, res.data),
+      });
+    };
+    reader.readAsText(file);
+  };
+
   const [sidebarFullyClosed, setSidebarFullyClosed] = React.useState(!open); // Initialize based on initial 'open' state
 
   React.useEffect(() => {
@@ -68,22 +87,21 @@ export function AppSidebar() {
         />
         <button
           aria-label="Insert new file"
+          onClick={handleInsertClick}
           className={cn(
-            buttonVariants({ variant: "ghost" }), // size: "icon" removed
-            "size-7", // Added: explicit size to match SidebarTrigger
-            "flex items-center justify-center", // Added: for icon centering
-            "overflow-hidden transition-all duration-300 ease-in-out", // For smooth animation
+            buttonVariants({ variant: "ghost" }),
+            "size-7",
+            "flex items-center justify-center",
+            "overflow-hidden transition-all duration-300 ease-in-out",
             darkBgState
-              ? "text-white hover:bg-neutral-700 hover:text-white" // Transparent bg from 'ghost' variant
+              ? "text-white hover:bg-neutral-700 hover:text-white"
               : "text-sidebar-foreground",
-            // Conditional visibility, width, and margin for slide-out effect
             shouldShowPlusButton
-              ? "ml-2 w-7 opacity-100" // Visible state: width changed from w-10 to w-7
-              : "ml-0 w-0 opacity-0", // Hidden state: takes no space and is transparent
+              ? "ml-2 w-7 opacity-100"
+              : "ml-0 w-0 opacity-0",
           )}
-          // TODO: Add onClick handler if this button should perform an action
         >
-          <Plus className="h-5 w-5" /> {/* Icon size changed from h-6 w-6 */}
+          <Plus className="h-5 w-5" />
         </button>
       </div>
       <Sidebar className="bg-sidebar text-sidebar-foreground flex h-screen w-72 flex-col">
@@ -95,9 +113,17 @@ export function AppSidebar() {
           <SidebarMenuButton
             variant="default"
             className="justify-center rounded-sm border border-[#7e2b4f] bg-[#3d1328] px-4 py-3.5 text-sm text-white hover:bg-[#4f1933] active:bg-[#5a1d3a]"
+            onClick={handleInsertClick}
           >
             Insert New File
           </SidebarMenuButton>
+          <input
+            type="file"
+            accept=".csv"
+            ref={fileInputRef}
+            className="hidden"
+            onChange={handleFileChange}
+          />
           <div className="w-full pt-4">
             {" "}
             {/* Changed from w-65 to w-full */}

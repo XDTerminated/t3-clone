@@ -9,9 +9,8 @@ import { parse } from "papaparse";
 import { useData } from "~/contexts/DataContext";
 
 export default function FileUploadModal() {
-  const [open, setOpen] = useState(true);
   const [exiting, setExiting] = useState(false);
-  const { addDataset } = useData();
+  const { addDataset, uploadOpen, closeUpload } = useData();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleUploadClick = () => {
@@ -29,9 +28,9 @@ export default function FileUploadModal() {
           skipEmptyLines: true,
           complete: (results) => {
             addDataset(file.name, results.data);
-            // animate exit
+            // animate exit then close modal
             setExiting(true);
-            setTimeout(() => setOpen(false), 300);
+            setTimeout(() => closeUpload(), 300);
           },
         });
       };
@@ -39,7 +38,7 @@ export default function FileUploadModal() {
     }
   };
 
-  if (!open) return null;
+  if (!uploadOpen) return null;
 
   return (
     <div

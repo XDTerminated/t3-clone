@@ -49,15 +49,15 @@ export default function DataViewModal() {
             ref={scrollRef}
             onScroll={showScroll}
             onMouseEnter={showScroll}
-            className={`data-scrollbar bg-background border-border max-h-[60vh] overflow-auto rounded-md border px-2 shadow-inner ${scrollActive ? "scroll-active" : ""}`}
+            className={`data-scrollbar bg-background border-border max-h-[60vh] overflow-x-auto overflow-y-auto rounded-md border px-2 shadow-inner ${scrollActive ? "scroll-active" : ""}`}
           >
-            <table className="divide-border min-w-full divide-y">
+            <table className="divide-border min-w-max divide-y whitespace-nowrap">
               <thead className="bg-popover sticky top-0">
                 <tr>
                   {columns.map((column) => (
                     <th
                       key={column}
-                      className="text-popover-foreground px-4 py-2 text-left text-sm font-medium first:rounded-tl-md last:rounded-tr-md"
+                      className="text-popover-foreground px-4 py-2 text-left text-sm font-medium whitespace-nowrap first:rounded-tl-md last:rounded-tr-md"
                     >
                       {column}
                     </th>
@@ -73,7 +73,7 @@ export default function DataViewModal() {
                     {columns.map((column) => (
                       <td
                         key={column}
-                        className="text-foreground px-4 py-2 text-sm"
+                        className="text-foreground px-4 py-2 text-sm whitespace-nowrap"
                       >
                         {row[column]}
                       </td>
