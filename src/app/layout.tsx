@@ -4,6 +4,7 @@ import { type Metadata } from "next";
 import { Inter } from "next/font/google";
 import { SidebarProvider } from "~/components/ui/sidebar";
 import ContentWrapper from "~/components/content-wrapper";
+import FileUploadModal from "~/components/file-upload-modal";
 
 export const metadata: Metadata = {
   title: "Anygraph",
@@ -18,13 +19,12 @@ const inter = Inter({
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="dark">
-      <head>
-        {/* Removed Adobe Fonts embed code placeholder */}
-      </head>
+      <head>{/* Removed Adobe Fonts embed code placeholder */}</head>
       <body
         className={`${inter.variable} text-foreground min-h-screen bg-[radial-gradient(ellipse_at_center,var(--background)_20%,oklch(0.235_0.017_290)_100%)]`}
       >
         <SidebarProvider>
+          <FileUploadModal />
           <ContentWrapper>{children}</ContentWrapper>
         </SidebarProvider>
       </body>
