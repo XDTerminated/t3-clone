@@ -80,6 +80,11 @@
   --sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --sidebar-border: var(--sidebar-border);
   --sidebar-ring: var(--sidebar-ring);
+
+  /* Custom scrollbar variables for light mode */
+  --scrollbar-thumb-light: oklch(0.65 0.01 270);
+  --scrollbar-thumb-hover-light: oklch(0.55 0.01 270);
+  --scrollbar-track-light: oklch(1 0 0);
 }
 
 .dark {
@@ -150,6 +155,11 @@
   --sidebar-ring: oklch(
     0.48 0.11 287.3
   ); /* Sidebar focus ring - matched to general focus ring */
+
+  /* Custom scrollbar variables for dark mode */
+  --scrollbar-thumb-dark: oklch(0.5 0.02 270);
+  --scrollbar-thumb-hover-dark: oklch(0.6 0.025 270);
+  --scrollbar-track-dark: oklch(0.255 0.017 290);
 }
 
 /* Style custom scrollbar for Chatbox textarea */
@@ -214,5 +224,56 @@
 }
 
 @layer base {
-  /* ...existing base styles... */
+  html {
+    background-color: var(--background);
+    /* Existing scrollbar-color for Firefox in light mode is further down */
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    /* Add other body defaults here if needed, e.g., min-height, font-smoothing */
+  }
+
+  /* Custom Scrollbar Styles */
+  /* For Webkit browsers (Chrome, Safari, Edge) */
+  ::-webkit-scrollbar {
+    width: 8px; /* Width of vertical scrollbar */
+    height: 8px; /* Height of horizontal scrollbar */
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--scrollbar-track-light); /* Default to light mode track */
+  }
+  .dark ::-webkit-scrollbar-track {
+    background: var(--scrollbar-track-dark); /* Dark mode track */
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb-light); /* Default to light mode thumb */
+    border-radius: 4px;
+  }
+  .dark ::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb-dark); /* Dark mode thumb */
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover-light); /* Light mode thumb hover */
+  }
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover-dark); /* Dark mode thumb hover */
+  }
+
+  /* For Firefox */
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb-light) var(--scrollbar-track-light); /* thumb track for light mode */
+  }
+
+  html.dark {
+    /* Ensure html itself is dark if .dark class is on html */
+    background-color: var(--background); /* Reinforce dark background for html */
+    scrollbar-color: var(--scrollbar-thumb-dark) var(--scrollbar-track-dark); /* thumb track for dark mode */
+  }
 }

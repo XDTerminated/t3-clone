@@ -24,11 +24,11 @@ export default function ContentWrapper({
         )}
       />
       {/* Wrapper row animates layout shift */}
-      <div className="bg-sidebar flex w-full flex-1 transition-all duration-300 ease-in-out">
+      <div className="bg-sidebar flex w-full flex-1 overflow-hidden transition-all duration-300 ease-in-out">
         <AppSidebar />
         <main
           className={cn(
-            "flex-grow bg-[radial-gradient(ellipse_at_center,var(--background)_20%,oklch(0.235_0.017_290)_100%)]",
+            "flex-grow overflow-y-scroll bg-[radial-gradient(ellipse_at_center,var(--background)_20%,oklch(0.235_0.017_290)_100%)]",
             "border-t border-l transition-colors duration-300 ease-in-out",
             open ? "border-sidebar-border rounded-tl-md" : "border-transparent",
           )}

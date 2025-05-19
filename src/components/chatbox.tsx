@@ -39,9 +39,8 @@ export function Chatbox({ onSend }: { onSend: (message: string) => void }) {
     }
   };
 
-  // When you send, read from messageRef, then reset DOM + state
-  const onSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  // New function to handle the core message sending logic
+  const handleSendMessage = () => {
     const message = messageRef.current.trim();
     if (!message) return;
 
@@ -54,6 +53,21 @@ export function Chatbox({ onSend }: { onSend: (message: string) => void }) {
     messageRef.current = "";
     resizeTextarea();
     setSendDisabled(true);
+  };
+
+  // When you send, read from messageRef, then reset DOM + state
+  const onSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleSendMessage(); // Call the new handler
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault(); // Prevent newline in textarea
+      if (!sendDisabled) {
+        handleSendMessage(); // Call the new handler
+      }
+    }
   };
 
   // initialize height before paint to avoid layout shift
@@ -82,6 +96,7 @@ export function Chatbox({ onSend }: { onSend: (message: string) => void }) {
               aria-label="Message input"
               defaultValue=""
               onInput={onInput}
+              onKeyDown={handleKeyDown} // This was added in the previous step
             />
 
             <div className="flex items-start justify-between">

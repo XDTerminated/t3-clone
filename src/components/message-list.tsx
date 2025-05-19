@@ -196,12 +196,22 @@ function InitializeMarkdownPlugin({ markdownText }: { markdownText: string }) {
 }
 
 export default function MessageList({ messages }: MessageListProps) {
+  const messagesEndRef = React.useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  React.useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
   return (
     <div
       role="log"
       aria-label="Chat messages"
       aria-live="polite"
-      className="pt-safe-offset-10 mx-auto flex w-full max-w-3xl flex-col space-y-16 px-4 pt-12 pb-10"
+      className="pt-safe-offset-10 mx-auto flex w-full max-w-3xl flex-col space-y-16 px-4 pt-12 pb-40"
     >
       {messages.map((msg, idx) => (
         <div
@@ -392,6 +402,7 @@ export default function MessageList({ messages }: MessageListProps) {
           )}
         </div>
       ))}
+      <div ref={messagesEndRef} />
     </div>
   );
 }
