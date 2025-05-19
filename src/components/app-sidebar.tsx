@@ -86,7 +86,7 @@ export function AppSidebar() {
       />
       <div
         className={cn(
-          "absolute top-3 left-4 z-20 flex items-center rounded-md p-1", // Changed top-4 to top-3
+          "fixed top-3 left-4 z-20 flex items-center rounded-md p-1", // Changed top-4 to top-3
           darkBgState ? "bg-neutral-800" : "",
         )}
       >

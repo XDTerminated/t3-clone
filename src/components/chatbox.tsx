@@ -8,7 +8,7 @@ import { useRef, useState, useLayoutEffect } from "react";
 
 const INITIAL_TEXTAREA_HEIGHT = 40; // slightly reduced initial textarea height
 
-export function Chatbox() {
+export function Chatbox({ onSend }: { onSend: (message: string) => void }) {
   const sidebar = useSidebar();
   const isSidebarOpenDesktop = sidebar
     ? sidebar.open && !sidebar.isMobile
@@ -45,8 +45,8 @@ export function Chatbox() {
     const message = messageRef.current.trim();
     if (!message) return;
 
-    // … your send logic here …
-    console.log("sending:", message);
+    // forward message to parent
+    onSend(message);
 
     // clear
     const ta = textareaRef.current!;
@@ -69,7 +69,7 @@ export function Chatbox() {
       )}
     >
       {/* Outer thin border wrapper */}
-      <div className="w-full max-w-3xl rounded-t-2xl p-[1px] ring-1 ring-[#302435]">
+      <div className="w-full max-w-3xl rounded-t-2xl px-[1px] pt-[1px] ring-1 ring-[#302435]">
         {/* Only top + sides */}
         <div className="w-full max-w-3xl rounded-t-2xl border-x-8 border-t-8 border-[#26202a] bg-gradient-to-b from-[#2c2532] to-[#2b2430] p-3 ring-1 ring-[#3a2532] ring-inset">
           <form className="flex flex-col gap-1" onSubmit={onSubmit}>
@@ -78,7 +78,7 @@ export function Chatbox() {
               name="input"
               id="chat-input"
               placeholder="Type your message here..."
-              className="min-h-[40px] max-h-[200px] w-full resize-none overflow-y-auto bg-transparent px-1 text-white outline-none placeholder:text-slate-400"
+              className="max-h-[200px] min-h-[40px] w-full resize-none overflow-y-auto bg-transparent px-1 text-white outline-none placeholder:text-slate-400"
               aria-label="Message input"
               defaultValue=""
               onInput={onInput}
