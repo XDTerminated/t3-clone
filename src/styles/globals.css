@@ -273,7 +273,26 @@
 
   html.dark {
     /* Ensure html itself is dark if .dark class is on html */
-    background-color: var(--background); /* Reinforce dark background for html */
+    background-color: var(
+      --background
+    ); /* Reinforce dark background for html */
     scrollbar-color: var(--scrollbar-thumb-dark) var(--scrollbar-track-dark); /* thumb track for dark mode */
   }
+}
+
+/* Define fadeIn keyframes and utility class animate-fadeIn */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-in-out;
+  /* keep element hidden until animation starts */
+  animation-fill-mode: forwards;
+  opacity: 0;
 }

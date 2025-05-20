@@ -227,7 +227,7 @@ export default function MessageList({ messages }: MessageListProps) {
             >
               <span className="sr-only">Your message: </span>
               <div className="flex flex-col">
-                <div className="prose dark:prose-invert max-w-none [&_ol:last-child]:mb-0 [&_p:last-child]:mb-0 [&_ul:last-child]:mb-0">
+                <div className="prose dark:prose-invert max-w-none leading-relaxed [&_ol:last-child]:mb-0 [&_p:last-child]:mb-0 [&_ul:last-child]:mb-0">
                   <LexicalMessage text={msg.text} />
                 </div>
               </div>
@@ -325,7 +325,7 @@ export default function MessageList({ messages }: MessageListProps) {
               <div
                 role="article"
                 aria-label="Assistant message"
-                className="prose dark:prose-invert max-w-none"
+                className="prose dark:prose-invert animate-fadeIn max-w-none leading-relaxed opacity-0"
               >
                 <span className="sr-only">Assistant Reply: </span>
                 <LexicalMessage text={msg.text} />

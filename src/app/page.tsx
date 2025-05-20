@@ -7,13 +7,16 @@ import { useState } from "react";
 export default function Page() {
   const [messages, setMessages] = useState<Message[]>([]);
   const handleSend = async (message: string) => {
+    // Build new chat history including this user message
     const newUserMsg: Message = { sender: "User", text: message };
-    setMessages((prev) => [...prev, newUserMsg]);
+    const history = [...messages, newUserMsg];
+    setMessages(history);
 
+    // Send full history to API for context
     const res = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({ history }),
     });
 
     if (!res.ok) {
@@ -22,11 +25,13 @@ export default function Page() {
     }
     const contentType = res.headers.get("content-type") ?? "";
     if (contentType.includes("text/event-stream")) {
-      // Stream tokens as SSE with accumulator
+      // Stream tokens as SSE with typewriter animation
       const reader = res.body!.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
       let aiText = "";
+      let charQueueIndex = 0;
+      const charDelay = 1; // faster ms delay per character
       // Initialize empty AI message
       setMessages((prev) => [...prev, { sender: "AI", text: "" }]);
       while (true) {
@@ -38,18 +43,23 @@ export default function Page() {
         for (const part of parts) {
           if (!part.startsWith("data: ")) continue;
           const dataStr = part.replace(/^data: /, "").trim();
-          if (dataStr === "[DONE]") break;
+          if (dataStr === "[DONE]") {
+            break;
+          }
           try {
-            const { token: tok } = JSON.parse(dataStr) as { token?: unknown };
-            if (typeof tok === "string") {
-              aiText += tok;
-              // Replace last message with full accumulated text
-              setMessages((prev) => {
-                const msgs = [...prev];
-                const idx = msgs.length - 1;
-                msgs[idx] = { sender: "AI", text: aiText };
-                return msgs;
-              });
+            const { token } = JSON.parse(dataStr) as { token?: unknown };
+            if (typeof token === "string") {
+              for (const ch of token) {
+                setTimeout(() => {
+                  aiText += ch;
+                  setMessages((prev) => {
+                    const msgs = [...prev];
+                    msgs[msgs.length - 1] = { sender: "AI", text: aiText };
+                    return msgs;
+                  });
+                }, charQueueIndex * charDelay);
+                charQueueIndex++;
+              }
             }
           } catch {}
         }
