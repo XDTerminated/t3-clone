@@ -2,7 +2,7 @@ import "katex/dist/katex.min.css";
 import "~/styles/globals.css";
 
 import { type Metadata } from "next";
-import { Quicksand } from "next/font/google";
+import { Montserrat } from "next/font/google";
 import { SidebarProvider } from "~/components/ui/sidebar";
 import ContentWrapper from "~/components/content-wrapper";
 import FileUploadModal from "~/components/file-upload-modal";
@@ -14,9 +14,9 @@ export const metadata: Metadata = {
   icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
 
-const quicksand = Quicksand({
+const montserrat = Montserrat({
   subsets: ["latin"],
-  variable: "--font-quicksand",
+  variable: "--font-montserrat",
 });
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -24,7 +24,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     <html lang="en" className="dark">
       <head>{/* Removed Adobe Fonts embed code placeholder */}</head>
       <body
-        className={`${quicksand.variable} text-foreground min-h-screen bg-[radial-gradient(ellipse_at_center,var(--background)_20%,oklch(0.235_0.017_290)_100%)]`}
+        className={`${montserrat.variable} text-foreground min-h-screen bg-[radial-gradient(ellipse_at_center,var(--background)_20%,oklch(0.235_0.017_290)_100%)]`}
       >
         <SidebarProvider>
           <DataProvider>

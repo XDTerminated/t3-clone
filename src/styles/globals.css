@@ -159,7 +159,7 @@
   /* Custom scrollbar variables for dark mode */
   --scrollbar-thumb-dark: oklch(0.5 0.02 270);
   --scrollbar-thumb-hover-dark: oklch(0.6 0.025 270);
-  --scrollbar-track-dark: oklch(0.255 0.017 290);
+  --scrollbar-track-dark: oklch(0.235 0.017 290);
 }
 
 /* Style custom scrollbar for Chatbox textarea */
@@ -226,6 +226,7 @@
 @layer base {
   html {
     background-color: var(--background);
+    font-size: 0.95rem;
     /* Existing scrollbar-color for Firefox in light mode is further down */
   }
 
@@ -233,6 +234,7 @@
     background-color: var(--background);
     color: var(--foreground);
     /* Add other body defaults here if needed, e.g., min-height, font-smoothing */
+    font-family: var(--font-montserrat), sans-serif;
   }
 
   /* Custom Scrollbar Styles */
@@ -246,7 +248,7 @@
     background: var(--scrollbar-track-light); /* Default to light mode track */
   }
   .dark ::-webkit-scrollbar-track {
-    background: var(--scrollbar-track-dark); /* Dark mode track */
+    background: radial-gradient(ellipse at center, oklch(0.255 0.017 290) 20%, oklch(0.235 0.017 290) 100%); /* Match the main gradient */
   }
 
   ::-webkit-scrollbar-thumb {
@@ -273,10 +275,8 @@
 
   html.dark {
     /* Ensure html itself is dark if .dark class is on html */
-    background-color: var(
-      --background
-    ); /* Reinforce dark background for html */
-    scrollbar-color: var(--scrollbar-thumb-dark) var(--scrollbar-track-dark); /* thumb track for dark mode */
+    background: radial-gradient(ellipse at center, oklch(0.255 0.017 290) 20%, oklch(0.235 0.017 290) 100%); /* Match the main gradient */
+    scrollbar-color: var(--scrollbar-thumb-dark) transparent; /* Use transparent track for Firefox to show gradient */
   }
 }
 

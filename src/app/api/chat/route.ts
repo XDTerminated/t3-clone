@@ -5,15 +5,15 @@ type ChatRequest = {
   message?: string;
   history?: Array<{ sender: string; text: string }>;
 };
+
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
 export async function POST(request: Request) {
-  // Parse and validate request body; support message or full history
   let promptContents: string[];
   try {
     const body = (await request.json()) as ChatRequest;
-    // Build promptContents from history if provided, else single message
+
     if (Array.isArray(body.history)) {
       promptContents = body.history
         .filter((msg) => typeof msg.text === "string")
@@ -37,7 +37,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Malformed JSON" }, { status: 400 });
   }
 
-  // Ensure API key is configured
   if (!GEMINI_API_KEY) {
     return NextResponse.json(
       { error: "Server misconfiguration: missing API key" },
@@ -45,19 +44,19 @@ export async function POST(request: Request) {
     );
   }
 
-  // Streamed response using GenAI SDK
   try {
-    // Prepare system instruction and full contents
     const systemInstruction =
-      "You are Gemini, a powerful conversational AI. Use the preceding conversation history to provide clear, accurate, and detailed answers. Respond naturally without adding any role prefixes or labels (e.g., 'AI:'), and only output the answer text. You can give your full responses however you just make sure you don't specify any roles or anything. Follow the tone of the user.";
+      "You are Gemini, a powerful conversational AI. Use the preceding conversation history to provide clear, accurate, and detailed answers. Respond naturally without adding any role prefixes or labels, and only output the answer text. Follow the tone of the user.";
     const fullContents = [systemInstruction, ...promptContents];
 
-    // Await the async generator stream
     const streamIterator = await ai.models.generateContentStream({
-      model: "gemini-2.0-flash-001",
-      // Include system instruction so AI skips 'AI:' labels
+      model: "gemini-2.5-flash-preview-05-20",
       contents: fullContents,
+      config: {
+        tools: [{ codeExecution: {} }],
+      },
     });
+
     const encoder = new TextEncoder();
     const responseStream = new ReadableStream({
       async start(controller) {
@@ -69,6 +68,7 @@ export async function POST(request: Request) {
         controller.close();
       },
     });
+
     return new Response(responseStream, {
       headers: {
         "Content-Type": "text/event-stream",
