@@ -14,6 +14,9 @@ export function Chatbox({ onSend }: { onSend: (message: string) => void }) {
     ? sidebar.open && !sidebar.isMobile
     : false;
 
+  const sidebarWidth = sidebar?.width || 256;
+  const isResizing = sidebar?.isResizing || false;
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messageRef = useRef("");
   const [sendDisabled, setSendDisabled] = useState(true);
@@ -74,13 +77,17 @@ export function Chatbox({ onSend }: { onSend: (message: string) => void }) {
   useLayoutEffect(() => {
     resizeTextarea();
   }, []);
-
   return (
     <div
       className={cn(
-        "pointer-events-auto fixed inset-x-0 bottom-0 flex justify-center transition-[padding-left] duration-100 ease-in-out", // Added transition classes
-        isSidebarOpenDesktop ? "pl-[18rem]" : "",
+        "pointer-events-auto fixed inset-x-0 bottom-0 flex justify-center",
+        // Add smooth transition for positioning, but disable during resizing for performance
+        !isResizing && "transition-all duration-300 ease-in-out",
       )}
+      style={{
+        paddingLeft: isSidebarOpenDesktop ? `${sidebarWidth}px` : "0px",
+        transition: isResizing ? "none" : undefined,
+      }}
     >
       {/* Outer thin border wrapper */}
       <div className="w-full max-w-3xl rounded-t-2xl px-[1px] pt-[1px] ring-1 ring-[#302435]">

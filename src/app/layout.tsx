@@ -5,12 +5,10 @@ import { type Metadata } from "next";
 import { Montserrat } from "next/font/google";
 import { SidebarProvider } from "~/components/ui/sidebar";
 import ContentWrapper from "~/components/content-wrapper";
-import FileUploadModal from "~/components/file-upload-modal";
-import DataViewModal from "~/components/data-view-modal";
 import { DataProvider } from "~/contexts/DataContext";
 
 export const metadata: Metadata = {
-  title: "Anygraph",
+  title: "T3 Chat",
   icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
 
@@ -28,9 +26,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       >
         <SidebarProvider>
           <DataProvider>
-            <FileUploadModal />
             <ContentWrapper>{children}</ContentWrapper>
-            <DataViewModal />
           </DataProvider>
         </SidebarProvider>
       </body>

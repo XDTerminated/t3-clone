@@ -2,7 +2,7 @@
 
 import * as React from "react"; // Import React for useEffect, useState
 import { useRef } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Search, LogIn } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -13,7 +13,6 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "~/components/ui/sidebar";
-import { Separator } from "~/components/ui/separator";
 import { cn } from "~/lib/utils";
 import { buttonVariants } from "~/components/ui/button";
 import { parse } from "papaparse";
@@ -83,10 +82,10 @@ export function AppSidebar() {
         ref={fileInputRef}
         className="hidden"
         onChange={handleFileChange}
-      />
+      />{" "}
       <div
         className={cn(
-          "fixed top-3 left-4 z-20 flex items-center rounded-md p-1", // Changed top-4 to top-3
+          "fixed top-2 left-2 z-20 flex items-center rounded-md p-1",
           darkBgState ? "bg-neutral-800" : "",
         )}
       >
@@ -116,28 +115,36 @@ export function AppSidebar() {
         >
           <Plus className="h-5 w-5" />
         </button>
-      </div>
-      <Sidebar className="bg-sidebar text-sidebar-foreground flex h-screen w-72 flex-col">
-        <SidebarHeader className="relative flex h-32 flex-col items-center justify-center p-4">
-          {/* Changed items-start to items-center and specific padding to p-4 */}
-          <h2 className="text-sidebar-foreground mb-2 text-xl font-semibold">
-            AnyGraph
-          </h2>
-          <SidebarMenuButton
-            variant="default"
-            className="justify-center rounded-sm border border-[#7e2b4f] bg-[#3d1328] px-4 py-3.5 text-sm text-white hover:bg-[#4f1933] active:bg-[#5a1d3a]"
-            onClick={handleInsertClick}
-          >
-            Insert New File
-          </SidebarMenuButton>
-          <div className="w-full pt-4">
-            {" "}
-            {/* Changed from w-65 to w-full */}
-            <Separator className="bg-sidebar-border" />
+      </div>{" "}
+      <Sidebar className="text-sidebar-foreground flex h-screen flex-col bg-gradient-to-tl from-neutral-900 via-neutral-800 to-neutral-700">
+        <SidebarHeader className="relative m-2 mb-0 flex flex-col gap-2 space-y-2 p-0">
+          <h1 className="text-muted-foreground flex h-8 shrink-0 items-center justify-center text-lg transition-opacity delay-75 duration-75">
+            <div className="text-foreground relative flex h-8 w-24 items-center justify-center text-sm font-semibold">
+              <div className="h-3.5 select-none">T3 Clone</div>
+            </div>
+          </h1>
+          <div className="px-1">
+            <button
+              className="focus-visible:ring-ring inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-pink-600/30 bg-pink-800/20 p-2 px-4 py-2 text-sm font-semibold whitespace-nowrap text-pink-100 shadow transition-colors select-none hover:bg-pink-700/30 focus-visible:ring-1 focus-visible:outline-none active:bg-pink-800/40 disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={handleInsertClick}
+            >
+              <span className="w-full text-center select-none">New Chat</span>
+            </button>
+          </div>
+          <div className="border-sidebar-border/30 border-b px-3 pb-2">
+            <div className="flex items-center">
+              <Search className="text-muted-foreground mr-3 -ml-[3px] size-4" />
+              <input
+                role="searchbox"
+                aria-label="Search threads"
+                placeholder="Search your threads..."
+                className="text-foreground placeholder-muted-foreground/50 w-full bg-transparent py-2 text-sm placeholder:select-none focus:outline-none"
+              />
+            </div>
           </div>
         </SidebarHeader>
 
-        <SidebarContent className="scrollbar-thin scrollbar-thumb-muted-foreground/50 scrollbar-track-transparent flex-grow space-y-1 overflow-y-auto px-2">
+        <SidebarContent className="relative flex min-h-0 flex-1 flex-col gap-2 overflow-auto pb-2">
           <SidebarMenu className="px-2">
             {datasets.map((ds: Dataset, idx: number) => (
               <SidebarMenuItem key={`${ds.name}-${idx}`} className="py-0.5">
@@ -152,6 +159,13 @@ export function AppSidebar() {
             ))}
           </SidebarMenu>
         </SidebarContent>
+
+        <div className="m-0 flex flex-col gap-2 p-2 pt-0">
+          <button className="text-muted-foreground hover:bg-sidebar-accent flex w-full items-center gap-4 rounded-lg p-4 select-none">
+            <LogIn className="size-4" />
+            <span>Login</span>
+          </button>
+        </div>
       </Sidebar>
     </>
   );

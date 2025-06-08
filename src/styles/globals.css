@@ -248,7 +248,11 @@
     background: var(--scrollbar-track-light); /* Default to light mode track */
   }
   .dark ::-webkit-scrollbar-track {
-    background: radial-gradient(ellipse at center, oklch(0.255 0.017 290) 20%, oklch(0.235 0.017 290) 100%); /* Match the main gradient */
+    background: radial-gradient(
+      ellipse at center,
+      oklch(0.255 0.017 290) 20%,
+      oklch(0.235 0.017 290) 100%
+    ); /* Match the main gradient */
   }
 
   ::-webkit-scrollbar-thumb {
@@ -275,7 +279,11 @@
 
   html.dark {
     /* Ensure html itself is dark if .dark class is on html */
-    background: radial-gradient(ellipse at center, oklch(0.255 0.017 290) 20%, oklch(0.235 0.017 290) 100%); /* Match the main gradient */
+    background: radial-gradient(
+      ellipse at center,
+      oklch(0.255 0.017 290) 20%,
+      oklch(0.235 0.017 290) 100%
+    ); /* Match the main gradient */
     scrollbar-color: var(--scrollbar-thumb-dark) transparent; /* Use transparent track for Firefox to show gradient */
   }
 }
@@ -295,4 +303,388 @@
   /* keep element hidden until animation starts */
   animation-fill-mode: forwards;
   opacity: 0;
+}
+
+/* Windows-specific scrollbar styles for main chat container */
+.main-chat-container {
+  /* Firefox scrollbar styling - hidden by default */
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent !important;
+
+  /* Force WebKit to use the new scrollbar API on Windows */
+  scroll-behavior: smooth;
+  overflow-y: auto;
+
+  /* Set specific dimensions to override Windows defaults */
+  --scrollbar-size: 8px;
+
+  /* CRITICAL: Pre-emptively set scrollbar colors to prevent flash */
+  --webkit-scrollbar-thumb-color: transparent;
+  --webkit-scrollbar-track-color: transparent;
+}
+
+/* WebKit scrollbar base styling - Force minimal size and match page background */
+.main-chat-container::-webkit-scrollbar {
+  width: var(--scrollbar-size) !important;
+  height: var(--scrollbar-size) !important;
+  background-color: var(--background) !important; /* Match page background */
+  background-image: none !important; /* Ensure no gradient or image from potential 'background' shorthand */
+
+  /* Critical for Windows: Override system defaults */
+  -webkit-appearance: none !important;
+  appearance: none !important;
+
+  /* Force immediate transparent state */
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  transition: none !important; /* Ensure no transitions */
+  animation: none !important; /* Ensure no animations */
+  -webkit-transition: none !important; /* Ensure WebKit specific transitions are off */
+  forced-color-adjust: none !important;
+  color-scheme: none !important;
+}
+
+.main-chat-container::-webkit-scrollbar-track {
+  background-color: var(--background) !important; /* Match page background */
+  background-image: none !important; /* Ensure no gradient or image from potential 'background' shorthand */
+
+  /* Ensure no system styling */
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  border: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+  transition: none !important; /* Ensure no transitions */
+  animation: none !important; /* Ensure no animations */
+  -webkit-transition: none !important; /* Ensure WebKit specific transitions are off */
+  forced-color-adjust: none !important;
+  color-scheme: none !important;
+}
+
+/* Hide scrollbar thumb by default - Force transparent state with EXTREME aggression */
+/* MODIFIED: Scrollbar thumb is now always visible with theme colors */
+.main-chat-container::-webkit-scrollbar-thumb {
+  /* background: transparent !important; */ /* REMOVED */
+  background-color: var(
+    --scrollbar-thumb-light
+  ) !important; /* Light mode default */
+  background-image: none !important;
+  border: none !important;
+  border-radius: 4px; /* Keep radius */
+  box-shadow: none !important;
+  outline: none !important;
+
+  /* Critical Windows overrides */
+  -webkit-appearance: none !important;
+  appearance: none !important;
+
+  /* Disable ALL transitions and animations to prevent color flashing */
+  transition: none !important;
+  animation: none !important;
+  -webkit-transition: none !important; /* Ensure WebKit specific transitions are off */
+
+  /* Force override any system colors */
+  /* color: transparent !important; */ /* REMOVED - No longer needed as background is not transparent */
+
+  /* Ensure no pseudo-elements are adding color */
+  content: "" !important;
+
+  /* ADDED: Explicitly disable system color adjustments for the default transparent state */
+  forced-color-adjust: none !important;
+  color-scheme: none !important;
+}
+
+/* ADDED: Hover state for light mode */
+.main-chat-container::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-thumb-hover-light) !important;
+}
+
+/* ADDED: Dark mode scrollbar thumb color */
+.dark .main-chat-container::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb-dark) !important;
+}
+
+/* ADDED: Dark mode scrollbar thumb hover color */
+.dark .main-chat-container::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-thumb-hover-dark) !important;
+}
+
+/* ULTIMATE Windows scrollbar button removal strategy */
+.main-chat-container::-webkit-scrollbar-button {
+  /* Method 1: Complete removal */
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+
+  /* Method 2: Visual hiding */
+  background: transparent !important;
+  border: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+
+  /* Method 3: Appearance reset */
+  -webkit-appearance: none !important;
+  appearance: none !important;
+
+  /* Method 4: Positioning override */
+  position: absolute !important;
+  top: -9999px !important;
+  left: -9999px !important;
+
+  /* Method 5: Content removal */
+  content: none !important;
+  font-size: 0 !important;
+  line-height: 0 !important;
+}
+
+/* Target ALL possible Windows scrollbar button states */
+.main-chat-container::-webkit-scrollbar-button:vertical:start:decrement,
+.main-chat-container::-webkit-scrollbar-button:vertical:end:increment,
+.main-chat-container::-webkit-scrollbar-button:vertical:start:increment,
+.main-chat-container::-webkit-scrollbar-button:vertical:end:decrement,
+.main-chat-container::-webkit-scrollbar-button:horizontal:start:decrement,
+.main-chat-container::-webkit-scrollbar-button:horizontal:end:increment,
+.main-chat-container::-webkit-scrollbar-button:horizontal:start:increment,
+.main-chat-container::-webkit-scrollbar-button:horizontal:end:decrement {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  background: transparent !important;
+  border: none !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  position: absolute !important;
+  top: -9999px !important;
+  left: -9999px !important;
+}
+
+/* Additional Windows-specific button targeting */
+.main-chat-container::-webkit-scrollbar-button:single-button,
+.main-chat-container::-webkit-scrollbar-button:double-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+/* Remove scrollbar corner completely */
+.main-chat-container::-webkit-scrollbar-corner {
+  background: transparent !important;
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Remove scrollbar resizer */
+.main-chat-container::-webkit-resizer {
+  display: none !important;
+  background: transparent !important;
+}
+
+/* REMOVED: Styles for .main-chat-container.scrolling as the class is no longer used */
+/*
+.main-chat-container.scrolling {
+  scrollbar-color: oklch(0.5 0.02 270) transparent !important;
+}
+
+.main-chat-container.scrolling::-webkit-scrollbar-thumb {
+  background: oklch(0.5 0.02 270) !important;
+  background-color: oklch(0.5 0.02 270) !important;
+  background-image: none !important;
+  background-attachment: scroll !important;
+  
+  color: oklch(0.5 0.02 270) !important; 
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  
+  transition: none !important;
+  animation: none !important;
+  -webkit-transition: none !important;
+  
+  -webkit-appearance: none !important;
+  appearance: none !important;
+}
+
+.main-chat-container.scrolling::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.6 0.025 270) !important;
+  background-color: oklch(0.6 0.025 270) !important;
+  background-image: none !important;
+  background-attachment: scroll !important;
+  
+  color: oklch(0.6 0.025 270) !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  
+  transition: none !important;
+  animation: none !important;
+  -webkit-transition: none !important;
+  
+  -webkit-appearance: none !important;
+  appearance: none !important;
+}
+*/
+
+/* Sidebar specific styles */
+.sidebar {
+  /* Ensure sidebar background is consistent with the theme */
+  background-color: var(--color-sidebar);
+  color: var(--color-sidebar-foreground);
+
+  /* Match the scrollbar track to the sidebar background */
+  scrollbar-color: var(--color-sidebar) transparent;
+}
+
+.sidebar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+  background: var(--color-sidebar);
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb-light);
+  border-radius: 4px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover-light);
+}
+
+/* Dark mode sidebar styles */
+.dark .sidebar {
+  background-color: var(--color-sidebar);
+  color: var(--color-sidebar-foreground);
+
+  scrollbar-color: var(--color-sidebar) transparent;
+}
+
+.dark .sidebar::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb-dark);
+}
+
+.dark .sidebar::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover-dark);
+}
+
+/* Specific styles for sidebar header */
+.sidebar-header {
+  /* Ensure consistent background and text color */
+  background-color: var(--color-sidebar-primary);
+  color: var(--color-sidebar-primary-foreground);
+
+  /* Match scrollbar thumb to primary color */
+  scrollbar-color: var(--color-sidebar-primary) transparent;
+}
+
+.sidebar-header::-webkit-scrollbar-thumb {
+  background: var(--color-sidebar-primary);
+  border-radius: 4px;
+}
+
+.sidebar-header::-webkit-scrollbar-thumb:hover {
+  background: var(--color-sidebar-primary-hover);
+}
+
+/* Ensure active link color is distinct */
+.sidebar a.active {
+  color: var(--color-primary);
+  background-color: var(--color-primary-background);
+}
+
+/* Adjustments for sidebar items */
+.sidebar-item {
+  padding: 0.5rem 1rem;
+  transition: background-color 0.3s ease;
+}
+
+/* Hover and active states for sidebar items */
+.sidebar-item:hover {
+  background-color: var(--color-secondary);
+}
+
+.sidebar-item.active {
+  background-color: var(--color-primary);
+  color: var(--color-primary-foreground);
+}
+
+/* Windows-specific scrollbar styles for sidebar */
+@supports (-ms-overflow-style: none) {
+  .sidebar {
+    -ms-overflow-style: none; /* Hide scrollbar in IE/Edge */
+  }
+}
+
+/* Windows 11 Chrome/Edge scrollbar override */
+@supports selector(::-webkit-scrollbar-button) {
+  .sidebar::-webkit-scrollbar-button {
+    /* Force zero dimensions with content blocking */
+    font-size: 0 !important;
+    line-height: 0 !important;
+    max-width: 0 !important;
+    max-height: 0 !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+
+    /* Remove any pseudo-content */
+    content: "" !important;
+
+    /* Block interaction */
+    pointer-events: none !important;
+    user-select: none !important;
+
+    /* Force overflow hidden */
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+
+    /* Transform out of view */
+    transform: scale(0) !important;
+  }
+}
+
+/* Last resort: hide entire scrollbar track buttons with clip-path */
+.sidebar::-webkit-scrollbar {
+  /* Clip any button areas */
+  clip-path: polygon(
+    0 12px,
+    100% 12px,
+    100% calc(100% - 12px),
+    0 calc(100% - 12px)
+  );
+}
+
+/* CRITICAL: Additional Windows Chrome/Edge overrides to prevent black flash */
+.sidebar.scrolling::-webkit-scrollbar-thumb {
+  /* Force color immediately - multiple fallbacks */
+  background: oklch(0.5 0.02 270) !important;
+  color: oklch(0.5 0.02 270) !important;
+  border-color: oklch(
+    0.5 0.02 270
+  ) !important; /* Ensure border doesn't flash */
+
+  /* Block any system theming */
+  forced-color-adjust: none !important;
+  color-scheme: none !important; /* Prevent system light/dark mode from interfering */
+}
+
+/* Light mode override with highest specificity */
+html:not(.dark) .sidebar.scrolling::-webkit-scrollbar-thumb {
+  background: oklch(0.65 0.01 270) !important;
+  color: oklch(0.65 0.01 270) !important;
+  border-color: oklch(
+    0.65 0.01 270
+  ) !important; /* Ensure border doesn't flash */
+
+  /* Block any system theming */
+  forced-color-adjust: none !important;
+  color-scheme: none !important;
 }

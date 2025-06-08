@@ -13,7 +13,9 @@ export default function ContentWrapper({
 }: {
   children: React.ReactNode;
 }) {
-  const { open } = useSidebar();
+  const { open, isResizing } = useSidebar();
+  const mainRef = React.useRef<HTMLElement>(null);
+
   return (
     <div className="flex h-screen w-full flex-col">
       {/* Animated top gap for sidebar open/close */}
@@ -22,15 +24,18 @@ export default function ContentWrapper({
           "bg-sidebar w-full overflow-hidden transition-[height] duration-100 ease-linear",
           open ? "h-3.5" : "h-0",
         )}
-      />
+      />{" "}
       {/* Wrapper row animates layout shift */}
-      <div className="bg-sidebar flex w-full flex-1 overflow-hidden transition-all duration-300 ease-in-out">
-        <AppSidebar />
+      <div className="bg-sidebar flex w-full flex-1 overflow-hidden">
+        <AppSidebar />{" "}
         <main
+          ref={mainRef}
           className={cn(
-            "flex-grow overflow-y-scroll bg-[radial-gradient(ellipse_at_center,var(--background)_20%,oklch(0.235_0.017_290)_100%)]",
+            "main-chat-container flex-grow overflow-y-scroll bg-[radial-gradient(ellipse_at_center,var(--background)_20%,oklch(0.235_0.017_290)_100%)]",
             "border-t border-l transition-colors duration-300 ease-in-out",
             open ? "border-sidebar-border rounded-tl-md" : "border-transparent",
+            // Add smooth transition for layout changes, but disable during resizing for performance
+            !isResizing && "transition-all duration-300 ease-in-out",
           )}
         >
           {children}
