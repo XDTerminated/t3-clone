@@ -89,9 +89,7 @@ export default function Page() {
   };
   return (
     <div className="relative flex h-full flex-col">
-      <TopRightIconHolder>
-        <div className="text-white">🔥</div>
-      </TopRightIconHolder>
+      <TopRightIconHolder />
       {messages.length === 0 ? (
         <WelcomeScreen onPromptSelect={handleSend} />
       ) : (
