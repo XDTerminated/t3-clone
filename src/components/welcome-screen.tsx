@@ -62,45 +62,51 @@ const categories = [
 export default function WelcomeScreen({ onPromptSelect }: WelcomeScreenProps) {
   const [selectedCategory, setSelectedCategory] = useState("create");
 
-  const currentCategory = categories.find((cat) => cat.id === selectedCategory);  return (
+  const currentCategory = categories.find((cat) => cat.id === selectedCategory);
+  return (
     <div className="flex h-full items-start justify-center pt-24">
-      <div className="w-full max-w-3xl space-y-6 px-2 duration-300 animate-in fade-in-50 zoom-in-95 sm:px-8">
-        <h2 className="text-center text-3xl font-semibold">How can I help you today?</h2>
+      <div className="animate-in fade-in-50 zoom-in-95 w-full max-w-3xl space-y-6 px-2 duration-300 sm:px-8">
+        <h2 className="text-center text-3xl font-semibold">
+          How can I help you today?
+        </h2>
         {/* Category Buttons */}
-      <div className="flex flex-row flex-wrap justify-center gap-2.5 text-sm max-sm:justify-evenly">
-        {categories.map((category) => {
-          const Icon = category.icon;
-          const isSelected = selectedCategory === category.id;
-          
-          return (
+        <div className="flex flex-row flex-wrap justify-center gap-2.5 text-sm max-sm:justify-evenly">
+          {categories.map((category) => {
+            const Icon = category.icon;
+            const isSelected = selectedCategory === category.id;
+
+            return (
+              <button
+                key={category.id}
+                onClick={() => setSelectedCategory(category.id)}
+                className={cn(
+                  "focus-visible:ring-ring justify-center text-sm whitespace-nowrap transition-colors focus-visible:ring-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+                  "outline-secondary/70 flex h-9 items-center gap-1 rounded-xl px-5 py-2 font-semibold outline-1 backdrop-blur-xl max-sm:size-16 max-sm:flex-col sm:gap-2 sm:rounded-full",
+                  isSelected
+                    ? "border-reflect button-reflect text-primary-foreground dark:bg-primary/20 disabled:dark:hover:bg-primary/20 disabled:dark:active:bg-primary/20 bg-[rgb(162,59,103)] shadow hover:bg-[#d56698] active:bg-[rgb(162,59,103)] disabled:hover:bg-[rgb(162,59,103)] disabled:active:bg-[rgb(162,59,103)] dark:hover:bg-pink-800/70 dark:active:bg-pink-800/40"
+                    : "bg-primary text-primary-foreground disabled:hover:bg-primary data-[selected=false]:bg-secondary/30 data-[selected=false]:text-secondary-foreground/90 data-[selected=false]:hover:bg-secondary shadow hover:bg-pink-600/90 data-[selected=false]:outline",
+                )}
+                data-selected={isSelected}
+              >
+                <Icon className="max-sm:block" />
+                <div>{category.name}</div>
+              </button>
+            );
+          })}
+        </div>{" "}
+        {/* Prompt Suggestions */}
+        <div className="text-foreground mx-auto flex max-w-2xl flex-col space-y-1">
+          {currentCategory?.prompts.map((prompt, index) => (
             <button
-              key={category.id}
-              onClick={() => setSelectedCategory(category.id)}              className={cn(
-                "justify-center whitespace-nowrap text-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
-                "h-9 flex items-center gap-1 rounded-xl px-5 py-2 font-semibold outline-1 outline-secondary/70 backdrop-blur-xl max-sm:size-16 max-sm:flex-col sm:gap-2 sm:rounded-full",
-                isSelected
-                  ? "border-reflect button-reflect bg-[rgb(162,59,103)] text-primary-foreground shadow hover:bg-[#d56698] active:bg-[rgb(162,59,103)] disabled:hover:bg-[rgb(162,59,103)] disabled:active:bg-[rgb(162,59,103)] dark:bg-primary/20 dark:hover:bg-pink-800/70 dark:active:bg-pink-800/40 disabled:dark:hover:bg-primary/20 disabled:dark:active:bg-primary/20"
-                  : "bg-primary text-primary-foreground shadow hover:bg-pink-600/90 disabled:hover:bg-primary data-[selected=false]:bg-secondary/30 data-[selected=false]:text-secondary-foreground/90 data-[selected=false]:outline data-[selected=false]:hover:bg-secondary"
-              )}
-              data-selected={isSelected}
+              key={index}
+              onClick={() => onPromptSelect(prompt)}
+              className="text-secondary-foreground hover:bg-secondary/50 w-full rounded-md py-3 text-center sm:px-3"
             >
-              <Icon className="max-sm:block" />
-              <div>{category.name}</div>
+              <span>{prompt}</span>
             </button>
-          );
-        })}
-      </div>      {/* Prompt Suggestions */}
-      <div className="flex flex-col text-foreground max-w-2xl mx-auto space-y-1">
-        {currentCategory?.prompts.map((prompt, index) => (
-          <button
-            key={index}
-            onClick={() => onPromptSelect(prompt)}
-            className="w-full rounded-md py-3 text-center text-secondary-foreground hover:bg-secondary/50 sm:px-3"
-          >
-            <span>{prompt}</span>
-          </button>))}
+          ))}
+        </div>
       </div>
-    </div>
     </div>
   );
 }

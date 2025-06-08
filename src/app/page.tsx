@@ -85,7 +85,8 @@ export default function Page() {
       console.error("Failed to parse JSON", err);
     }
     setMessages((prev) => [...prev, { sender: "AI", text: reply }]);
-  };  return (
+  };
+  return (
     <div className="relative flex h-full flex-col">
       {messages.length === 0 ? (
         <WelcomeScreen onPromptSelect={handleSend} />
