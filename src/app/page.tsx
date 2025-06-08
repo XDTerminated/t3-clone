@@ -2,6 +2,7 @@
 
 import { Chatbox } from "~/components/chatbox";
 import MessageList, { type Message } from "~/components/message-list";
+import WelcomeScreen from "~/components/welcome-screen";
 import { useState } from "react";
 
 export default function Page() {
@@ -84,10 +85,13 @@ export default function Page() {
       console.error("Failed to parse JSON", err);
     }
     setMessages((prev) => [...prev, { sender: "AI", text: reply }]);
-  };
-  return (
+  };  return (
     <div className="relative flex h-full flex-col">
-      <MessageList messages={messages} />
+      {messages.length === 0 ? (
+        <WelcomeScreen onPromptSelect={handleSend} />
+      ) : (
+        <MessageList messages={messages} />
+      )}
       <Chatbox onSend={handleSend} />
     </div>
   );
