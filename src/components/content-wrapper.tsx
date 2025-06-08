@@ -18,11 +18,12 @@ export default function ContentWrapper({
 
   return (
     <div className="flex h-screen w-full flex-col">
+      {" "}
       {/* Animated top gap for sidebar open/close */}
       <div
         className={cn(
           "bg-sidebar w-full overflow-hidden transition-[height] duration-100 ease-linear",
-          open ? "h-3.5" : "h-0",
+          open ? "h-4" : "h-0",
         )}
       />{" "}
       {/* Wrapper row animates layout shift */}
@@ -33,7 +34,9 @@ export default function ContentWrapper({
           className={cn(
             "main-chat-container flex-grow overflow-y-scroll bg-[radial-gradient(ellipse_at_center,var(--background)_20%,oklch(0.235_0.017_290)_100%)]",
             "border-t border-l transition-colors duration-300 ease-in-out",
-            open ? "border-sidebar-border rounded-tl-md" : "border-transparent",
+            open
+              ? "border-sidebar-border rounded-tl-2xl"
+              : "border-transparent",
             // Add smooth transition for layout changes, but disable during resizing for performance
             !isResizing && "transition-all duration-300 ease-in-out",
           )}
