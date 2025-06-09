@@ -86,7 +86,7 @@ export function AppSidebar() {
       <div
         className={cn(
           "fixed top-2 left-2 z-20 flex items-center rounded-md p-1",
-          darkBgState ? "bg-neutral-800" : "",
+          darkBgState ? "bg-sidebar" : "",
         )}
       >
         <SidebarTrigger
