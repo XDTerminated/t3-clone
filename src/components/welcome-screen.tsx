@@ -60,15 +60,18 @@ const categories = [
 ];
 
 export default function WelcomeScreen({ onPromptSelect }: WelcomeScreenProps) {
-  const [selectedCategory, setSelectedCategory] = useState("create");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
-  const currentCategory = categories.find((cat) => cat.id === selectedCategory);
+  // Show "create" prompts by default, but don't highlight the button
+  const currentCategory = categories.find(
+    (cat) => cat.id === (selectedCategory ?? "create"),
+  );
   return (
     <div className="flex h-full items-start justify-center pt-24">
       <div className="animate-in fade-in-50 zoom-in-95 w-full max-w-3xl space-y-6 px-2 duration-100 sm:px-8">
         <h2 className="text-center text-3xl font-semibold">
           How can I help you today?
-        </h2>
+        </h2>{" "}
         {/* Category Buttons */}
         <div className="flex flex-row flex-wrap justify-center gap-2.5 text-sm max-sm:justify-evenly">
           {categories.map((category) => {
@@ -81,10 +84,10 @@ export default function WelcomeScreen({ onPromptSelect }: WelcomeScreenProps) {
                 onClick={() => setSelectedCategory(category.id)}
                 className={cn(
                   "focus-visible:ring-ring justify-center text-sm whitespace-nowrap transition-colors focus-visible:ring-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
-                  "flex h-9 items-center gap-1 rounded-xl px-5 py-2 font-semibold backdrop-blur-xl max-sm:size-16 max-sm:flex-col sm:gap-2 sm:rounded-full",
+                  "flex h-9 items-center gap-1 rounded-xl border px-5 py-2 font-semibold backdrop-blur-xl max-sm:size-16 max-sm:flex-col sm:gap-2 sm:rounded-full",
                   isSelected
-                    ? "bg-primary text-primary-foreground hover:bg-primary/90 active:bg-primary/80 shadow"
-                    : "bg-secondary/30 text-secondary-foreground/90 hover:bg-secondary/50 active:bg-secondary/70 border-secondary/20 border",
+                    ? "category-button-selected shadow"
+                    : "bg-secondary/30 text-secondary-foreground/90 hover:bg-secondary/50 active:bg-secondary/70 border-secondary/20",
                 )}
                 data-selected={isSelected}
               >
@@ -92,7 +95,7 @@ export default function WelcomeScreen({ onPromptSelect }: WelcomeScreenProps) {
                 <div>{category.name}</div>
               </button>
             );
-          })}
+          })}{" "}
         </div>{" "}
         {/* Prompt Suggestions */}
         <div className="text-foreground mx-auto flex max-w-2xl flex-col space-y-2">
@@ -100,7 +103,7 @@ export default function WelcomeScreen({ onPromptSelect }: WelcomeScreenProps) {
             <button
               key={index}
               onClick={() => onPromptSelect(prompt)}
-              className="text-secondary-foreground hover:bg-secondary/50 active:bg-secondary/70 border-secondary/20 hover:border-secondary/40 w-full rounded-lg border px-4 py-3 text-left transition-colors"
+              className="text-secondary-foreground hover:bg-secondary/50 active:bg-secondary/70 w-full rounded-lg px-4 py-3 text-center transition-colors"
             >
               <span>{prompt}</span>
             </button>

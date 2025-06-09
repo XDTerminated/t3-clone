@@ -688,17 +688,13 @@ html:not(.dark) .sidebar.scrolling::-webkit-scrollbar-thumb {
 
 /* Custom New Chat button colors */
 .new-chat-button {
-  background-color: rgb(
-    162,
-    59,
-    103
-  ) !important; /* Base color from your example */
+  background-color: #d56698 !important; /* Base color corrected */
   color: white !important;
-  border-color: rgba(162, 59, 103, 0.3) !important;
+  border-color: rgba(213, 102, 152, 0.3) !important;
 }
 
 .new-chat-button:hover {
-  background-color: #d56698 !important; /* Hover color from your example */
+  background-color: rgb(162, 59, 103) !important; /* Hover color corrected */
 }
 
 .new-chat-button:active {
@@ -803,4 +799,32 @@ html:not(.dark) .sidebar.scrolling::-webkit-scrollbar-thumb {
     93,
     0.4
   ) !important; /* dark:active:bg-pink-800/40 equivalent */
+}
+
+/* Custom category button selection colors (matching new-chat-button */
+.category-button-selected {
+  background-color: #d56698 !important; /* Base color */
+  color: white !important;
+  border-color: rgba(213, 102, 152, 0.3) !important;
+}
+
+.category-button-selected:hover {
+  background-color: rgb(162, 59, 103) !important; /* Hover color */
+}
+
+.category-button-selected:active {
+  background-color: rgb(162, 59, 103) !important; /* Active state */
+}
+
+/* Dark mode styles for category button selection */
+.dark .category-button-selected {
+  background-color: rgba(162, 59, 103, 0.2) !important;
+}
+
+.dark .category-button-selected:hover {
+  background-color: rgba(190, 24, 93, 0.7) !important;
+}
+
+.dark .category-button-selected:active {
+  background-color: rgba(190, 24, 93, 0.7) !important;
 }

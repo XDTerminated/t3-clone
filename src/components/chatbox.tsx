@@ -111,11 +111,11 @@ export function Chatbox({ onSend }: { onSend: (message: string) => void }) {
               defaultValue=""
               onInput={onInput}
               onKeyDown={handleKeyDown}
-            />
+            />{" "}
             <div className="flex items-center justify-between">
               <div className="flex items-center">
                 <button
-                  className="text-secondary-foreground hover:bg-secondary/50 active:bg-secondary/70 flex items-center gap-2 rounded-lg bg-transparent px-3 py-2 transition-colors"
+                  className="text-secondary-foreground hover:bg-secondary/50 active:bg-secondary/70 flex items-center gap-2 rounded-lg bg-transparent px-1 py-2 transition-colors"
                   type="button"
                 >
                   <span className="text-sm font-medium">Gemini 2.5 Flash</span>
@@ -124,6 +124,7 @@ export function Chatbox({ onSend }: { onSend: (message: string) => void }) {
               </div>
               {/* Right: send button */}
               <div className="flex items-center gap-2">
+                {" "}
                 <Button
                   type="submit"
                   size="sm"
@@ -133,7 +134,7 @@ export function Chatbox({ onSend }: { onSend: (message: string) => void }) {
                     "flex h-9 w-9 items-center justify-center rounded-lg border p-2",
                     sendDisabled
                       ? "bg-secondary/30 text-secondary-foreground/50 border-secondary/20 hover:bg-secondary/40"
-                      : "bg-primary text-primary-foreground border-primary/20 hover:bg-primary/90 active:bg-primary/80",
+                      : "new-chat-button",
                   )}
                 >
                   <ArrowUp className="h-4 w-4" />
