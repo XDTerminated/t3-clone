@@ -6,7 +6,7 @@ import { cn } from "~/lib/utils";
 import { useSidebar } from "~/components/ui/sidebar";
 import { useRef, useState, useLayoutEffect } from "react";
 
-const INITIAL_TEXTAREA_HEIGHT = 40; // slightly reduced initial textarea height
+const INITIAL_TEXTAREA_HEIGHT = 48; // slightly reduced initial textarea height
 
 export function Chatbox({ onSend }: { onSend: (message: string) => void }) {
   const sidebar = useSidebar();
@@ -77,6 +77,7 @@ export function Chatbox({ onSend }: { onSend: (message: string) => void }) {
   useLayoutEffect(() => {
     resizeTextarea();
   }, []);
+
   return (
     <div
       className={cn(
@@ -90,22 +91,27 @@ export function Chatbox({ onSend }: { onSend: (message: string) => void }) {
       }}
     >
       {" "}
-      {/* Outer thin border wrapper */}
-      <div className="ring-border/30 w-full max-w-3xl rounded-t-2xl px-[1px] pt-[1px] ring-1">
-        {/* Only top + sides */}
-        <div className="border-card from-card/80 to-card ring-border w-full max-w-3xl rounded-t-2xl border-x-8 border-t-8 bg-gradient-to-b p-3 shadow-lg ring-1 backdrop-blur-sm ring-inset">
-          <form className="flex flex-col gap-1" onSubmit={onSubmit}>
+      {/* Outermost ring border wrapper */}
+      <div className="w-full max-w-4xl rounded-t-2xl border border-b-0 border-[#302435] bg-transparent p-[1px] shadow-none">
+        {/* Outer thin border wrapper */}
+        <div className="w-full max-w-4xl rounded-t-2xl bg-[hsla(270,10%,20%,0.4)] p-2 pb-0 shadow-none backdrop-blur-lg">
+          {" "}
+          {/* Form now directly contains the styling previously on an inner div */}
+          <form
+            className="text-secondary-foreground relative flex w-full flex-col items-stretch gap-2 rounded-t-lg border border-b-0 border-white/70 bg-[hsla(270,10%,20%,0.4)] px-3 pt-3 pb-6 outline-8 outline-[hsla(289,23%,23%,0.5)] sm:pb-3 dark:border-[hsla(0,0%,83%,0.04)] dark:bg-[hsla(273.8,15.1%,20.8%,0.045)] dark:outline-[hsla(270,16.13%,12.16%,0.4)]"
+            onSubmit={onSubmit}
+          >
             <textarea
               ref={textareaRef}
               name="input"
               id="chat-input"
               placeholder="Type your message here..."
-              className="text-foreground placeholder:text-muted-foreground max-h-[200px] min-h-[40px] w-full resize-none overflow-y-auto bg-transparent px-1 outline-none"
+              className="text-foreground placeholder:text-muted-foreground max-h-[200px] min-h-[48px] w-full resize-none overflow-y-auto bg-transparent px-1 outline-none"
               aria-label="Message input"
               defaultValue=""
               onInput={onInput}
               onKeyDown={handleKeyDown}
-            />{" "}
+            />
             <div className="flex items-center justify-between">
               <div className="flex items-center">
                 <button

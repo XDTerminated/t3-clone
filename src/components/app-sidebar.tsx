@@ -92,10 +92,11 @@ export function AppSidebar() {
         {" "}
         <SidebarTrigger
           className={cn(
-            "rounded-lg transition-colors",
+            "rounded-lg !bg-transparent transition-colors",
+            "hover:!bg-sidebar-accent hover:!text-sidebar-accent-foreground",
             darkBgState
-              ? "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground bg-transparent"
-              : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+              ? "text-sidebar-foreground bg-transparent"
+              : "text-sidebar-foreground",
           )}
         />{" "}
         <button
@@ -106,9 +107,8 @@ export function AppSidebar() {
             "size-7",
             "flex items-center justify-center",
             "overflow-hidden transition-all duration-100 ease-linear",
-            darkBgState
-              ? "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-              : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+            "hover:!bg-sidebar-accent hover:!text-sidebar-accent-foreground",
+            darkBgState ? "text-sidebar-foreground" : "text-sidebar-foreground",
             shouldShowPlusButton
               ? "ml-2 w-7 opacity-100"
               : "ml-0 w-0 opacity-0",
@@ -125,8 +125,9 @@ export function AppSidebar() {
             </div>
           </h1>{" "}
           <div className="px-1">
+            {" "}
             <button
-              className="focus-visible:ring-ring border-primary/30 bg-primary/20 text-primary-foreground hover:bg-primary/30 active:bg-primary/40 inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-semibold whitespace-nowrap shadow transition-colors select-none focus-visible:ring-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+              className="new-chat-button focus-visible:ring-ring inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-semibold whitespace-nowrap shadow transition-colors select-none focus-visible:ring-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
               onClick={handleInsertClick}
             >
               <span className="w-full text-center select-none">New Chat</span>

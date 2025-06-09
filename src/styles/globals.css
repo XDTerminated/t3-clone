@@ -55,7 +55,7 @@
   --card-foreground: oklch(0.129 0.042 264.695);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.129 0.042 264.695);
-  --primary: oklch(0.208 0.042 265.755);
+  --primary: oklch(0.263 0.108 351.5);
   --primary-foreground: oklch(0.984 0.003 247.858);
   --secondary: oklch(0.968 0.007 247.896);
   --secondary-foreground: oklch(0.208 0.042 265.755);
@@ -100,10 +100,9 @@
     0.25 0.02 283
   ); /* Popover background - kept previous, adjust if needed */
   --popover-foreground: oklch(0.876 0 0); /* Text on popover */
-
   --primary: oklch(
-    0.452 0.131 287.3
-  ); /* "New Chat" button background from image - restored */
+    0.263 0.108 351.5
+  ); /* Red color for "New Chat" button from hex #43132A */
   --primary-foreground: oklch(1 0 0); /* Text on "New Chat" button (white) */
 
   --secondary: oklch(
@@ -322,7 +321,6 @@
   --webkit-scrollbar-track-color: transparent;
 }
 
-/* WebKit scrollbar base styling - Force minimal size and match page background */
 .main-chat-container::-webkit-scrollbar {
   width: var(--scrollbar-size) !important;
   height: var(--scrollbar-size) !important;
@@ -686,4 +684,123 @@ html:not(.dark) .sidebar.scrolling::-webkit-scrollbar-thumb {
   /* Block any system theming */
   forced-color-adjust: none !important;
   color-scheme: none !important;
+}
+
+/* Custom New Chat button colors */
+.new-chat-button {
+  background-color: rgb(
+    162,
+    59,
+    103
+  ) !important; /* Base color from your example */
+  color: white !important;
+  border-color: rgba(162, 59, 103, 0.3) !important;
+}
+
+.new-chat-button:hover {
+  background-color: #d56698 !important; /* Hover color from your example */
+}
+
+.new-chat-button:active {
+  background-color: rgb(
+    162,
+    59,
+    103
+  ) !important; /* Active state same as base */
+}
+
+/* Dark mode styles for new chat button */
+.dark .new-chat-button {
+  background-color: rgba(
+    162,
+    59,
+    103,
+    0.2
+  ) !important; /* dark:bg-primary/20 equivalent */
+}
+
+.dark .new-chat-button:hover {
+  background-color: rgba(
+    190,
+    24,
+    93,
+    0.7
+  ) !important; /* dark:hover:bg-pink-800/70 equivalent */
+}
+
+.dark .new-chat-button:active {
+  background-color: rgba(
+    190,
+    24,
+    93,
+    0.4
+  ) !important; /* dark:active:bg-pink-800/40 equivalent */
+}
+
+/* Custom chatbox styling */
+.chatbox-container {
+  background: var(--card);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.dark .chatbox-container {
+  background: rgba(var(--card), 0.8);
+  border: 1px solid rgba(var(--border), 0.3);
+}
+
+/* Enhanced textarea styling for chatbox */
+#chat-input {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb-dark) transparent;
+  transition: all 0.2s ease;
+}
+
+#chat-input:focus {
+  box-shadow: 0 0 0 3px rgba(var(--ring), 0.1);
+}
+
+#chat-input::-webkit-scrollbar {
+  width: 6px;
+}
+
+#chat-input::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#chat-input::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb-dark);
+  border-radius: 3px;
+  transition: background-color 0.2s ease;
+}
+
+#chat-input::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-thumb-hover-dark);
+}
+
+/* Button hover animations in chatbox */
+.chatbox-button {
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.chatbox-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.chatbox-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.dark .new-chat-button:active {
+  background-color: rgba(
+    190,
+    24,
+    93,
+    0.4
+  ) !important; /* dark:active:bg-pink-800/40 equivalent */
 }
