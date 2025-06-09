@@ -16,6 +16,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@clerk/nextjs": "^6.21.0",
     "@google/genai": "^0.13.0",
     "@lexical/code": "^0.31.1",
     "@lexical/link": "^0.31.1",

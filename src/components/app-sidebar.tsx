@@ -2,7 +2,8 @@
 
 import * as React from "react"; // Import React for useEffect, useState
 import { useRef } from "react";
-import { Plus, Search, LogIn } from "lucide-react";
+import { Plus, Search, LogIn, LogOut, User } from "lucide-react";
+import { useAuth, useClerk, useUser } from "@clerk/nextjs";
 import {
   Sidebar,
   SidebarContent,
@@ -20,6 +21,10 @@ import { useData, type Dataset } from "~/contexts/DataContext";
 
 export function AppSidebar() {
   const { isMobile, open, openMobile } = useSidebar();
+  const { isSignedIn, isLoaded } = useAuth();
+  const { user } = useUser();
+  const { signOut } = useClerk();
+
   // retrieve data context values
   const dataContext = useData();
   const { datasets, selectDataset, addDataset } = dataContext;
@@ -44,6 +49,19 @@ export function AppSidebar() {
       });
     };
     reader.readAsText(file);
+  }; // Handle Google sign-in
+  const handleSignIn = () => {
+    // Navigate directly to Google OAuth
+    window.location.href = "/sign-in/google";
+  };
+
+  // Handle sign-out
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error("Sign-out error:", error);
+    }
   };
 
   const [sidebarFullyClosed, setSidebarFullyClosed] = React.useState(!open); // Initialize based on initial 'open' state
@@ -161,10 +179,41 @@ export function AppSidebar() {
           </SidebarMenu>
         </SidebarContent>{" "}
         <div className="m-0 flex flex-col gap-2 p-2 pt-0">
-          <button className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:bg-sidebar-accent/80 flex w-full items-center gap-4 rounded-lg p-4 transition-colors select-none">
-            <LogIn className="size-4" />
-            <span>Login</span>
-          </button>
+          {isLoaded && isSignedIn ? (
+            // User is signed in - show user info and logout button
+            <div className="flex flex-col gap-2">
+              <div className="bg-sidebar-accent/50 flex items-center gap-3 rounded-lg p-3">
+                <User className="text-sidebar-foreground size-4" />{" "}
+                <div className="flex flex-col">
+                  <span className="text-sidebar-foreground text-sm font-medium">
+                    {user?.fullName ??
+                      user?.emailAddresses?.[0]?.emailAddress ??
+                      "User"}
+                  </span>
+                  <span className="text-sidebar-foreground/70 text-xs">
+                    {user?.emailAddresses?.[0]?.emailAddress}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={handleSignOut}
+                className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:bg-sidebar-accent/80 flex w-full items-center gap-4 rounded-lg p-4 transition-colors select-none"
+              >
+                <LogOut className="size-4" />
+                <span>Sign Out</span>
+              </button>
+            </div>
+          ) : (
+            // User is not signed in - show login button
+            <button
+              onClick={handleSignIn}
+              className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:bg-sidebar-accent/80 flex w-full items-center gap-4 rounded-lg p-4 transition-colors select-none"
+              disabled={!isLoaded}
+            >
+              <LogIn className="size-4" />
+              <span>{isLoaded ? "Login with Google" : "Loading..."}</span>
+            </button>
+          )}
         </div>
       </Sidebar>
     </>
