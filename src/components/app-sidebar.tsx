@@ -2,8 +2,9 @@
 
 import * as React from "react"; // Import React for useEffect, useState
 import { useRef } from "react";
-import { Plus, Search, LogIn, LogOut, User } from "lucide-react";
-import { useAuth, useClerk, useUser } from "@clerk/nextjs";
+import Image from "next/image";
+import { Plus, Search, LogIn, User } from "lucide-react";
+import { useAuth, useUser } from "@clerk/nextjs";
 import {
   Sidebar,
   SidebarContent,
@@ -20,10 +21,8 @@ import { parse } from "papaparse";
 import { useData, type Dataset } from "~/contexts/DataContext";
 
 export function AppSidebar() {
-  const { isMobile, open, openMobile } = useSidebar();
-  const { isSignedIn, isLoaded } = useAuth();
+  const { isMobile, open, openMobile } = useSidebar();  const { isSignedIn, isLoaded } = useAuth();
   const { user } = useUser();
-  const { signOut } = useClerk();
 
   // retrieve data context values
   const dataContext = useData();
@@ -49,22 +48,13 @@ export function AppSidebar() {
       });
     };
     reader.readAsText(file);
-  }; // Handle Google sign-in
+  };  // Handle Google sign-in
   const handleSignIn = () => {
     // Navigate directly to Google OAuth
     window.location.href = "/sign-in/google";
   };
 
-  // Handle sign-out
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-    } catch (error) {
-      console.error("Sign-out error:", error);
-    }
-  };
-
-  const [sidebarFullyClosed, setSidebarFullyClosed] = React.useState(!open); // Initialize based on initial 'open' state
+  const [sidebarFullyClosed, setSidebarFullyClosed] = React.useState(!open);// Initialize based on initial 'open' state
 
   React.useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -177,31 +167,30 @@ export function AppSidebar() {
               </SidebarMenuItem>
             ))}
           </SidebarMenu>
-        </SidebarContent>{" "}
-        <div className="m-0 flex flex-col gap-2 p-2 pt-0">
+        </SidebarContent>{" "}        <div className="m-0 flex flex-col gap-2 p-2 pt-0">
           {isLoaded && isSignedIn ? (
-            // User is signed in - show user info and logout button
-            <div className="flex flex-col gap-2">
-              <div className="bg-sidebar-accent/50 flex items-center gap-3 rounded-lg p-3">
-                <User className="text-sidebar-foreground size-4" />{" "}
-                <div className="flex flex-col">
-                  <span className="text-sidebar-foreground text-sm font-medium">
-                    {user?.fullName ??
-                      user?.emailAddresses?.[0]?.emailAddress ??
-                      "User"}
-                  </span>
-                  <span className="text-sidebar-foreground/70 text-xs">
-                    {user?.emailAddresses?.[0]?.emailAddress}
-                  </span>
-                </div>
+            // User is signed in - show user info with profile picture
+            <div className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground flex w-full items-center gap-4 rounded-lg p-4 transition-colors select-none">              {user?.imageUrl ? (
+                <Image
+                  src={user.imageUrl}
+                  alt="Profile"
+                  width={24}
+                  height={24}
+                  className="rounded-full object-cover"
+                />
+              ) : (
+                <User className="size-6" />
+              )}
+              <div className="flex flex-col min-w-0 flex-1">
+                <span className="text-sm font-medium truncate">
+                  {user?.fullName ??
+                    user?.emailAddresses?.[0]?.emailAddress ??
+                    "User"}
+                </span>
+                <span className="text-xs text-sidebar-foreground/70 truncate">
+                  {user?.emailAddresses?.[0]?.emailAddress}
+                </span>
               </div>
-              <button
-                onClick={handleSignOut}
-                className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:bg-sidebar-accent/80 flex w-full items-center gap-4 rounded-lg p-4 transition-colors select-none"
-              >
-                <LogOut className="size-4" />
-                <span>Sign Out</span>
-              </button>
             </div>
           ) : (
             // User is not signed in - show login button
