@@ -95,20 +95,21 @@ export default function TopRightIconHolder({
             "pointer-events-auto fixed top-2 right-2 z-10 flex items-center p-1",
           )}
         >
+          {" "}
           <button
             className={cn(
-              "flex size-7 items-center justify-center rounded-md transition-colors",
+              "flex size-7 items-center justify-center rounded-lg transition-colors",
               "hover:bg-sidebar-accent/30 focus:ring-sidebar-ring focus:ring-1 focus:outline-none",
               "text-sidebar-foreground/80 hover:text-sidebar-foreground",
             )}
             aria-label="Settings"
           >
             <Settings className="h-4 w-4" />
-          </button>{" "}
+          </button>
           <button
             onClick={toggleTheme}
             className={cn(
-              "ml-2 flex size-7 items-center justify-center rounded-md transition-colors",
+              "ml-2 flex size-7 items-center justify-center rounded-lg transition-colors",
               "hover:bg-sidebar-accent/30 focus:ring-sidebar-ring focus:ring-1 focus:outline-none",
               "text-sidebar-foreground/80 hover:text-sidebar-foreground",
             )}

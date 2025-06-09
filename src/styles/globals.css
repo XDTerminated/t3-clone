@@ -165,7 +165,7 @@
 /* Style custom scrollbar for Chatbox textarea */
 #chat-input {
   scrollbar-width: thin;
-  scrollbar-color: #3a2532 transparent;
+  scrollbar-color: var(--scrollbar-thumb-dark) transparent;
 }
 #chat-input::-webkit-scrollbar {
   width: 6px;
@@ -174,11 +174,11 @@
   background: transparent;
 }
 #chat-input::-webkit-scrollbar-thumb {
-  background-color: #3a2532;
+  background-color: var(--scrollbar-thumb-dark);
   border-radius: 3px;
 }
 #chat-input::-webkit-scrollbar-thumb:hover {
-  background-color: #2b2430;
+  background-color: var(--scrollbar-thumb-hover-dark);
 }
 
 /* Custom scrollbar for data preview modal */
@@ -195,9 +195,8 @@
 .data-scrollbar.scroll-active,
 .data-scrollbar:hover {
   /* Show thumb */
-  --thumb-opacity: 1;
-  /* Firefox themed color */
-  scrollbar-color: #3a2532 transparent;
+  --thumb-opacity: 1; /* Firefox themed color */
+  scrollbar-color: var(--scrollbar-thumb-dark) transparent;
 }
 /* WebKit scrolling */
 .data-scrollbar::-webkit-scrollbar {
@@ -207,7 +206,7 @@
   background: transparent;
 }
 .data-scrollbar::-webkit-scrollbar-thumb {
-  background-color: #3a2532;
+  background-color: var(--scrollbar-thumb-dark);
   border-radius: 3px;
   opacity: var(--thumb-opacity);
   transition: opacity 0.5s ease;

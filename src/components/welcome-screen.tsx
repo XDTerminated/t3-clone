@@ -81,10 +81,10 @@ export default function WelcomeScreen({ onPromptSelect }: WelcomeScreenProps) {
                 onClick={() => setSelectedCategory(category.id)}
                 className={cn(
                   "focus-visible:ring-ring justify-center text-sm whitespace-nowrap transition-colors focus-visible:ring-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
-                  "outline-secondary/70 flex h-9 items-center gap-1 rounded-xl px-5 py-2 font-semibold outline-1 backdrop-blur-xl max-sm:size-16 max-sm:flex-col sm:gap-2 sm:rounded-full",
+                  "flex h-9 items-center gap-1 rounded-xl px-5 py-2 font-semibold backdrop-blur-xl max-sm:size-16 max-sm:flex-col sm:gap-2 sm:rounded-full",
                   isSelected
-                    ? "border-reflect button-reflect text-primary-foreground dark:bg-primary/20 disabled:dark:hover:bg-primary/20 disabled:dark:active:bg-primary/20 bg-[rgb(162,59,103)] shadow hover:bg-[#d56698] active:bg-[rgb(162,59,103)] disabled:hover:bg-[rgb(162,59,103)] disabled:active:bg-[rgb(162,59,103)] dark:hover:bg-pink-800/70 dark:active:bg-pink-800/40"
-                    : "bg-primary text-primary-foreground disabled:hover:bg-primary data-[selected=false]:bg-secondary/30 data-[selected=false]:text-secondary-foreground/90 data-[selected=false]:hover:bg-secondary shadow hover:bg-pink-600/90 data-[selected=false]:outline",
+                    ? "bg-primary text-primary-foreground hover:bg-primary/90 active:bg-primary/80 shadow"
+                    : "bg-secondary/30 text-secondary-foreground/90 hover:bg-secondary/50 active:bg-secondary/70 border-secondary/20 border",
                 )}
                 data-selected={isSelected}
               >
@@ -95,12 +95,12 @@ export default function WelcomeScreen({ onPromptSelect }: WelcomeScreenProps) {
           })}
         </div>{" "}
         {/* Prompt Suggestions */}
-        <div className="text-foreground mx-auto flex max-w-2xl flex-col space-y-1">
+        <div className="text-foreground mx-auto flex max-w-2xl flex-col space-y-2">
           {currentCategory?.prompts.map((prompt, index) => (
             <button
               key={index}
               onClick={() => onPromptSelect(prompt)}
-              className="text-secondary-foreground hover:bg-secondary/50 w-full rounded-md py-3 text-center sm:px-3"
+              className="text-secondary-foreground hover:bg-secondary/50 active:bg-secondary/70 border-secondary/20 hover:border-secondary/40 w-full rounded-lg border px-4 py-3 text-left transition-colors"
             >
               <span>{prompt}</span>
             </button>

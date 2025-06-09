@@ -89,27 +89,27 @@ export function Chatbox({ onSend }: { onSend: (message: string) => void }) {
         transition: isResizing ? "none" : undefined,
       }}
     >
+      {" "}
       {/* Outer thin border wrapper */}
-      <div className="w-full max-w-3xl rounded-t-2xl px-[1px] pt-[1px] ring-1 ring-[#302435]">
+      <div className="ring-border/30 w-full max-w-3xl rounded-t-2xl px-[1px] pt-[1px] ring-1">
         {/* Only top + sides */}
-        <div className="w-full max-w-3xl rounded-t-2xl border-x-8 border-t-8 border-[#26202a] bg-gradient-to-b from-[#2c2532] to-[#2b2430] p-3 ring-1 ring-[#3a2532] ring-inset">
+        <div className="border-card from-card/80 to-card ring-border w-full max-w-3xl rounded-t-2xl border-x-8 border-t-8 bg-gradient-to-b p-3 shadow-lg ring-1 backdrop-blur-sm ring-inset">
           <form className="flex flex-col gap-1" onSubmit={onSubmit}>
             <textarea
               ref={textareaRef}
               name="input"
               id="chat-input"
               placeholder="Type your message here..."
-              className="max-h-[200px] min-h-[40px] w-full resize-none overflow-y-auto bg-transparent px-1 text-white outline-none placeholder:text-slate-400"
+              className="text-foreground placeholder:text-muted-foreground max-h-[200px] min-h-[40px] w-full resize-none overflow-y-auto bg-transparent px-1 outline-none"
               aria-label="Message input"
               defaultValue=""
               onInput={onInput}
-              onKeyDown={handleKeyDown} // This was added in the previous step
-            />
-
-            <div className="flex items-start justify-between">
-              <div className="-ml-2 flex items-center">
+              onKeyDown={handleKeyDown}
+            />{" "}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
                 <button
-                  className="flex translate-y-1 transform items-center gap-2 rounded-md bg-transparent px-3 py-2 text-slate-300 transition-colors hover:bg-[#332d39] hover:text-slate-100"
+                  className="text-secondary-foreground hover:bg-secondary/50 active:bg-secondary/70 flex items-center gap-2 rounded-lg bg-transparent px-3 py-2 transition-colors"
                   type="button"
                 >
                   <span className="text-sm font-medium">Gemini 2.5 Flash</span>
@@ -124,10 +124,10 @@ export function Chatbox({ onSend }: { onSend: (message: string) => void }) {
                   aria-label="Send message"
                   disabled={sendDisabled}
                   className={cn(
-                    "flex h-9 w-9 items-center justify-center rounded-md border border-[#7f2d52] p-2 text-white", // Added border and border-[#7f2d52]
+                    "flex h-9 w-9 items-center justify-center rounded-lg border p-2",
                     sendDisabled
-                      ? "bg-[#3a2134] hover:bg-[#4f2c46]"
-                      : "bg-[#451e35] hover:bg-[#7e1c48]",
+                      ? "bg-secondary/30 text-secondary-foreground/50 border-secondary/20 hover:bg-secondary/40"
+                      : "bg-primary text-primary-foreground border-primary/20 hover:bg-primary/90 active:bg-primary/80",
                   )}
                 >
                   <ArrowUp className="h-4 w-4" />

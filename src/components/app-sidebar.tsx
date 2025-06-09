@@ -89,14 +89,15 @@ export function AppSidebar() {
           darkBgState ? "bg-sidebar" : "",
         )}
       >
+        {" "}
         <SidebarTrigger
           className={cn(
-            "rounded-md",
+            "rounded-lg transition-colors",
             darkBgState
-              ? "bg-transparent text-white hover:bg-neutral-700 hover:text-white"
-              : "text-sidebar-foreground",
+              ? "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground bg-transparent"
+              : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
           )}
-        />
+        />{" "}
         <button
           aria-label="Insert new file"
           onClick={handleInsertClick}
@@ -106,8 +107,8 @@ export function AppSidebar() {
             "flex items-center justify-center",
             "overflow-hidden transition-all duration-100 ease-linear",
             darkBgState
-              ? "text-white hover:bg-neutral-700 hover:text-white"
-              : "text-sidebar-foreground",
+              ? "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
             shouldShowPlusButton
               ? "ml-2 w-7 opacity-100"
               : "ml-0 w-0 opacity-0",
@@ -122,10 +123,10 @@ export function AppSidebar() {
             <div className="text-foreground relative flex h-8 w-24 items-center justify-center text-sm font-semibold">
               <div className="h-3.5 select-none">T3 Clone</div>
             </div>
-          </h1>
+          </h1>{" "}
           <div className="px-1">
             <button
-              className="focus-visible:ring-ring inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-pink-600/30 bg-pink-800/20 p-2 px-4 py-2 text-sm font-semibold whitespace-nowrap text-pink-100 shadow transition-colors select-none hover:bg-pink-700/30 focus-visible:ring-1 focus-visible:outline-none active:bg-pink-800/40 disabled:cursor-not-allowed disabled:opacity-50"
+              className="focus-visible:ring-ring border-primary/30 bg-primary/20 text-primary-foreground hover:bg-primary/30 active:bg-primary/40 inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-semibold whitespace-nowrap shadow transition-colors select-none focus-visible:ring-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
               onClick={handleInsertClick}
             >
               <span className="w-full text-center select-none">New Chat</span>
@@ -143,7 +144,6 @@ export function AppSidebar() {
             </div>
           </div>
         </SidebarHeader>
-
         <SidebarContent className="relative flex min-h-0 flex-1 flex-col gap-2 overflow-auto pb-2">
           <SidebarMenu className="px-2">
             {datasets.map((ds: Dataset, idx: number) => (
@@ -158,10 +158,9 @@ export function AppSidebar() {
               </SidebarMenuItem>
             ))}
           </SidebarMenu>
-        </SidebarContent>
-
+        </SidebarContent>{" "}
         <div className="m-0 flex flex-col gap-2 p-2 pt-0">
-          <button className="text-muted-foreground hover:bg-sidebar-accent flex w-full items-center gap-4 rounded-lg p-4 select-none">
+          <button className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:bg-sidebar-accent/80 flex w-full items-center gap-4 rounded-lg p-4 transition-colors select-none">
             <LogIn className="size-4" />
             <span>Login</span>
           </button>
