@@ -82,7 +82,7 @@ export function Chatbox({ onSend }: { onSend: (message: string) => void }) {
       className={cn(
         "pointer-events-auto fixed inset-x-0 bottom-0 flex justify-center",
         // Add smooth transition for positioning, but disable during resizing for performance
-        !isResizing && "transition-all duration-300 ease-in-out",
+        !isResizing && "transition-all duration-100 ease-linear",
       )}
       style={{
         paddingLeft: isSidebarOpenDesktop ? `${sidebarWidth}px` : "0px",

@@ -41,9 +41,10 @@ export default function TopRightIconHolder({
     >
       {" "}
       <div className="group ease-snappy pointer-events-none absolute top-4 z-10 -mb-8 h-32 w-full origin-top transition-all">
+        {" "}
         <svg
           className={cn(
-            "absolute -right-12 h-9 origin-top-left skew-x-[30deg] overflow-visible transition-all duration-300 ease-in-out",
+            "absolute -right-12 h-9 origin-top-left skew-x-[30deg] overflow-visible transition-all duration-100 ease-linear",
             isCollapsed
               ? "translate-y-[-100%] opacity-0"
               : "translate-y-0 opacity-100",
@@ -80,10 +81,10 @@ export default function TopRightIconHolder({
           />{" "}
         </svg>{" "}
         {/* Icons positioned within the SVG decorative area */}
-        {/* Rectangle background matching sidebar toggle container */}
+        {/* Rectangle background matching sidebar toggle container */}{" "}
         <div
           className={cn(
-            "fixed top-2 right-2 z-0 rounded-md p-1 transition-opacity duration-300 ease-in-out",
+            "fixed top-2 right-2 z-0 rounded-md p-1 transition-opacity duration-100 ease-linear",
             "bg-sidebar",
             isCollapsed ? "opacity-100" : "opacity-0",
           )}

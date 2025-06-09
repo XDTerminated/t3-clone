@@ -65,7 +65,7 @@ export default function WelcomeScreen({ onPromptSelect }: WelcomeScreenProps) {
   const currentCategory = categories.find((cat) => cat.id === selectedCategory);
   return (
     <div className="flex h-full items-start justify-center pt-24">
-      <div className="animate-in fade-in-50 zoom-in-95 w-full max-w-3xl space-y-6 px-2 duration-300 sm:px-8">
+      <div className="animate-in fade-in-50 zoom-in-95 w-full max-w-3xl space-y-6 px-2 duration-100 sm:px-8">
         <h2 className="text-center text-3xl font-semibold">
           How can I help you today?
         </h2>

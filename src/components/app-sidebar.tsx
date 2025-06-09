@@ -104,7 +104,7 @@ export function AppSidebar() {
             buttonVariants({ variant: "ghost" }),
             "size-7",
             "flex items-center justify-center",
-            "overflow-hidden transition-all duration-300 ease-in-out",
+            "overflow-hidden transition-all duration-100 ease-linear",
             darkBgState
               ? "text-white hover:bg-neutral-700 hover:text-white"
               : "text-sidebar-foreground",
@@ -118,7 +118,7 @@ export function AppSidebar() {
       </div>{" "}
       <Sidebar className="text-sidebar-foreground flex h-screen flex-col bg-gradient-to-tl from-neutral-900 via-neutral-800 to-neutral-700">
         <SidebarHeader className="relative m-2 mb-0 flex flex-col gap-2 space-y-2 p-0">
-          <h1 className="text-muted-foreground flex h-8 shrink-0 items-center justify-center text-lg transition-opacity delay-75 duration-75">
+          <h1 className="text-muted-foreground flex h-8 shrink-0 items-center justify-center text-lg transition-opacity delay-75 duration-100">
             <div className="text-foreground relative flex h-8 w-24 items-center justify-center text-sm font-semibold">
               <div className="h-3.5 select-none">T3 Clone</div>
             </div>

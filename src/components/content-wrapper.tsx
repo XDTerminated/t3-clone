@@ -33,12 +33,12 @@ export default function ContentWrapper({
           ref={mainRef}
           className={cn(
             "main-chat-container flex-grow overflow-y-scroll bg-[radial-gradient(ellipse_at_center,var(--background)_20%,oklch(0.235_0.017_290)_100%)]",
-            "border-t border-l transition-colors duration-300 ease-in-out",
+            "border-t border-l transition-colors duration-100 ease-linear",
             open
               ? "border-sidebar-border rounded-tl-2xl"
               : "border-transparent",
             // Add smooth transition for layout changes, but disable during resizing for performance
-            !isResizing && "transition-all duration-300 ease-in-out",
+            !isResizing && "transition-all duration-100 ease-linear",
           )}
         >
           {children}
