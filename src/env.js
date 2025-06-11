@@ -7,6 +7,7 @@ export const env = createEnv({
    * isn't built with invalid env vars.
    */ server: {
     NODE_ENV: z.enum(["development", "test", "production"]),
+    DATABASE_URL: z.string(),
     GEMINI_API_KEY: z.string(),
     CLERK_SECRET_KEY: z.string(),
   },
@@ -18,12 +19,12 @@ export const env = createEnv({
   client: {
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string(),
   },
-
   /**
    * You can't destruct `process.env` as a regular object in the Next.js edge runtimes (e.g.
    * middlewares) or client-side so we need to destruct manually.
    */ runtimeEnv: {
     NODE_ENV: process.env.NODE_ENV,
+    DATABASE_URL: process.env.DATABASE_URL,
     GEMINI_API_KEY: process.env.GEMINI_API_KEY,
     CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY,
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:

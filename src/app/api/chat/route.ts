@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
+import { auth } from "@clerk/nextjs/server";
 
 type ChatRequest = {
   message?: string;
+  chatId?: string;
   history?: Array<{ sender: string; text: string }>;
 };
 
@@ -11,12 +13,23 @@ const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
 export async function POST(request: Request) {
   let promptContents: string[];
+
   try {
+    const { userId } = await auth();
+
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = (await request.json()) as ChatRequest;
 
+    // For now, let's keep the original logic and ignore chatId
     if (Array.isArray(body.history)) {
       promptContents = body.history
-        .filter((msg) => typeof msg.text === "string")
+        .filter(
+          (msg): msg is { sender: string; text: string } =>
+            typeof msg.text === "string",
+        )
         .map((msg) => `${msg.sender}: ${msg.text.trim()}`);
       if (promptContents.length === 0) {
         return NextResponse.json({ reply: "" });
@@ -26,7 +39,7 @@ export async function POST(request: Request) {
       if (!msg) {
         return NextResponse.json({ reply: "" });
       }
-      promptContents = [msg];
+      promptContents = [`User: ${msg}`];
     } else {
       return NextResponse.json(
         { error: "Invalid request body" },
@@ -50,7 +63,7 @@ export async function POST(request: Request) {
     const fullContents = [systemInstruction, ...promptContents];
 
     const streamIterator = await ai.models.generateContentStream({
-      model: "gemini-2.5-flash-preview-05-20",
+      model: "gemini-2.0-flash-exp",
       contents: fullContents,
       config: {
         tools: [{ codeExecution: {} }],

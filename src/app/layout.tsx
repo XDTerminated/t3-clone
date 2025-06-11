@@ -7,6 +7,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { SidebarProvider } from "~/components/ui/sidebar";
 import ContentWrapper from "~/components/content-wrapper";
 import { DataProvider } from "~/contexts/DataContext";
+import { ChatProvider } from "~/contexts/ChatContext";
 
 export const metadata: Metadata = {
   title: "T3 Chat",
@@ -26,9 +27,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <body
           className={`${montserrat.variable} text-foreground min-h-screen bg-[radial-gradient(ellipse_at_center,var(--background)_20%,oklch(0.235_0.017_290)_100%)]`}
         >
+          {" "}
           <SidebarProvider>
             <DataProvider>
-              <ContentWrapper>{children}</ContentWrapper>
+              <ChatProvider>
+                <ContentWrapper>{children}</ContentWrapper>
+              </ChatProvider>
             </DataProvider>
           </SidebarProvider>
         </body>
