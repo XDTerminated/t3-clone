@@ -388,6 +388,7 @@ export function AppSidebar() {
                       </div>{" "}
                       <div className="w-full text-sm">
                         <ul className="flex w-full min-w-0 flex-col gap-1">
+                          {" "}
                           {today.map((chat) => (
                             <ChatItem
                               key={chat.id}
@@ -396,6 +397,7 @@ export function AppSidebar() {
                               onPin={handlePinChat}
                               onRename={handleRenameChat}
                               onDelete={handleDeleteChat}
+                              isActive={currentChatId === chat.id}
                             />
                           ))}
                         </ul>
@@ -411,6 +413,7 @@ export function AppSidebar() {
                       </div>{" "}
                       <div className="w-full text-sm">
                         <ul className="flex w-full min-w-0 flex-col gap-1">
+                          {" "}
                           {yesterday.map((chat) => (
                             <ChatItem
                               key={chat.id}
@@ -419,6 +422,7 @@ export function AppSidebar() {
                               onPin={handlePinChat}
                               onRename={handleRenameChat}
                               onDelete={handleDeleteChat}
+                              isActive={currentChatId === chat.id}
                             />
                           ))}
                         </ul>
@@ -434,6 +438,7 @@ export function AppSidebar() {
                       </div>{" "}
                       <div className="w-full text-sm">
                         <ul className="flex w-full min-w-0 flex-col gap-1">
+                          {" "}
                           {last30Days.map((chat) => (
                             <ChatItem
                               key={chat.id}
@@ -442,6 +447,7 @@ export function AppSidebar() {
                               onPin={handlePinChat}
                               onRename={handleRenameChat}
                               onDelete={handleDeleteChat}
+                              isActive={currentChatId === chat.id}
                             />
                           ))}
                         </ul>
@@ -457,6 +463,7 @@ export function AppSidebar() {
                       </div>{" "}
                       <div className="w-full text-sm">
                         <ul className="flex w-full min-w-0 flex-col gap-1">
+                          {" "}
                           {older.map((chat) => (
                             <ChatItem
                               key={chat.id}
@@ -465,6 +472,7 @@ export function AppSidebar() {
                               onPin={handlePinChat}
                               onRename={handleRenameChat}
                               onDelete={handleDeleteChat}
+                              isActive={currentChatId === chat.id}
                             />
                           ))}
                         </ul>
