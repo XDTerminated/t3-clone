@@ -107,6 +107,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     return null;
   };
   const selectChat = async (chatId: string) => {
+    // Don't do anything if we're already on this chat
+    if (currentChatId === chatId) {
+      return;
+    }
+
     setIsLoadingChat(true);
     setCurrentChatId(chatId);
     setMessages([]); // Clear messages immediately for smooth transition

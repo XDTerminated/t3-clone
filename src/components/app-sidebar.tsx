@@ -72,12 +72,14 @@ const ChatItem = ({
   onPin,
   onRename,
   onDelete,
+  isActive = false,
 }: {
   chat: { id: string; title: string | null; pinned?: boolean };
   onSelect: (id: string) => void;
   onPin: (id: string) => void;
   onRename: (id: string, newTitle: string) => void;
   onDelete: (id: string, title: string | null) => void;
+  isActive?: boolean;
 }) => {
   const [isEditing, setIsEditing] = React.useState(false);
   const [editTitle, setEditTitle] = React.useState(chat.title ?? "New Chat");
@@ -114,7 +116,12 @@ const ChatItem = ({
   };
   return (
     <li className="group/menu-item relative">
-      <div className="group/link hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:text-sidebar-accent-foreground focus-visible:ring-sidebar-ring hover:focus-visible:bg-sidebar-accent relative flex h-9 w-full items-center overflow-hidden rounded-lg px-2 py-1 text-sm outline-none focus-visible:ring-2">
+      <div
+        className={cn(
+          "group/link hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:text-sidebar-accent-foreground focus-visible:ring-sidebar-ring hover:focus-visible:bg-sidebar-accent relative flex h-9 w-full items-center overflow-hidden rounded-lg px-2 py-1 text-sm outline-none focus-visible:ring-2",
+          isActive && "bg-sidebar-accent text-sidebar-accent-foreground",
+        )}
+      >
         {" "}
         <div className="relative flex w-full items-center">
           <button
@@ -199,8 +206,15 @@ export function AppSidebar() {
   const { isMobile, open, openMobile } = useSidebar();
   const { isSignedIn, isLoaded } = useAuth();
   const { user } = useUser();
-  const { chats, startNewChat, selectChat, deleteChat, renameChat, pinChat } =
-    useChat();
+  const {
+    chats,
+    currentChatId,
+    startNewChat,
+    selectChat,
+    deleteChat,
+    renameChat,
+    pinChat,
+  } = useChat();
 
   // Delete dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
@@ -349,6 +363,7 @@ export function AppSidebar() {
                       </div>{" "}
                       <div className="w-full text-sm">
                         <ul className="flex w-full min-w-0 flex-col gap-1">
+                          {" "}
                           {pinned.map((chat) => (
                             <ChatItem
                               key={chat.id}
@@ -357,6 +372,7 @@ export function AppSidebar() {
                               onPin={handlePinChat}
                               onRename={handleRenameChat}
                               onDelete={handleDeleteChat}
+                              isActive={currentChatId === chat.id}
                             />
                           ))}
                         </ul>
