@@ -14,6 +14,7 @@ import {
 import { cn } from "~/lib/utils";
 import { buttonVariants } from "~/components/ui/button";
 import { useChat } from "~/contexts/ChatContext";
+import { DeleteChatDialog } from "~/components/delete-chat-dialog";
 
 // Helper function to group chats by time period
 const groupChatsByDate = (
@@ -22,18 +23,29 @@ const groupChatsByDate = (
     title: string | null;
     createdAt: Date;
     updatedAt: Date;
+    pinned?: boolean;
   }>,
 ) => {
   const now = new Date();
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-  const recent = chats.filter(
+  // Separate pinned and unpinned chats
+  const pinnedChats = chats.filter((chat) => chat.pinned);
+  const unpinnedChats = chats.filter((chat) => !chat.pinned);
+
+  // Group unpinned chats by date
+  const recentUnpinned = unpinnedChats.filter(
     (chat) => new Date(chat.updatedAt) > thirtyDaysAgo,
   );
-  const older = chats.filter(
+  const olderUnpinned = unpinnedChats.filter(
     (chat) => new Date(chat.updatedAt) <= thirtyDaysAgo,
   );
-  return { recent, older };
+
+  return {
+    pinned: pinnedChats,
+    recent: recentUnpinned,
+    older: olderUnpinned,
+  };
 };
 
 // Chat item component with hover actions
@@ -44,65 +56,117 @@ const ChatItem = ({
   onRename,
   onDelete,
 }: {
-  chat: { id: string; title: string | null };
+  chat: { id: string; title: string | null; pinned?: boolean };
   onSelect: (id: string) => void;
   onPin: (id: string) => void;
-  onRename: (id: string) => void;
-  onDelete: (id: string) => void;
+  onRename: (id: string, newTitle: string) => void;
+  onDelete: (id: string, title: string | null) => void;
 }) => {
+  const [isEditing, setIsEditing] = React.useState(false);
+  const [editTitle, setEditTitle] = React.useState(chat.title ?? "New Chat");
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
+
+  const handleSave = () => {
+    const newTitle = editTitle.trim();
+    if (newTitle && newTitle !== (chat.title ?? "New Chat")) {
+      onRename(chat.id, newTitle);
+    }
+    setIsEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleSave();
+    } else if (e.key === "Escape") {
+      setEditTitle(chat.title ?? "New Chat");
+      setIsEditing(false);
+    }
+  };
+
+  const handleStartEdit = () => {
+    setEditTitle(chat.title ?? "New Chat");
+    setIsEditing(true);
+  };
   return (
     <li className="group/menu-item relative">
       <div className="group/link hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:text-sidebar-accent-foreground focus-visible:ring-sidebar-ring hover:focus-visible:bg-sidebar-accent relative flex h-9 w-full items-center overflow-hidden rounded-lg px-2 py-1 text-sm outline-none focus-visible:ring-2">
+        {" "}
         <div className="relative flex w-full items-center">
           <button
             className="w-full text-left"
-            onClick={() => onSelect(chat.id)}
+            onClick={() => !isEditing && onSelect(chat.id)}
+            disabled={isEditing}
           >
             <div className="relative w-full">
-              <input
-                aria-label="Thread title"
-                aria-readonly="true"
-                readOnly
-                tabIndex={-1}
-                className="hover:truncate-none text-muted-foreground pointer-events-none h-full w-full cursor-pointer truncate overflow-hidden rounded bg-transparent px-1 py-1 text-sm outline-none"
-                title={chat.title ?? "New Chat"}
-                type="text"
-                value={chat.title ?? "New Chat"}
-              />
+              {isEditing ? (
+                <input
+                  ref={inputRef}
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  onBlur={handleSave}
+                  onKeyDown={handleKeyDown}
+                  className="text-sidebar-foreground w-full border-none bg-transparent px-1 py-1 text-sm outline-none focus:outline-none"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              ) : (
+                <input
+                  aria-label="Thread title"
+                  aria-readonly="true"
+                  readOnly
+                  tabIndex={-1}
+                  className="hover:truncate-none text-muted-foreground pointer-events-none h-full w-full cursor-pointer truncate overflow-hidden rounded bg-transparent px-1 py-1 text-sm outline-none"
+                  title={chat.title ?? "New Chat"}
+                  type="text"
+                  value={chat.title ?? "New Chat"}
+                />
+              )}
             </div>
           </button>
           {/* Hover actions */}
           <div className="text-muted-foreground group-hover/link:bg-sidebar-accent pointer-events-auto absolute top-0 -right-1 bottom-0 z-50 flex translate-x-full items-center justify-end transition-transform group-hover/link:translate-x-0">
-            <div className="from-sidebar-accent pointer-events-none absolute top-0 right-[100%] bottom-0 h-12 w-8 bg-gradient-to-l to-transparent opacity-0 group-hover/link:opacity-100"></div>
+            <div className="from-sidebar-accent pointer-events-none absolute top-0 right-[100%] bottom-0 h-12 w-8 bg-gradient-to-l to-transparent opacity-0 group-hover/link:opacity-100"></div>{" "}
             <button
-              className="sidebar-action-btn sidebar-pin-btn hover:bg-muted/40 rounded-md p-1.5"
+              className={cn(
+                "sidebar-action-btn sidebar-pin-btn rounded-md p-1.5",
+                chat.pinned
+                  ? "text-primary hover:bg-primary/20"
+                  : "hover:bg-muted/40",
+              )}
               tabIndex={-1}
-              aria-label="Pin thread"
+              aria-label={chat.pinned ? "Unpin thread" : "Pin thread"}
               onClick={(e) => {
                 e.stopPropagation();
                 onPin(chat.id);
               }}
             >
-              <Pin className="size-4" />
-            </button>
+              <Pin className={cn("size-4", chat.pinned && "fill-current")} />
+            </button>{" "}
             <button
               className="sidebar-action-btn hover:bg-muted/40 rounded-md p-1.5"
               tabIndex={-1}
               aria-label="Rename thread"
               onClick={(e) => {
                 e.stopPropagation();
-                onRename(chat.id);
+                handleStartEdit();
               }}
             >
               <Edit2 className="size-4" />
-            </button>
+            </button>{" "}
             <button
               className="sidebar-action-btn sidebar-delete-btn hover:bg-destructive/50 hover:text-destructive-foreground rounded-md p-1.5"
               tabIndex={-1}
               aria-label="Delete thread"
               onClick={(e) => {
                 e.stopPropagation();
-                onDelete(chat.id);
+                onDelete(chat.id, chat.title);
               }}
             >
               <X className="size-4" />
@@ -118,26 +182,42 @@ export function AppSidebar() {
   const { isMobile, open, openMobile } = useSidebar();
   const { isSignedIn, isLoaded } = useAuth();
   const { user } = useUser();
-  const { chats, startNewChat, selectChat } = useChat();
+  const { chats, startNewChat, selectChat, deleteChat, renameChat, pinChat } =
+    useChat();
+
+  // Delete dialog state
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [chatToDelete, setChatToDelete] = React.useState<{
+    id: string;
+    title: string | null;
+  } | null>(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
 
   const handleNewChat = () => {
     startNewChat();
   };
-
   // Chat manipulation handlers
-  const handlePinChat = (chatId: string) => {
-    // TODO: Implement pin functionality
-    console.log("Pin chat:", chatId);
+  const handlePinChat = async (chatId: string) => {
+    await pinChat(chatId);
+  };
+  const handleRenameChat = (chatId: string, newTitle: string) => {
+    void renameChat(chatId, newTitle);
+  };
+  const handleDeleteChat = (chatId: string, chatTitle: string | null) => {
+    setChatToDelete({ id: chatId, title: chatTitle });
+    setDeleteDialogOpen(true);
   };
 
-  const handleRenameChat = (chatId: string) => {
-    // TODO: Implement rename functionality
-    console.log("Rename chat:", chatId);
-  };
+  const confirmDelete = async () => {
+    if (!chatToDelete) return;
 
-  const handleDeleteChat = (chatId: string) => {
-    // TODO: Implement delete functionality
-    console.log("Delete chat:", chatId);
+    setIsDeleting(true);
+    try {
+      await deleteChat(chatToDelete.id);
+    } finally {
+      setIsDeleting(false);
+      setChatToDelete(null);
+    }
   };
 
   // Handle Google sign-in
@@ -236,11 +316,36 @@ export function AppSidebar() {
           </div>
         </SidebarHeader>{" "}
         <SidebarContent className="relative flex min-h-0 flex-1 flex-col gap-0 overflow-auto pb-2">
+          {" "}
           {isSignedIn && chats.length > 0 ? (
             (() => {
-              const { recent, older } = groupChatsByDate(chats);
+              const { pinned, recent, older } = groupChatsByDate(chats);
               return (
                 <div className="w-full">
+                  {/* Pinned chats */}
+                  {pinned.length > 0 && (
+                    <div className="relative flex w-full min-w-0 flex-col p-2">
+                      <div className="ring-sidebar-ring ease-snappy text-muted-foreground flex h-8 shrink-0 items-center rounded-md px-1.5 text-xs font-medium transition-[margin,opacity] duration-200 outline-none select-none focus-visible:ring-2">
+                        <Pin className="mr-1.5 size-3" />
+                        <span>Pinned</span>
+                      </div>{" "}
+                      <div className="w-full text-sm">
+                        <ul className="flex w-full min-w-0 flex-col gap-1">
+                          {pinned.map((chat) => (
+                            <ChatItem
+                              key={chat.id}
+                              chat={chat}
+                              onSelect={selectChat}
+                              onPin={handlePinChat}
+                              onRename={handleRenameChat}
+                              onDelete={handleDeleteChat}
+                            />
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Recent chats (Last 30 Days) */}
                   {recent.length > 0 && (
                     <div className="relative flex w-full min-w-0 flex-col p-2">
@@ -332,9 +437,18 @@ export function AppSidebar() {
               <LogIn className="size-4" />
               <span>{isLoaded ? "Login with Google" : "Loading..."}</span>
             </button>
-          )}
+          )}{" "}
         </div>
       </Sidebar>
+
+      {/* Delete confirmation dialog */}
+      <DeleteChatDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        chatTitle={chatToDelete?.title ?? null}
+        onConfirm={confirmDelete}
+        isDeleting={isDeleting}
+      />
     </>
   );
 }

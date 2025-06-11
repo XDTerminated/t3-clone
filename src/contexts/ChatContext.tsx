@@ -16,6 +16,7 @@ interface Chat {
   userId: string;
   createdAt: Date;
   updatedAt: Date;
+  pinned?: boolean;
 }
 
 interface ChatContextType {
@@ -30,6 +31,9 @@ interface ChatContextType {
   selectChat: (chatId: string) => Promise<void>;
   sendMessage: (message: string) => Promise<void>;
   fetchChats: () => Promise<void>;
+  deleteChat: (chatId: string) => Promise<void>;
+  renameChat: (chatId: string, newTitle: string) => Promise<void>;
+  pinChat: (chatId: string) => Promise<void>;
 }
 
 // API Response Types
@@ -306,6 +310,81 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const deleteChat = async (chatId: string) => {
+    try {
+      const response = await fetch(`/api/chats/${chatId}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        // Remove chat from local state
+        setChats((prev) => prev.filter((chat) => chat.id !== chatId));
+
+        // If the deleted chat was the current one, clear the current chat
+        if (currentChatId === chatId) {
+          setCurrentChatId(null);
+          setMessages([]);
+          setIsPendingNewChat(false);
+        }
+      } else {
+        console.error("Failed to delete chat:", response.status);
+      }
+    } catch (error) {
+      console.error("Error deleting chat:", error);
+    }
+  };
+
+  const renameChat = async (chatId: string, newTitle: string) => {
+    try {
+      const response = await fetch(`/api/chats/${chatId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: newTitle }),
+      });
+
+      if (response.ok) {
+        // Update chat title in local state
+        setChats((prev) =>
+          prev.map((chat) =>
+            chat.id === chatId ? { ...chat, title: newTitle } : chat,
+          ),
+        );
+      } else {
+        console.error("Failed to rename chat:", response.status);
+      }
+    } catch (error) {
+      console.error("Error renaming chat:", error);
+    }
+  };
+
+  const pinChat = async (chatId: string) => {
+    try {
+      const chat = chats.find((c) => c.id === chatId);
+      if (!chat) return;
+
+      const newPinnedState = !chat.pinned;
+
+      const response = await fetch(`/api/chats/${chatId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pinned: newPinnedState }),
+      });
+
+      if (response.ok) {
+        // Update pinned status in local state
+        setChats((prev) =>
+          prev.map((chat) =>
+            chat.id === chatId ? { ...chat, pinned: newPinnedState } : chat,
+          ),
+        );
+      } else {
+        console.error("Failed to pin/unpin chat:", response.status);
+      }
+    } catch (error) {
+      console.error("Error pinning/unpinning chat:", error);
+    }
+  };
+
   // Fetch chats when user signs in
   useEffect(() => {
     if (isSignedIn) {
@@ -327,6 +406,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         selectChat,
         sendMessage,
         fetchChats,
+        deleteChat,
+        renameChat,
+        pinChat,
       }}
     >
       {children}
