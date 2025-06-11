@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 import { auth } from "@clerk/nextjs/server";
+import { prisma } from "~/lib/prisma";
 
 type ChatRequest = {
   message?: string;
@@ -20,11 +21,66 @@ export async function POST(request: Request) {
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    const body = (await request.json()) as ChatRequest; // If chatId is provided, load the conversation history from database
+    if (body.chatId && typeof body.chatId === "string") {
+      try {
+        // Verify the chat belongs to the user
+        const chat = await prisma.chat.findFirst({
+          where: { id: body.chatId, userId },
+        });
 
-    const body = (await request.json()) as ChatRequest;
+        if (!chat) {
+          return NextResponse.json(
+            { error: "Chat not found" },
+            { status: 404 },
+          );
+        }
 
+        // Get messages for the chat
+        const messages = await prisma.message.findMany({
+          where: { chatId: body.chatId },
+          orderBy: { createdAt: "asc" },
+        });
+
+        // Convert database messages to conversation format
+        const dbHistory = messages.map((msg) => ({
+          sender: msg.role === "user" ? "User" : "AI",
+          text: msg.content,
+        }));
+
+        // If history is provided in body, use it (includes the new message)
+        // Otherwise use database history
+        const conversationHistory = body.history ?? dbHistory;
+
+        promptContents = conversationHistory
+          .filter(
+            (msg): msg is { sender: string; text: string } =>
+              typeof msg.text === "string",
+          )
+          .map((msg) => `${msg.sender}: ${msg.text.trim()}`);
+
+        if (promptContents.length === 0) {
+          return NextResponse.json({ reply: "" });
+        }
+      } catch (dbError) {
+        console.error("Database error:", dbError);
+        // Fall back to message-only if database fails
+        if (body.message && typeof body.message === "string") {
+          const msg = body.message.trim();
+          if (!msg) {
+            return NextResponse.json({ reply: "" });
+          }
+          promptContents = [`User: ${msg}`];
+        } else {
+          return NextResponse.json(
+            { error: "Database error and no fallback message" },
+            { status: 500 },
+          );
+        }
+      }
+    }
     // For now, let's keep the original logic and ignore chatId
-    if (Array.isArray(body.history)) {
+    else if (Array.isArray(body.history)) {
       promptContents = body.history
         .filter(
           (msg): msg is { sender: string; text: string } =>

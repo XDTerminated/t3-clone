@@ -226,14 +226,18 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     // Generate title if this is the first message (new chat or empty messages)
     if (isNewChat || messages.length === 0) {
       void generateTitle(chatId, message);
-    }
-
-    // Get AI response
+    } // Get AI response
     try {
+      // Build the conversation history including the new user message
+      const conversationHistory = [...messages, newUserMsg];
+
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message, chatId }),
+        body: JSON.stringify({
+          chatId,
+          history: conversationHistory,
+        }),
       });
 
       if (!response.ok) {

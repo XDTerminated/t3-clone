@@ -83,11 +83,9 @@ export default function WelcomeScreen({ onPromptSelect }: WelcomeScreenProps) {
                 key={category.id}
                 onClick={() => setSelectedCategory(category.id)}
                 className={cn(
-                  "focus-visible:ring-ring justify-center text-sm whitespace-nowrap transition-colors focus-visible:ring-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
-                  "flex h-9 items-center gap-1 rounded-xl border px-5 py-2 font-semibold backdrop-blur-xl max-sm:size-16 max-sm:flex-col sm:gap-2 sm:rounded-full",
-                  isSelected
-                    ? "category-button-selected shadow"
-                    : "bg-secondary/30 text-secondary-foreground/90 hover:bg-secondary/50 active:bg-secondary/70 border-secondary/20",
+                  "new-chat-button focus-visible:ring-ring inline-flex h-9 items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-semibold whitespace-nowrap shadow transition-colors select-none focus-visible:ring-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
+                  "flex items-center gap-1 rounded-xl px-5 py-2 font-semibold backdrop-blur-xl max-sm:size-16 max-sm:flex-col sm:gap-2 sm:rounded-full",
+                  isSelected ? "opacity-100" : "opacity-70 hover:opacity-90",
                 )}
                 data-selected={isSelected}
               >
