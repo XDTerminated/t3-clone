@@ -72,6 +72,15 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
   }, [isSignedIn]);
   const startNewChat = () => {
+    // Don't do anything if we're already in a pending new chat state
+    // OR if we're already on the welcome screen (no current chat and no messages)
+    if (
+      (isPendingNewChat && !currentChatId) ||
+      (!currentChatId && messages.length === 0)
+    ) {
+      return;
+    }
+
     // Start a new chat session without creating it in the database
     setIsLoadingChat(true);
     setCurrentChatId(null);
