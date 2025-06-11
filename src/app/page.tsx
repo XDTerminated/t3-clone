@@ -32,7 +32,7 @@ export default function Page() {
       ) : shouldShowWelcome ? (
         <WelcomeScreen onPromptSelect={sendMessage} />
       ) : (
-        <div className="animate-in fade-in-50 flex-1 duration-300">
+        <div className="animate-in fade-in-50 zoom-in-95 flex-1 duration-100">
           <MessageList messages={messages} />
         </div>
       )}
