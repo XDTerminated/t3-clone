@@ -538,61 +538,84 @@
   background-color: var(--color-sidebar);
   color: var(--color-sidebar-foreground);
 
-  /* Match the scrollbar track to the sidebar background */
-  scrollbar-color: var(--color-sidebar) transparent;
+  /* HIDE SCROLLBAR COMPLETELY */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
 }
 
 .sidebar::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  display: none; /* WebKit browsers (Chrome, Safari, Edge) */
+  width: 0 !important;
+  height: 0 !important;
 }
 
 .sidebar::-webkit-scrollbar-track {
-  background: var(--color-sidebar);
+  display: none !important;
 }
 
 .sidebar::-webkit-scrollbar-thumb {
-  background: var(--scrollbar-thumb-light);
-  border-radius: 4px;
+  display: none !important;
 }
 
 .sidebar::-webkit-scrollbar-thumb:hover {
-  background: var(--scrollbar-thumb-hover-light);
+  display: none !important;
 }
 
-/* Dark mode sidebar styles */
+/* Also hide scrollbar for sidebar content specifically */
+[data-sidebar="content"] {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
+
+[data-sidebar="content"]::-webkit-scrollbar {
+  display: none; /* WebKit browsers (Chrome, Safari, Edge) */
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Dark mode sidebar styles - also hide scrollbar */
 .dark .sidebar {
   background-color: var(--color-sidebar);
   color: var(--color-sidebar-foreground);
 
-  scrollbar-color: var(--color-sidebar) transparent;
+  /* HIDE SCROLLBAR COMPLETELY */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
+
+.dark .sidebar::-webkit-scrollbar {
+  display: none !important;
 }
 
 .dark .sidebar::-webkit-scrollbar-thumb {
-  background: var(--scrollbar-thumb-dark);
+  display: none !important;
 }
 
 .dark .sidebar::-webkit-scrollbar-thumb:hover {
-  background: var(--scrollbar-thumb-hover-dark);
+  display: none !important;
 }
 
-/* Specific styles for sidebar header */
+/* Specific styles for sidebar header - also hide scrollbar */
 .sidebar-header {
   /* Ensure consistent background and text color */
   background-color: var(--color-sidebar-primary);
   color: var(--color-sidebar-primary-foreground);
 
-  /* Match scrollbar thumb to primary color */
-  scrollbar-color: var(--color-sidebar-primary) transparent;
+  /* HIDE SCROLLBAR COMPLETELY */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
+
+.sidebar-header::-webkit-scrollbar {
+  display: none !important;
 }
 
 .sidebar-header::-webkit-scrollbar-thumb {
-  background: var(--color-sidebar-primary);
-  border-radius: 4px;
+  display: none !important;
 }
 
 .sidebar-header::-webkit-scrollbar-thumb:hover {
-  background: var(--color-sidebar-primary-hover);
+  display: none !important;
 }
 
 /* Ensure active link color is distinct */
