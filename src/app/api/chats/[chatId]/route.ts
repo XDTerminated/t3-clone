@@ -9,7 +9,7 @@ interface UpdateChatBody {
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { chatId: string } },
+  { params }: { params: Promise<{ chatId: string }> },
 ) {
   try {
     const { userId } = await auth();
@@ -18,7 +18,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { chatId } = params;
+    const { chatId } = await params;
 
     // Verify the chat belongs to the user and delete it
     const deletedChat = await prisma.chat.deleteMany({
@@ -44,7 +44,7 @@ export async function DELETE(
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { chatId: string } },
+  { params }: { params: Promise<{ chatId: string }> },
 ) {
   try {
     const { userId } = await auth();
@@ -52,7 +52,7 @@ export async function PATCH(
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const { chatId } = params;
+    const { chatId } = await params;
     const body = (await request.json()) as UpdateChatBody;
 
     // Verify the chat belongs to the user
