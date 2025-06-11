@@ -27,6 +27,8 @@ const groupChatsByDate = (
   }>,
 ) => {
   const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
   // Separate pinned and unpinned chats
@@ -34,17 +36,32 @@ const groupChatsByDate = (
   const unpinnedChats = chats.filter((chat) => !chat.pinned);
 
   // Group unpinned chats by date
-  const recentUnpinned = unpinnedChats.filter(
-    (chat) => new Date(chat.updatedAt) > thirtyDaysAgo,
-  );
-  const olderUnpinned = unpinnedChats.filter(
-    (chat) => new Date(chat.updatedAt) <= thirtyDaysAgo,
-  );
+  const todayChats = unpinnedChats.filter((chat) => {
+    const chatDate = new Date(chat.updatedAt);
+    return chatDate >= today;
+  });
+
+  const yesterdayChats = unpinnedChats.filter((chat) => {
+    const chatDate = new Date(chat.updatedAt);
+    return chatDate >= yesterday && chatDate < today;
+  });
+
+  const last30DaysChats = unpinnedChats.filter((chat) => {
+    const chatDate = new Date(chat.updatedAt);
+    return chatDate >= thirtyDaysAgo && chatDate < yesterday;
+  });
+
+  const olderChats = unpinnedChats.filter((chat) => {
+    const chatDate = new Date(chat.updatedAt);
+    return chatDate < thirtyDaysAgo;
+  });
 
   return {
     pinned: pinnedChats,
-    recent: recentUnpinned,
-    older: olderUnpinned,
+    today: todayChats,
+    yesterday: yesterdayChats,
+    last30Days: last30DaysChats,
+    older: olderChats,
   };
 };
 
@@ -319,7 +336,8 @@ export function AppSidebar() {
           {" "}
           {isSignedIn && chats.length > 0 ? (
             (() => {
-              const { pinned, recent, older } = groupChatsByDate(chats);
+              const { pinned, today, yesterday, last30Days, older } =
+                groupChatsByDate(chats);
               return (
                 <div className="w-full">
                   {/* Pinned chats */}
@@ -346,15 +364,61 @@ export function AppSidebar() {
                     </div>
                   )}
 
-                  {/* Recent chats (Last 30 Days) */}
-                  {recent.length > 0 && (
+                  {/* Today's chats */}
+                  {today.length > 0 && (
+                    <div className="relative flex w-full min-w-0 flex-col p-2">
+                      <div className="ring-sidebar-ring ease-snappy text-muted-foreground flex h-8 shrink-0 items-center rounded-md px-1.5 text-xs font-medium transition-[margin,opacity] duration-200 outline-none select-none focus-visible:ring-2">
+                        <span>Today</span>
+                      </div>{" "}
+                      <div className="w-full text-sm">
+                        <ul className="flex w-full min-w-0 flex-col gap-1">
+                          {today.map((chat) => (
+                            <ChatItem
+                              key={chat.id}
+                              chat={chat}
+                              onSelect={selectChat}
+                              onPin={handlePinChat}
+                              onRename={handleRenameChat}
+                              onDelete={handleDeleteChat}
+                            />
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Yesterday's chats */}
+                  {yesterday.length > 0 && (
+                    <div className="relative flex w-full min-w-0 flex-col p-2">
+                      <div className="ring-sidebar-ring ease-snappy text-muted-foreground flex h-8 shrink-0 items-center rounded-md px-1.5 text-xs font-medium transition-[margin,opacity] duration-200 outline-none select-none focus-visible:ring-2">
+                        <span>Yesterday</span>
+                      </div>{" "}
+                      <div className="w-full text-sm">
+                        <ul className="flex w-full min-w-0 flex-col gap-1">
+                          {yesterday.map((chat) => (
+                            <ChatItem
+                              key={chat.id}
+                              chat={chat}
+                              onSelect={selectChat}
+                              onPin={handlePinChat}
+                              onRename={handleRenameChat}
+                              onDelete={handleDeleteChat}
+                            />
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Last 30 Days chats */}
+                  {last30Days.length > 0 && (
                     <div className="relative flex w-full min-w-0 flex-col p-2">
                       <div className="ring-sidebar-ring ease-snappy text-muted-foreground flex h-8 shrink-0 items-center rounded-md px-1.5 text-xs font-medium transition-[margin,opacity] duration-200 outline-none select-none focus-visible:ring-2">
                         <span>Last 30 Days</span>
                       </div>{" "}
                       <div className="w-full text-sm">
                         <ul className="flex w-full min-w-0 flex-col gap-1">
-                          {recent.map((chat) => (
+                          {last30Days.map((chat) => (
                             <ChatItem
                               key={chat.id}
                               chat={chat}
