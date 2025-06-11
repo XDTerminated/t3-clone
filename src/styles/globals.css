@@ -313,6 +313,9 @@
   scroll-behavior: smooth;
   overflow-y: auto;
 
+  /* CRITICAL: Reserve space for scrollbar to prevent layout shift */
+  scrollbar-gutter: stable;
+
   /* Set specific dimensions to override Windows defaults */
   --scrollbar-size: 8px;
 
