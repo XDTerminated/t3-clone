@@ -26,7 +26,7 @@ interface ChatContextType {
   loading: boolean;
   isLoadingChat: boolean;
   isPendingNewChat: boolean;
-  createNewChat: () => Promise<string | null>;
+  createNewChat: () => Promise<Chat | null>; // Changed return type
   startNewChat: () => void;
   selectChat: (chatId: string) => Promise<void>;
   sendMessage: (message: string) => Promise<void>;
@@ -43,6 +43,10 @@ interface ChatsResponse {
 
 interface CreateChatResponse {
   chat: Chat;
+}
+
+interface GenerateTitleResponse {
+  title: string;
 }
 
 const ChatContext = createContext<ChatContextType | null>(null);
@@ -92,8 +96,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       setIsLoadingChat(false);
     }, 150);
   };
-
-  const createNewChat = async (): Promise<string | null> => {
+  const createNewChat = async (): Promise<Chat | null> => { // Changed return type
     if (!isSignedIn) return null;
 
     try {
@@ -103,12 +106,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
       if (response.ok) {
         const data = (await response.json()) as CreateChatResponse;
-        const newChat = data.chat;
-        setChats((prev) => [newChat, ...prev]);
-        setCurrentChatId(newChat.id);
-        setMessages([]);
-        setIsPendingNewChat(false);
-        return newChat.id;
+        // Don't update UI state here - let sendMessage handle it
+        return data.chat; // Return the full chat object
       }
     } catch (error) {
       console.error("Failed to create new chat:", error);
@@ -182,50 +181,37 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         console.log("Message saved successfully");
       }
     } catch (error) {
-      console.error("Error saving message:", error);
-    }
+      console.error("Error saving message:", error);    }
   };
-  const generateTitle = async (chatId: string, message: string) => {
-    try {
-      console.log(
-        "Generating title for chat:",
-        chatId,
-        "with message:",
-        message.substring(0, 50) + "...",
-      );
-      const response = await fetch("/api/chats/generate-title", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chatId, message }),
-      });
-
-      if (!response.ok) {
-        console.error(
-          "Failed to generate title:",
-          response.status,
-          response.statusText,
-        );
-        const errorText = await response.text();
-        console.error("Title generation error details:", errorText);
-      } else {
-        console.log("Title generated successfully");
-        // Refresh chats to get the updated title
-        void fetchChats();
-      }
-    } catch (error) {
-      console.error("Error generating title:", error);
-    }
+  
+  const generateQuickTitle = (message: string): string => {
+    // Generate a quick title from the first message for immediate UI feedback
+    const words = message.trim().split(/\s+/).slice(0, 6);
+    return words.join(" ") + (words.length >= 6 ? "..." : "");
   };
   const sendMessage = async (message: string) => {
-    let chatId = currentChatId;
+    const chatId = currentChatId;
     let isNewChat = false;
+    let tempChatId: string | null = null;
 
+    // === IMMEDIATE UI UPDATES (no waiting) ===
     if (!chatId || isPendingNewChat) {
-      // Create new chat if none exists or if we're in a pending new chat state
-      const newChatId = await createNewChat();
-      if (!newChatId) return;
-      chatId = newChatId;
-      setCurrentChatId(newChatId);
+      // Generate temporary chat ID for immediate UI feedback
+      tempChatId = `temp-${Date.now()}`;
+      const quickTitle = generateQuickTitle(message);
+      
+      // Add temporary chat to sidebar immediately
+      const tempChat: Chat = {
+        id: tempChatId,
+        title: quickTitle,
+        userId: "temp",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        pinned: false,
+      };
+      
+      setChats((prev) => [tempChat, ...prev]);
+      setCurrentChatId(tempChatId);
       setIsPendingNewChat(false);
       isNewChat = true;
     }
@@ -233,99 +219,202 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     // Add user message to UI immediately
     const newUserMsg = { sender: "User", text: message };
     setMessages((prev) => [...prev, newUserMsg]);
+    
+    // Initialize empty AI message immediately
+    setMessages((prev) => [...prev, { sender: "AI", text: "" }]);    // === START AI RESPONSE IMMEDIATELY (don't wait for DB) ===
+    const conversationHistory = [...messages, newUserMsg];
+    
+    // Start AI response without waiting
+    const aiResponsePromise = (async () => {
+      try {
+        const response = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chatId: isNewChat ? null : chatId, // Use null for new chats, actual chatId for existing
+            history: conversationHistory,
+          }),
+        });
 
-    // Save user message to database
-    await saveMessage(chatId, message, "user");
+        if (!response.ok) {
+          console.error(`HTTP error ${response.status}`);
+          return "";
+        }
 
-    // Generate title if this is the first message (new chat or empty messages)
-    if (isNewChat || messages.length === 0) {
-      void generateTitle(chatId, message);
-    } // Get AI response
-    try {
-      // Build the conversation history including the new user message
-      const conversationHistory = [...messages, newUserMsg];
+        const contentType = response.headers.get("content-type") ?? "";
+        if (contentType.includes("text/event-stream")) {
+          const reader = response.body!.getReader();
+          const decoder = new TextDecoder();
+          let buffer = "";
+          let completeAiText = "";
+          let displayedLength = 0;
+          const charDelay = 1;
 
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chatId,
-          history: conversationHistory,
-        }),
-      });
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
 
-      if (!response.ok) {
-        console.error(`HTTP error ${response.status}`);
-        return;
-      }
-      const contentType = response.headers.get("content-type") ?? "";
-      if (contentType.includes("text/event-stream")) {
-        // Handle streaming response
-        const reader = response.body!.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-        let completeAiText = ""; // This will store the complete response
-        let displayedLength = 0; // Track how many characters we've displayed
-        const charDelay = 1;
+            buffer += decoder.decode(value, { stream: true });
+            const parts = buffer.split(/\r?\n\r?\n/);
+            buffer = parts.pop() ?? "";
 
-        // Initialize empty AI message
-        setMessages((prev) => [...prev, { sender: "AI", text: "" }]);
+            for (const part of parts) {
+              if (!part.startsWith("data: ")) continue;
+              const dataStr = part.replace(/^data: /, "").trim();
+              if (dataStr === "[DONE]") break;
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const parts = buffer.split(/\r?\n\r?\n/);
-          buffer = parts.pop() ?? "";
-
-          for (const part of parts) {
-            if (!part.startsWith("data: ")) continue;
-            const dataStr = part.replace(/^data: /, "").trim();
-            if (dataStr === "[DONE]") break;
-
-            try {
-              const parsed = JSON.parse(dataStr) as { token?: unknown };
-              const { token } = parsed;
-              if (typeof token === "string") {
-                // Add to complete response immediately
-                completeAiText += token; // Schedule character-by-character display for new characters only
-                const newChars = completeAiText.slice(displayedLength);
-                for (let i = 0; i < newChars.length; i++) {
-                  const targetLength = displayedLength + i + 1;
-                  setTimeout(
-                    () => {
-                      setMessages((prev) => {
-                        const msgs = [...prev];
-                        if (msgs[msgs.length - 1]?.sender === "AI") {
-                          // Set the text to the exact substring we want
-                          msgs[msgs.length - 1] = {
-                            ...msgs[msgs.length - 1]!,
-                            text: completeAiText.slice(0, targetLength),
-                          };
-                        }
-                        return msgs;
-                      });
-                    },
-                    (displayedLength + i) * charDelay,
-                  );
+              try {
+                const parsed = JSON.parse(dataStr) as { token?: unknown };
+                const { token } = parsed;
+                if (typeof token === "string") {
+                  completeAiText += token;
+                  
+                  const newChars = completeAiText.slice(displayedLength);
+                  for (let i = 0; i < newChars.length; i++) {
+                    const targetLength = displayedLength + i + 1;
+                    setTimeout(
+                      () => {
+                        setMessages((prev) => {
+                          const msgs = [...prev];
+                          if (msgs[msgs.length - 1]?.sender === "AI") {
+                            msgs[msgs.length - 1] = {
+                              ...msgs[msgs.length - 1]!,
+                              text: completeAiText.slice(0, targetLength),
+                            };
+                          }
+                          return msgs;
+                        });
+                      },
+                      (displayedLength + i) * charDelay,
+                    );
+                  }
+                  displayedLength = completeAiText.length;
                 }
-                displayedLength = completeAiText.length;
+              } catch {
+                // Ignore parse errors
               }
-            } catch {
-              // Ignore parse errors
             }
+          }
+          return completeAiText;
+        }
+      } catch (error) {
+        console.error("Error getting AI response:", error);
+        return "";
+      }
+      return "";
+    })();
+
+    // === BACKGROUND DATABASE OPERATIONS (async, non-blocking) ===
+    void (async () => {
+      try {
+        let realChatId = chatId;
+        let chatToUpdateInDB: Chat | null = null;
+
+        // Create real chat in database if needed
+        if (isNewChat && tempChatId) {
+          const newChatFromDB = await createNewChat(); // Returns Chat | null
+          if (newChatFromDB) {
+            realChatId = newChatFromDB.id;
+            chatToUpdateInDB = newChatFromDB; // Store for title update
+
+            // Update the temporary chat entry with real data from DB, keeping quickTitle for now
+            setChats((prev) =>
+              prev.map((c) =>
+                c.id === tempChatId
+                  ? { ...newChatFromDB, title: c.title } // Use newChatFromDB, preserve quickTitle
+                  : c
+              )
+            );
+            setCurrentChatId(newChatFromDB.id);
+          } else {
+            console.error("Failed to create real chat. Removing temporary chat.");
+            // Remove the temp chat from UI if creation fails
+            setChats(prev => prev.filter(c => c.id !== tempChatId));
+            if (currentChatId === tempChatId) {
+                // Reset to a state where user can start another new chat or select existing
+                setCurrentChatId(null);
+                setMessages([]);
+                setIsPendingNewChat(true); // Or call startNewChat() if it has the desired reset logic
+            }
+            return; // Stop further background processing for this failed chat
           }
         }
 
-        // Save complete AI response to database
-        if (completeAiText) {
-          await saveMessage(chatId, completeAiText, "assistant");
-        }
+        // Save user message to database (async, non-blocking)
+        const saveUserMessagePromise = realChatId ? saveMessage(realChatId, message, "user") : Promise.resolve();
+
+        // Generate and update title (async, non-blocking)
+        const titlePromise = (async () => {
+          if (isNewChat && realChatId && chatToUpdateInDB) {
+            let betterTitle = chatToUpdateInDB.title; // Default to quick title
+            try {
+              const titleGenResponse = await fetch("/api/chats/generate-title", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message }),
+              });
+              if (titleGenResponse.ok) {
+                const titleData = (await titleGenResponse.json()) as GenerateTitleResponse;
+                betterTitle = titleData.title;
+              } else {
+                console.warn("Failed to generate title from AI, using local fallback.");
+                // Fallback to local generation if API fails
+                betterTitle = message.length > 30
+                  ? message.substring(0, 30) + "..."
+                  : message;
+              }
+            } catch (error) {
+              console.error("Error calling generate-title API, using local fallback:", error);
+              betterTitle = message.length > 30
+                ? message.substring(0, 30) + "..."
+                : message;
+            }
+
+            // Update the chat title in local state immediately
+            setChats((prev) =>
+              prev.map((chat) =>
+                chat.id === realChatId
+                  ? { ...chat, title: betterTitle }
+                  : chat
+              )
+            );
+
+            // Update title in DB
+            try {
+              const res = await fetch(`/api/chats/${realChatId}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ title: betterTitle }),
+              });
+              if (!res.ok) {
+                console.error("Failed to update chat title in DB:", await res.text());
+                // Optionally revert local title if DB update fails, or notify user
+              } else {
+                console.log("Chat title updated in DB successfully:", betterTitle);
+                // If server returns updated chat, can use it: const updatedChatFromDB = await res.json();
+                // setChats(prev => prev.map(c => c.id === realChatId ? { ...c, ...updatedChatFromDB.chat } : c));
+              }
+            } catch (error) {
+              console.error("Error updating chat title in DB:", error);
+            }
+          }
+        })();
+
+        // Wait for AI response and save it
+        const completeAiText = await aiResponsePromise;
+        const saveAiMessagePromise = completeAiText 
+          ? saveMessage(realChatId!, completeAiText, "assistant")
+          : Promise.resolve();
+
+        // Wait for all background operations to complete (optional)
+        await Promise.all([
+          saveUserMessagePromise,
+          titlePromise,
+          saveAiMessagePromise,
+        ]);      } catch (error) {
+        console.error("Error in background database operations:", error);
       }
-    } catch (error) {
-      console.error("Error sending message:", error);
-    }
+    })();
   };
 
   const deleteChat = async (chatId: string) => {
