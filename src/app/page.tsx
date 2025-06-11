@@ -18,7 +18,6 @@ export default function Page() {
     loginDialogAction,
     setLoginDialogOpen,
   } = useChat();
-
   // Show welcome screen only if:
   // 1. Not loading a chat AND
   // 2. No messages AND
@@ -27,6 +26,7 @@ export default function Page() {
     !isLoadingChat &&
     messages.length === 0 &&
     (currentChatId === null || isPendingNewChat === true);
+
   return (
     <div className="relative flex h-full flex-col">
       <TopRightIconHolder />
@@ -36,7 +36,7 @@ export default function Page() {
       ) : shouldShowWelcome ? (
         <WelcomeScreen onPromptSelect={sendMessage} />
       ) : (
-        <div className="animate-in fade-in-50 zoom-in-95 flex-1 duration-100">
+        <div className="flex-1">
           <MessageList messages={messages} />
         </div>
       )}

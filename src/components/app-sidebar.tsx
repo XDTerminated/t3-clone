@@ -215,6 +215,7 @@ export function AppSidebar() {
     deleteChat,
     renameChat,
     pinChat,
+    isLoadingChats,
   } = useChat();
 
   // Delete dialog state
@@ -348,7 +349,13 @@ export function AppSidebar() {
         </SidebarHeader>{" "}
         <SidebarContent className="relative flex min-h-0 flex-1 flex-col gap-0 overflow-auto pb-2">
           {" "}
-          {isSignedIn && chats.length > 0 ? (
+          {isLoadingChats ? (
+            // Show loading indicator when fetching chats
+            <div className="text-sidebar-foreground/50 flex flex-col items-center justify-center px-4 py-8 text-center text-sm">
+              <div className="border-sidebar-foreground/20 border-t-sidebar-foreground/60 mb-3 h-5 w-5 animate-spin rounded-full border-2"></div>
+              <span>Loading conversations...</span>
+            </div>
+          ) : isSignedIn && chats.length > 0 ? (
             (() => {
               const { pinned, today, yesterday, last30Days, older } =
                 groupChatsByDate(chats);

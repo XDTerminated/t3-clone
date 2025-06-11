@@ -26,6 +26,7 @@ interface ChatContextType {
   loading: boolean;
   isLoadingChat: boolean;
   isPendingNewChat: boolean;
+  isLoadingChats: boolean; // Loading state for sidebar chats
   createNewChat: () => Promise<Chat | null>; // Changed return type
   startNewChat: () => void;
   selectChat: (chatId: string) => Promise<void>;
@@ -64,14 +65,16 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [loading] = useState(false);
   const [isLoadingChat, setIsLoadingChat] = useState(false);
   const [isPendingNewChat, setIsPendingNewChat] = useState(false);
+  const [isLoadingChats, setIsLoadingChats] = useState(false); // Loading state for sidebar
   const [loginDialogOpen, setLoginDialogOpen] = useState(false);
   const [loginDialogAction, setLoginDialogAction] = useState<
     "send" | "chat" | null
   >(null);
-  const { isSignedIn } = useAuth();
+  const { isSignedIn, isLoaded } = useAuth();
   const fetchChats = useCallback(async () => {
     if (!isSignedIn) return;
 
+    setIsLoadingChats(true);
     try {
       const response = await fetch("/api/chats");
       if (response.ok) {
@@ -80,6 +83,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error) {
       console.error("Failed to fetch chats:", error);
+    } finally {
+      setIsLoadingChats(false);
     }
   }, [isSignedIn]);
   const startNewChat = () => {
@@ -535,20 +540,21 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
   }; // Fetch chats when user signs in - with a delay to allow UI to settle and lazy load
   useEffect(() => {
-    if (isSignedIn) {
+    if (isSignedIn && isLoaded) {
       // Add a delay to let the authentication UI settle and then lazy load chats
       const timer = setTimeout(() => {
         void fetchChats();
       }, 300); // Increased delay to ensure auth is fully settled
       return () => clearTimeout(timer);
-    } else {
+    } else if (isLoaded && !isSignedIn) {
       // Clear chats when user signs out
       setChats([]);
       setCurrentChatId(null);
       setMessages([]);
       setIsPendingNewChat(false);
+      setIsLoadingChats(false);
     }
-  }, [isSignedIn, fetchChats]);
+  }, [isSignedIn, isLoaded, fetchChats]);
   return (
     <ChatContext.Provider
       value={{
@@ -558,6 +564,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         loading,
         isLoadingChat,
         isPendingNewChat,
+        isLoadingChats,
         createNewChat,
         startNewChat,
         selectChat,

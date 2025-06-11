@@ -13,8 +13,9 @@ export default function ContentWrapper({
 }: {
   children: React.ReactNode;
 }) {
-  const { open, isResizing } = useSidebar();
+  const { open } = useSidebar();
   const mainRef = React.useRef<HTMLElement>(null);
+
   return (
     <div className="flex h-screen w-full flex-col">
       {/* Animated top gap for sidebar open/close */}
@@ -35,8 +36,6 @@ export default function ContentWrapper({
             open
               ? "border-sidebar-border rounded-tl-2xl"
               : "border-transparent",
-            // Add smooth transition for layout changes, but disable during resizing for performance
-            !isResizing && "transition-all duration-100 ease-linear",
           )}
         >
           {children}
