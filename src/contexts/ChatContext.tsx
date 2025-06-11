@@ -24,6 +24,7 @@ interface ChatContextType {
   messages: Array<{ sender: string; text: string }>;
   loading: boolean;
   createNewChat: () => Promise<string | null>;
+  startNewChat: () => void;
   selectChat: (chatId: string) => Promise<void>;
   sendMessage: (message: string) => Promise<void>;
   fetchChats: () => Promise<void>;
@@ -47,6 +48,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     Array<{ sender: string; text: string }>
   >([]);
   const [loading] = useState(false);
+  const [isPendingNewChat, setIsPendingNewChat] = useState(false);
   const { isSignedIn } = useAuth();
 
   const fetchChats = useCallback(async () => {
@@ -62,6 +64,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       console.error("Failed to fetch chats:", error);
     }
   }, [isSignedIn]);
+  const startNewChat = () => {
+    // Start a new chat session without creating it in the database
+    setCurrentChatId(null);
+    setMessages([]);
+    setIsPendingNewChat(true);
+  };
 
   const createNewChat = async (): Promise<string | null> => {
     if (!isSignedIn) return null;
@@ -77,16 +85,17 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         setChats((prev) => [newChat, ...prev]);
         setCurrentChatId(newChat.id);
         setMessages([]);
+        setIsPendingNewChat(false);
         return newChat.id;
       }
     } catch (error) {
       console.error("Failed to create new chat:", error);
     }
     return null;
-  };
-  const selectChat = async (chatId: string) => {
+  };  const selectChat = async (chatId: string) => {
     setCurrentChatId(chatId);
     setMessages([]);
+    setIsPendingNewChat(false); // Clear pending new chat state when selecting an existing chat
 
     // Load messages for the selected chat
     try {
@@ -170,17 +179,17 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error("Error generating title:", error);
     }
-  };
-  const sendMessage = async (message: string) => {
+  };  const sendMessage = async (message: string) => {
     let chatId = currentChatId;
     let isNewChat = false;
 
-    if (!chatId) {
-      // Create new chat if none exists
+    if (!chatId || isPendingNewChat) {
+      // Create new chat if none exists or if we're in a pending new chat state
       const newChatId = await createNewChat();
       if (!newChatId) return;
       chatId = newChatId;
       setCurrentChatId(newChatId);
+      setIsPendingNewChat(false);
       isNewChat = true;
     }
 
@@ -209,13 +218,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       const contentType = response.headers.get("content-type") ?? "";
-      if (contentType.includes("text/event-stream")) {
-        // Handle streaming response
+      if (contentType.includes("text/event-stream")) {        // Handle streaming response
         const reader = response.body!.getReader();
         const decoder = new TextDecoder();
         let buffer = "";
         let completeAiText = ""; // This will store the complete response
-        let charQueueIndex = 0;
+        let displayedLength = 0; // Track how many characters we've displayed
         const charDelay = 1;
 
         // Initialize empty AI message
@@ -239,24 +247,25 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               const { token } = parsed;
               if (typeof token === "string") {
                 // Add to complete response immediately
-                completeAiText += token;
-
-                // Schedule character-by-character display
-                for (const ch of token) {
-                  const currentIndex = charQueueIndex;
+                completeAiText += token;                // Schedule character-by-character display for new characters only
+                const newChars = completeAiText.slice(displayedLength);
+                for (let i = 0; i < newChars.length; i++) {
+                  const targetLength = displayedLength + i + 1;
                   setTimeout(() => {
                     setMessages((prev) => {
                       const msgs = [...prev];
                       if (msgs[msgs.length - 1]?.sender === "AI") {
-                        // Build the displayed text character by character
-                        const lastMsg = msgs[msgs.length - 1]!;
-                        lastMsg.text = lastMsg.text + ch;
+                        // Set the text to the exact substring we want
+                        msgs[msgs.length - 1] = {
+                          ...msgs[msgs.length - 1]!,
+                          text: completeAiText.slice(0, targetLength)
+                        };
                       }
                       return msgs;
                     });
-                  }, currentIndex * charDelay);
-                  charQueueIndex++;
+                  }, (displayedLength + i) * charDelay);
                 }
+                displayedLength = completeAiText.length;
               }
             } catch {
               // Ignore parse errors
@@ -282,13 +291,13 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   }, [isSignedIn, fetchChats]);
 
   return (
-    <ChatContext.Provider
-      value={{
+    <ChatContext.Provider      value={{
         chats,
         currentChatId,
         messages,
         loading,
         createNewChat,
+        startNewChat,
         selectChat,
         sendMessage,
         fetchChats,

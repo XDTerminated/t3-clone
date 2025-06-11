@@ -21,12 +21,11 @@ import { useChat } from "~/contexts/ChatContext";
 export function AppSidebar() {
   const { isMobile, open, openMobile } = useSidebar();
   const { isSignedIn, isLoaded } = useAuth();
-  const { user } = useUser();
-  const { chats, createNewChat, selectChat, currentChatId } = useChat();
+  const { user } = useUser();  const { chats, startNewChat, selectChat, currentChatId } = useChat();
 
-  const handleNewChat = async () => {
-    await createNewChat();
-  }; // Handle Google sign-in
+  const handleNewChat = () => {
+    startNewChat();
+  };// Handle Google sign-in
   const handleSignIn = () => {
     // Navigate directly to Google OAuth
     window.location.href = "/sign-in/google";
