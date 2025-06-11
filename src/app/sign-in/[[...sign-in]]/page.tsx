@@ -7,11 +7,10 @@ import { useRouter } from "next/navigation";
 export default function SignInPage() {
   const { isSignedIn, isLoaded } = useAuth();
   const router = useRouter();
-
   useEffect(() => {
     if (isLoaded && isSignedIn) {
-      // User is already signed in, redirect to home
-      router.push("/");
+      // User is already signed in, redirect to home - use replace for faster navigation
+      router.replace("/");
     }
   }, [isSignedIn, isLoaded, router]);
 

@@ -69,7 +69,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     "send" | "chat" | null
   >(null);
   const { isSignedIn } = useAuth();
-
   const fetchChats = useCallback(async () => {
     if (!isSignedIn) return;
 
@@ -534,12 +533,20 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error("Error pinning/unpinning chat:", error);
     }
-  };
-
-  // Fetch chats when user signs in
+  }; // Fetch chats when user signs in - with a delay to allow UI to settle and lazy load
   useEffect(() => {
     if (isSignedIn) {
-      void fetchChats();
+      // Add a delay to let the authentication UI settle and then lazy load chats
+      const timer = setTimeout(() => {
+        void fetchChats();
+      }, 300); // Increased delay to ensure auth is fully settled
+      return () => clearTimeout(timer);
+    } else {
+      // Clear chats when user signs out
+      setChats([]);
+      setCurrentChatId(null);
+      setMessages([]);
+      setIsPendingNewChat(false);
     }
   }, [isSignedIn, fetchChats]);
   return (

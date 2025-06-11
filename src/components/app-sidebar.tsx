@@ -205,6 +205,7 @@ const ChatItem = ({
 export function AppSidebar() {
   const { isMobile, open, openMobile } = useSidebar();
   const { isSignedIn, isLoaded } = useAuth();
+  // Only fetch user data when signed in to avoid unnecessary API calls
   const { user } = useUser();
   const {
     chats,
@@ -250,11 +251,10 @@ export function AppSidebar() {
       setChatToDelete(null);
     }
   };
-
   // Handle Google sign-in
   const handleSignIn = () => {
-    // Navigate directly to Google OAuth
-    window.location.href = "/sign-in/google";
+    // Navigate directly to Google OAuth using replace for faster navigation
+    window.location.replace("/sign-in/google");
   };
 
   const [sidebarFullyClosed, setSidebarFullyClosed] = React.useState(!open); // Initialize based on initial 'open' state

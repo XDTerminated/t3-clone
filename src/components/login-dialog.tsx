@@ -20,8 +20,8 @@ interface LoginDialogProps {
 
 export function LoginDialog({ open, onOpenChange, action }: LoginDialogProps) {
   const handleSignIn = () => {
-    // Navigate directly to Google OAuth
-    window.location.href = "/sign-in/google";
+    // Navigate directly to Google OAuth using replace for faster navigation
+    window.location.replace("/sign-in/google");
   };
 
   const getActionText = () => {

@@ -9,11 +9,10 @@ export default function GoogleSignInPage() {
   const { isSignedIn } = useAuth();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
-
   useEffect(() => {
     // If user is already signed in, redirect immediately
     if (isSignedIn) {
-      router.push("/");
+      router.replace("/");
       return;
     }
 
@@ -21,7 +20,7 @@ export default function GoogleSignInPage() {
       if (!isLoaded || !signIn) return;
 
       try {
-        // Start the OAuth flow with Google
+        // Start the OAuth flow with Google - use replace for faster navigation
         await signIn.authenticateWithRedirect({
           strategy: "oauth_google",
           redirectUrl: "/sign-in/sso-callback",
@@ -34,12 +33,17 @@ export default function GoogleSignInPage() {
         );
         // Fallback to regular sign-in page after a delay
         setTimeout(() => {
-          window.location.href = "/sign-in";
-        }, 2000);
+          window.location.replace("/sign-in");
+        }, 1500); // Reduced delay
       }
     };
 
-    void initiateGoogleSignIn();
+    // Reduce delay before initiating sign-in
+    const timer = setTimeout(() => {
+      void initiateGoogleSignIn();
+    }, 50);
+
+    return () => clearTimeout(timer);
   }, [isLoaded, signIn, isSignedIn, router]);
 
   if (isSignedIn) {

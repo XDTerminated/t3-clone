@@ -9,15 +9,17 @@ export async function GET() {
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
     const chats = await prisma.chat.findMany({
       where: { userId },
       orderBy: { updatedAt: "desc" },
-      include: {
-        messages: {
-          take: 1,
-          orderBy: { createdAt: "desc" },
-        },
+      // Remove messages include for faster initial load
+      select: {
+        id: true,
+        title: true,
+        userId: true,
+        createdAt: true,
+        updatedAt: true,
+        pinned: true,
       },
     });
 

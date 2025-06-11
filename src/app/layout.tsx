@@ -21,13 +21,21 @@ const montserrat = Montserrat({
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <ClerkProvider>
+    <ClerkProvider
+      appearance={{
+        variables: {
+          colorPrimary: "hsl(var(--primary))",
+        },
+      }}
+    >
       <html lang="en" className="dark">
-        <head>{/* Removed Adobe Fonts embed code placeholder */}</head>
+        <head>
+          <link rel="preconnect" href="https://clerk.accounts.dev" />
+          <link rel="preconnect" href="https://api.clerk.dev" />
+        </head>
         <body
           className={`${montserrat.variable} text-foreground min-h-screen bg-[radial-gradient(ellipse_at_center,var(--background)_20%,oklch(0.235_0.017_290)_100%)]`}
         >
-          {" "}
           <SidebarProvider>
             <DataProvider>
               <ChatProvider>
