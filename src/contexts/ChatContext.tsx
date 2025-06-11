@@ -23,6 +23,8 @@ interface ChatContextType {
   currentChatId: string | null;
   messages: Array<{ sender: string; text: string }>;
   loading: boolean;
+  isLoadingChat: boolean;
+  isPendingNewChat: boolean;
   createNewChat: () => Promise<string | null>;
   startNewChat: () => void;
   selectChat: (chatId: string) => Promise<void>;
@@ -48,6 +50,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     Array<{ sender: string; text: string }>
   >([]);
   const [loading] = useState(false);
+  const [isLoadingChat, setIsLoadingChat] = useState(false);
   const [isPendingNewChat, setIsPendingNewChat] = useState(false);
   const { isSignedIn } = useAuth();
 
@@ -66,9 +69,15 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   }, [isSignedIn]);
   const startNewChat = () => {
     // Start a new chat session without creating it in the database
+    setIsLoadingChat(true);
     setCurrentChatId(null);
     setMessages([]);
     setIsPendingNewChat(true);
+
+    // Add a small delay for smooth transition
+    setTimeout(() => {
+      setIsLoadingChat(false);
+    }, 150);
   };
 
   const createNewChat = async (): Promise<string | null> => {
@@ -94,9 +103,13 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     return null;
   };
   const selectChat = async (chatId: string) => {
+    setIsLoadingChat(true);
     setCurrentChatId(chatId);
-    setMessages([]);
+    setMessages([]); // Clear messages immediately for smooth transition
     setIsPendingNewChat(false); // Clear pending new chat state when selecting an existing chat
+
+    // Add a small delay to ensure smooth transition
+    await new Promise((resolve) => setTimeout(resolve, 150));
 
     // Load messages for the selected chat
     try {
@@ -113,9 +126,13 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         setMessages(uiMessages);
       } else {
         console.error("Failed to load messages for chat:", chatId);
+        setMessages([]); // Clear messages on error
       }
     } catch (error) {
       console.error("Error loading messages:", error);
+      setMessages([]); // Clear messages on error
+    } finally {
+      setIsLoadingChat(false);
     }
   };
   const saveMessage = async (
@@ -303,6 +320,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         currentChatId,
         messages,
         loading,
+        isLoadingChat,
+        isPendingNewChat,
         createNewChat,
         startNewChat,
         selectChat,

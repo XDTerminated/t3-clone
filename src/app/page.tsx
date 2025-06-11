@@ -7,15 +7,34 @@ import TopRightIconHolder from "~/components/top-right-icon-holder";
 import { useChat } from "~/contexts/ChatContext";
 
 export default function Page() {
-  const { messages, sendMessage } = useChat();
+  const {
+    messages,
+    sendMessage,
+    isLoadingChat,
+    currentChatId,
+    isPendingNewChat,
+  } = useChat();
 
+  // Show welcome screen only if:
+  // 1. Not loading a chat AND
+  // 2. No messages AND
+  // 3. (No current chat OR in pending new chat state)
+  const shouldShowWelcome =
+    !isLoadingChat &&
+    messages.length === 0 &&
+    (currentChatId === null || isPendingNewChat === true);
   return (
     <div className="relative flex h-full flex-col">
       <TopRightIconHolder />
-      {messages.length === 0 ? (
+      {isLoadingChat ? (
+        // Show blank area while loading
+        <div className="flex-1" />
+      ) : shouldShowWelcome ? (
         <WelcomeScreen onPromptSelect={sendMessage} />
       ) : (
-        <MessageList messages={messages} />
+        <div className="animate-in fade-in-50 flex-1 duration-300">
+          <MessageList messages={messages} />
+        </div>
       )}
       <Chatbox onSend={sendMessage} />
     </div>
