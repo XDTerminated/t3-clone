@@ -4,13 +4,15 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "next build",
+    "build": "prisma generate && next build",
+    "build:vercel": "prisma generate && SKIP_ENV_VALIDATION=1 next build",
     "check": "next lint && tsc --noEmit",
     "dev": "next dev --turbo",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mdx}\" --cache",
     "format:write": "prettier --write \"**/*.{ts,tsx,js,jsx,mdx}\" --cache",
     "lint": "next lint",
     "lint:fix": "next lint --fix",
+    "postinstall": "prisma generate",
     "preview": "next build && next start",
     "start": "next start",
     "typecheck": "tsc --noEmit"
