@@ -52,7 +52,9 @@ export async function POST(request: Request) {
       topK: 10, // Increased for faster token selection
       topP: 0.8, // Reduced for faster processing
       maxOutputTokens: 15, // Shorter for faster generation
-    }; // Simplified safety settings for faster processing
+    };
+
+    // Simplified safety settings for faster processing
     const safetySettings = [
       {
         category: HarmCategory.HARM_CATEGORY_HARASSMENT,
@@ -62,8 +64,8 @@ export async function POST(request: Request) {
         category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
         threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
       },
-    ]; // Concise prompt for faster processing
-    const prompt = `Create a short title (3-5 words) for: "${truncatedMessage}"`;
+    ]; // Improved prompt for single, clean title generation
+    const prompt = `Generate exactly one short title (3-5 words) for this message. Return only the title, nothing else: "${truncatedMessage}"`;
 
     const parts = [{ text: prompt }];
 
@@ -79,7 +81,36 @@ export async function POST(request: Request) {
         // Ensure part.text is defined before trying to access it
         const textPart = candidate.content.parts[0]?.text;
         if (textPart) {
-          generatedTitle = textPart.trim().replace(/\"/g, ""); // Remove quotes if AI adds them
+          // Clean and process the generated text
+          let cleanedTitle = textPart.trim();
+
+          // Remove quotes and common unwanted characters
+          cleanedTitle = cleanedTitle.replace(/["""''`]/g, "");
+
+          // Split by common separators and take only the first valid title
+          const separators = /[\n\r\t|;:•\-]+/;
+          const titleOptions = cleanedTitle.split(separators);
+
+          // Find the first non-empty, reasonable length title
+          for (const option of titleOptions) {
+            const cleaned = option.trim();
+            const reservedWordsRegex = /^(title|chat|conversation)$/i;
+            if (
+              cleaned.length >= 3 &&
+              cleaned.length <= 50 &&
+              !reservedWordsRegex.exec(cleaned)
+            ) {
+              generatedTitle = cleaned;
+              break;
+            }
+          }
+          // If no good option found, use the first part of the original text
+          if (generatedTitle === "New Chat" && titleOptions.length > 0) {
+            const firstOption = titleOptions[0]?.trim();
+            if (firstOption && firstOption.length >= 3) {
+              generatedTitle = firstOption;
+            }
+          }
         }
       }
     } // Fallback if title is empty or too short after generation
@@ -98,7 +129,7 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ title: generatedTitle });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error generating title with Gemini:", error);
     const messageFromBody = (requestBody as { message?: unknown })?.message;
     let fallbackTitle =
