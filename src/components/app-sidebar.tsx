@@ -2,15 +2,12 @@
 
 import * as React from "react"; // Import React for useEffect, useState
 import Image from "next/image";
-import { Plus, Search, LogIn, User, MessageSquare } from "lucide-react";
+import { Plus, Search, LogIn, User, Pin, X, Edit2 } from "lucide-react";
 import { useAuth, useUser } from "@clerk/nextjs";
 import {
   Sidebar,
   SidebarContent,
   SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
   SidebarTrigger,
   useSidebar,
 } from "~/components/ui/sidebar";
@@ -18,14 +15,132 @@ import { cn } from "~/lib/utils";
 import { buttonVariants } from "~/components/ui/button";
 import { useChat } from "~/contexts/ChatContext";
 
+// Helper function to group chats by time period
+const groupChatsByDate = (
+  chats: Array<{
+    id: string;
+    title: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }>,
+) => {
+  const now = new Date();
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+  const recent = chats.filter(
+    (chat) => new Date(chat.updatedAt) > thirtyDaysAgo,
+  );
+  const older = chats.filter(
+    (chat) => new Date(chat.updatedAt) <= thirtyDaysAgo,
+  );
+  return { recent, older };
+};
+
+// Chat item component with hover actions
+const ChatItem = ({
+  chat,
+  onSelect,
+  onPin,
+  onRename,
+  onDelete,
+}: {
+  chat: { id: string; title: string | null };
+  onSelect: (id: string) => void;
+  onPin: (id: string) => void;
+  onRename: (id: string) => void;
+  onDelete: (id: string) => void;
+}) => {
+  return (
+    <li className="group/menu-item relative">
+      <div className="group/link hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:text-sidebar-accent-foreground focus-visible:ring-sidebar-ring hover:focus-visible:bg-sidebar-accent relative flex h-9 w-full items-center overflow-hidden rounded-lg px-2 py-1 text-sm outline-none focus-visible:ring-2">
+        <div className="relative flex w-full items-center">
+          <button
+            className="w-full text-left"
+            onClick={() => onSelect(chat.id)}
+          >
+            <div className="relative w-full">
+              <input
+                aria-label="Thread title"
+                aria-readonly="true"
+                readOnly
+                tabIndex={-1}
+                className="hover:truncate-none text-muted-foreground pointer-events-none h-full w-full cursor-pointer truncate overflow-hidden rounded bg-transparent px-1 py-1 text-sm outline-none"
+                title={chat.title ?? "New Chat"}
+                type="text"
+                value={chat.title ?? "New Chat"}
+              />
+            </div>
+          </button>
+          {/* Hover actions */}
+          <div className="text-muted-foreground group-hover/link:bg-sidebar-accent pointer-events-auto absolute top-0 -right-1 bottom-0 z-50 flex translate-x-full items-center justify-end transition-transform group-hover/link:translate-x-0">
+            <div className="from-sidebar-accent pointer-events-none absolute top-0 right-[100%] bottom-0 h-12 w-8 bg-gradient-to-l to-transparent opacity-0 group-hover/link:opacity-100"></div>
+            <button
+              className="sidebar-action-btn sidebar-pin-btn hover:bg-muted/40 rounded-md p-1.5"
+              tabIndex={-1}
+              aria-label="Pin thread"
+              onClick={(e) => {
+                e.stopPropagation();
+                onPin(chat.id);
+              }}
+            >
+              <Pin className="size-4" />
+            </button>
+            <button
+              className="sidebar-action-btn hover:bg-muted/40 rounded-md p-1.5"
+              tabIndex={-1}
+              aria-label="Rename thread"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRename(chat.id);
+              }}
+            >
+              <Edit2 className="size-4" />
+            </button>
+            <button
+              className="sidebar-action-btn sidebar-delete-btn hover:bg-destructive/50 hover:text-destructive-foreground rounded-md p-1.5"
+              tabIndex={-1}
+              aria-label="Delete thread"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(chat.id);
+              }}
+            >
+              <X className="size-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </li>
+  );
+};
+
 export function AppSidebar() {
   const { isMobile, open, openMobile } = useSidebar();
   const { isSignedIn, isLoaded } = useAuth();
-  const { user } = useUser();  const { chats, startNewChat, selectChat, currentChatId } = useChat();
+  const { user } = useUser();
+  const { chats, startNewChat, selectChat } = useChat();
 
   const handleNewChat = () => {
     startNewChat();
-  };// Handle Google sign-in
+  };
+
+  // Chat manipulation handlers
+  const handlePinChat = (chatId: string) => {
+    // TODO: Implement pin functionality
+    console.log("Pin chat:", chatId);
+  };
+
+  const handleRenameChat = (chatId: string) => {
+    // TODO: Implement rename functionality
+    console.log("Rename chat:", chatId);
+  };
+
+  const handleDeleteChat = (chatId: string) => {
+    // TODO: Implement delete functionality
+    console.log("Delete chat:", chatId);
+  };
+
+  // Handle Google sign-in
   const handleSignIn = () => {
     // Navigate directly to Google OAuth
     window.location.href = "/sign-in/google";
@@ -120,29 +235,65 @@ export function AppSidebar() {
             </div>
           </div>
         </SidebarHeader>{" "}
-        <SidebarContent className="relative flex min-h-0 flex-1 flex-col gap-2 overflow-auto pb-2">
-          <SidebarMenu className="px-2">
-            {chats.map((chat) => (
-              <SidebarMenuItem key={chat.id} className="py-0.5">
-                <SidebarMenuButton
-                  variant="default"
-                  className={cn(
-                    "hover:bg-sidebar-accent text-sidebar-foreground h-8 w-full justify-start bg-transparent px-2 text-sm",
-                    currentChatId === chat.id && "bg-sidebar-accent",
+        <SidebarContent className="relative flex min-h-0 flex-1 flex-col gap-0 overflow-auto pb-2">
+          {isSignedIn && chats.length > 0 ? (
+            (() => {
+              const { recent, older } = groupChatsByDate(chats);
+              return (
+                <div className="w-full">
+                  {/* Recent chats (Last 30 Days) */}
+                  {recent.length > 0 && (
+                    <div className="relative flex w-full min-w-0 flex-col p-2">
+                      <div className="ring-sidebar-ring ease-snappy text-muted-foreground flex h-8 shrink-0 items-center rounded-md px-1.5 text-xs font-medium transition-[margin,opacity] duration-200 outline-none select-none focus-visible:ring-2">
+                        <span>Last 30 Days</span>
+                      </div>{" "}
+                      <div className="w-full text-sm">
+                        <ul className="flex w-full min-w-0 flex-col gap-1">
+                          {recent.map((chat) => (
+                            <ChatItem
+                              key={chat.id}
+                              chat={chat}
+                              onSelect={selectChat}
+                              onPin={handlePinChat}
+                              onRename={handleRenameChat}
+                              onDelete={handleDeleteChat}
+                            />
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
                   )}
-                  onClick={() => selectChat(chat.id)}
-                >
-                  <MessageSquare className="mr-2 h-4 w-4" />
-                  <span className="truncate">{chat.title ?? "New Chat"}</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
-            {chats.length === 0 && isSignedIn && (
-              <div className="text-sidebar-foreground/50 py-4 text-center text-sm">
-                No chats yet. Start a new conversation!
-              </div>
-            )}
-          </SidebarMenu>
+
+                  {/* Older chats */}
+                  {older.length > 0 && (
+                    <div className="relative flex w-full min-w-0 flex-col p-2">
+                      <div className="ring-sidebar-ring ease-snappy text-muted-foreground flex h-8 shrink-0 items-center rounded-md px-1.5 text-xs font-medium transition-[margin,opacity] duration-200 outline-none select-none focus-visible:ring-2">
+                        <span>Older</span>
+                      </div>{" "}
+                      <div className="w-full text-sm">
+                        <ul className="flex w-full min-w-0 flex-col gap-1">
+                          {older.map((chat) => (
+                            <ChatItem
+                              key={chat.id}
+                              chat={chat}
+                              onSelect={selectChat}
+                              onPin={handlePinChat}
+                              onRename={handleRenameChat}
+                              onDelete={handleDeleteChat}
+                            />
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()
+          ) : isSignedIn ? (
+            <div className="text-sidebar-foreground/50 px-4 py-4 text-center text-sm">
+              No chats yet. Start a new conversation!
+            </div>
+          ) : null}
         </SidebarContent>{" "}
         <div className="m-0 flex flex-col gap-2 p-2 pt-0">
           {isLoaded && isSignedIn ? (

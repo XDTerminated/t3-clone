@@ -614,79 +614,85 @@
   color: var(--color-primary-foreground);
 }
 
-/* Windows-specific scrollbar styles for sidebar */
-@supports (-ms-overflow-style: none) {
-  .sidebar {
-    -ms-overflow-style: none; /* Hide scrollbar in IE/Edge */
-  }
+/* Enhanced sidebar chat styling */
+.sidebar-chat-item {
+  position: relative;
+  transition: all 0.15s ease-in-out;
 }
 
-/* Windows 11 Chrome/Edge scrollbar override */
-@supports selector(::-webkit-scrollbar-button) {
-  .sidebar::-webkit-scrollbar-button {
-    /* Force zero dimensions with content blocking */
-    font-size: 0 !important;
-    line-height: 0 !important;
-    max-width: 0 !important;
-    max-height: 0 !important;
-    min-width: 0 !important;
-    min-height: 0 !important;
-
-    /* Remove any pseudo-content */
-    content: "" !important;
-
-    /* Block interaction */
-    pointer-events: none !important;
-    user-select: none !important;
-
-    /* Force overflow hidden */
-    overflow: hidden !important;
-    clip: rect(0, 0, 0, 0) !important;
-
-    /* Transform out of view */
-    transform: scale(0) !important;
-  }
+.sidebar-chat-item:hover .sidebar-chat-actions {
+  transform: translateX(0);
 }
 
-/* Last resort: hide entire scrollbar track buttons with clip-path */
-.sidebar::-webkit-scrollbar {
-  /* Clip any button areas */
-  clip-path: polygon(
-    0 12px,
-    100% 12px,
-    100% calc(100% - 12px),
-    0 calc(100% - 12px)
-  );
+.sidebar-chat-actions {
+  transform: translateX(100%);
+  transition: transform 0.15s ease-in-out;
 }
 
-/* CRITICAL: Additional Windows Chrome/Edge overrides to prevent black flash */
-.sidebar.scrolling::-webkit-scrollbar-thumb {
-  /* Force color immediately - multiple fallbacks */
-  background: oklch(0.5 0.02 270) !important;
-  color: oklch(0.5 0.02 270) !important;
-  border-color: oklch(
-    0.5 0.02 270
-  ) !important; /* Ensure border doesn't flash */
-
-  /* Block any system theming */
-  forced-color-adjust: none !important;
-  color-scheme: none !important; /* Prevent system light/dark mode from interfering */
+.sidebar-chat-gradient {
+  background: linear-gradient(to left, var(--sidebar-accent), transparent);
+  opacity: 0;
+  transition: opacity 0.15s ease-in-out;
 }
 
-/* Light mode override with highest specificity */
-html:not(.dark) .sidebar.scrolling::-webkit-scrollbar-thumb {
-  background: oklch(0.65 0.01 270) !important;
-  color: oklch(0.65 0.01 270) !important;
-  border-color: oklch(
-    0.65 0.01 270
-  ) !important; /* Ensure border doesn't flash */
-
-  /* Block any system theming */
-  forced-color-adjust: none !important;
-  color-scheme: none !important;
+.sidebar-chat-item:hover .sidebar-chat-gradient {
+  opacity: 1;
 }
 
-/* Custom New Chat button colors */
+/* Group heading styling */
+.sidebar-group-heading {
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.025em;
+  text-transform: none;
+  opacity: 0.8;
+}
+
+/* Chat input field styling */
+.sidebar-chat-title {
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  width: 100%;
+  padding: 0.25rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.sidebar-chat-title:hover {
+  text-overflow: clip;
+  white-space: normal;
+  overflow: visible;
+}
+
+/* Action button styling */
+.sidebar-action-btn {
+  opacity: 0.7;
+  transition: all 0.15s ease-in-out;
+}
+
+.sidebar-action-btn:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+/* Destructive action styling */
+.sidebar-delete-btn:hover {
+  background-color: rgb(var(--destructive) / 0.5);
+  color: rgb(var(--destructive-foreground));
+}
+
+/* Pin button styling */
+.sidebar-pin-btn:hover {
+  background-color: rgb(var(--muted) / 0.4);
+}
+
+/* Custom New Chat button colors - restored original pink/magenta scheme */
 .new-chat-button {
   background-color: #d56698 !important; /* Base color corrected */
   color: white !important;
@@ -731,100 +737,4 @@ html:not(.dark) .sidebar.scrolling::-webkit-scrollbar-thumb {
     93,
     0.4
   ) !important; /* dark:active:bg-pink-800/40 equivalent */
-}
-
-/* Custom chatbox styling */
-.chatbox-container {
-  background: var(--card);
-  border: 1px solid var(--border);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-}
-
-.dark .chatbox-container {
-  background: rgba(var(--card), 0.8);
-  border: 1px solid rgba(var(--border), 0.3);
-}
-
-/* Enhanced textarea styling for chatbox */
-#chat-input {
-  scrollbar-width: thin;
-  scrollbar-color: var(--scrollbar-thumb-dark) transparent;
-  transition: all 0.2s ease;
-}
-
-#chat-input:focus {
-  box-shadow: 0 0 0 3px rgba(var(--ring), 0.1);
-}
-
-#chat-input::-webkit-scrollbar {
-  width: 6px;
-}
-
-#chat-input::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-#chat-input::-webkit-scrollbar-thumb {
-  background-color: var(--scrollbar-thumb-dark);
-  border-radius: 3px;
-  transition: background-color 0.2s ease;
-}
-
-#chat-input::-webkit-scrollbar-thumb:hover {
-  background-color: var(--scrollbar-thumb-hover-dark);
-}
-
-/* Button hover animations in chatbox */
-.chatbox-button {
-  transition: all 0.2s ease;
-  position: relative;
-  overflow: hidden;
-}
-
-.chatbox-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.chatbox-button:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-}
-
-.dark .new-chat-button:active {
-  background-color: rgba(
-    190,
-    24,
-    93,
-    0.4
-  ) !important; /* dark:active:bg-pink-800/40 equivalent */
-}
-
-/* Custom category button selection colors (matching new-chat-button */
-.category-button-selected {
-  background-color: #d56698 !important; /* Base color */
-  color: white !important;
-  border-color: rgba(213, 102, 152, 0.3) !important;
-}
-
-.category-button-selected:hover {
-  background-color: rgb(162, 59, 103) !important; /* Hover color */
-}
-
-.category-button-selected:active {
-  background-color: rgb(162, 59, 103) !important; /* Active state */
-}
-
-/* Dark mode styles for category button selection */
-.dark .category-button-selected {
-  background-color: rgba(162, 59, 103, 0.2) !important;
-}
-
-.dark .category-button-selected:hover {
-  background-color: rgba(190, 24, 93, 0.7) !important;
-}
-
-.dark .category-button-selected:active {
-  background-color: rgba(190, 24, 93, 0.7) !important;
 }
