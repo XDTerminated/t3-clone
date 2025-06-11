@@ -92,7 +92,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       console.error("Failed to create new chat:", error);
     }
     return null;
-  };  const selectChat = async (chatId: string) => {
+  };
+  const selectChat = async (chatId: string) => {
     setCurrentChatId(chatId);
     setMessages([]);
     setIsPendingNewChat(false); // Clear pending new chat state when selecting an existing chat
@@ -179,7 +180,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error("Error generating title:", error);
     }
-  };  const sendMessage = async (message: string) => {
+  };
+  const sendMessage = async (message: string) => {
     let chatId = currentChatId;
     let isNewChat = false;
 
@@ -218,7 +220,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       const contentType = response.headers.get("content-type") ?? "";
-      if (contentType.includes("text/event-stream")) {        // Handle streaming response
+      if (contentType.includes("text/event-stream")) {
+        // Handle streaming response
         const reader = response.body!.getReader();
         const decoder = new TextDecoder();
         let buffer = "";
@@ -247,23 +250,26 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               const { token } = parsed;
               if (typeof token === "string") {
                 // Add to complete response immediately
-                completeAiText += token;                // Schedule character-by-character display for new characters only
+                completeAiText += token; // Schedule character-by-character display for new characters only
                 const newChars = completeAiText.slice(displayedLength);
                 for (let i = 0; i < newChars.length; i++) {
                   const targetLength = displayedLength + i + 1;
-                  setTimeout(() => {
-                    setMessages((prev) => {
-                      const msgs = [...prev];
-                      if (msgs[msgs.length - 1]?.sender === "AI") {
-                        // Set the text to the exact substring we want
-                        msgs[msgs.length - 1] = {
-                          ...msgs[msgs.length - 1]!,
-                          text: completeAiText.slice(0, targetLength)
-                        };
-                      }
-                      return msgs;
-                    });
-                  }, (displayedLength + i) * charDelay);
+                  setTimeout(
+                    () => {
+                      setMessages((prev) => {
+                        const msgs = [...prev];
+                        if (msgs[msgs.length - 1]?.sender === "AI") {
+                          // Set the text to the exact substring we want
+                          msgs[msgs.length - 1] = {
+                            ...msgs[msgs.length - 1]!,
+                            text: completeAiText.slice(0, targetLength),
+                          };
+                        }
+                        return msgs;
+                      });
+                    },
+                    (displayedLength + i) * charDelay,
+                  );
                 }
                 displayedLength = completeAiText.length;
               }
@@ -291,7 +297,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   }, [isSignedIn, fetchChats]);
 
   return (
-    <ChatContext.Provider      value={{
+    <ChatContext.Provider
+      value={{
         chats,
         currentChatId,
         messages,
