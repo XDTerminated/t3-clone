@@ -4,6 +4,8 @@ import * as React from "react";
 import { Settings, Sun, Moon } from "lucide-react";
 import { cn } from "~/lib/utils";
 import { useSidebar } from "~/components/ui/sidebar";
+import { useAuth } from "@clerk/nextjs";
+import { useChat } from "~/contexts/ChatContext";
 
 /**
  * Top-right icon holder with decorative border that blends with the sidebar layout
@@ -15,6 +17,8 @@ export default function TopRightIconHolder({
 }) {
   const [isDark, setIsDark] = React.useState(true);
   const { state } = useSidebar();
+  const { isSignedIn } = useAuth();
+  const { setLoginDialogOpen, setLoginDialogAction } = useChat();
   const isCollapsed = state === "collapsed";
 
   // Initialize theme state based on current HTML class
@@ -22,7 +26,6 @@ export default function TopRightIconHolder({
     const html = document.documentElement;
     setIsDark(html.classList.contains("dark"));
   }, []);
-
   const toggleTheme = () => {
     const html = document.documentElement;
     const newTheme = !isDark;
@@ -32,6 +35,16 @@ export default function TopRightIconHolder({
       html.classList.add("dark");
     } else {
       html.classList.remove("dark");
+    }
+  };
+
+  const handleSettingsClick = () => {
+    if (!isSignedIn) {
+      setLoginDialogAction("send"); // Use "send" as default action for settings
+      setLoginDialogOpen(true);
+    } else {
+      // TODO: Add actual settings functionality here
+      console.log("Settings clicked - implement settings panel");
     }
   };
   return (
@@ -97,6 +110,7 @@ export default function TopRightIconHolder({
         >
           {" "}
           <button
+            onClick={handleSettingsClick}
             className={cn(
               "flex size-7 items-center justify-center rounded-lg transition-colors",
               "hover:bg-sidebar-accent/30 focus:ring-sidebar-ring focus:ring-1 focus:outline-none",

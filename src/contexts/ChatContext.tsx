@@ -33,7 +33,11 @@ interface ChatContextType {
   fetchChats: () => Promise<void>;
   deleteChat: (chatId: string) => Promise<void>;
   renameChat: (chatId: string, newTitle: string) => Promise<void>;
-  pinChat: (chatId: string) => Promise<void>;
+  pinChat: (chatId: string) => Promise<void>; // Login dialog state
+  loginDialogOpen: boolean;
+  loginDialogAction: "send" | "chat" | null;
+  setLoginDialogOpen: (open: boolean) => void;
+  setLoginDialogAction: (action: "send" | "chat" | null) => void;
 }
 
 // API Response Types
@@ -60,6 +64,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [loading] = useState(false);
   const [isLoadingChat, setIsLoadingChat] = useState(false);
   const [isPendingNewChat, setIsPendingNewChat] = useState(false);
+  const [loginDialogOpen, setLoginDialogOpen] = useState(false);
+  const [loginDialogAction, setLoginDialogAction] = useState<
+    "send" | "chat" | null
+  >(null);
   const { isSignedIn } = useAuth();
 
   const fetchChats = useCallback(async () => {
@@ -76,6 +84,13 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
   }, [isSignedIn]);
   const startNewChat = () => {
+    // Check if user is signed in first
+    if (!isSignedIn) {
+      setLoginDialogAction("chat");
+      setLoginDialogOpen(true);
+      return;
+    }
+
     // Don't do anything if we're already in a pending new chat state
     // OR if we're already on the welcome screen (no current chat and no messages)
     if (
@@ -96,7 +111,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       setIsLoadingChat(false);
     }, 150);
   };
-  const createNewChat = async (): Promise<Chat | null> => { // Changed return type
+  const createNewChat = async (): Promise<Chat | null> => {
+    // Changed return type
     if (!isSignedIn) return null;
 
     try {
@@ -181,15 +197,23 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         console.log("Message saved successfully");
       }
     } catch (error) {
-      console.error("Error saving message:", error);    }
+      console.error("Error saving message:", error);
+    }
   };
-  
+
   const generateQuickTitle = (message: string): string => {
     // Generate a quick title from the first message for immediate UI feedback
     const words = message.trim().split(/\s+/).slice(0, 6);
     return words.join(" ") + (words.length >= 6 ? "..." : "");
   };
   const sendMessage = async (message: string) => {
+    // Check if user is signed in first
+    if (!isSignedIn) {
+      setLoginDialogAction("send");
+      setLoginDialogOpen(true);
+      return;
+    }
+
     const chatId = currentChatId;
     let isNewChat = false;
     let tempChatId: string | null = null;
@@ -199,7 +223,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       // Generate temporary chat ID for immediate UI feedback
       tempChatId = `temp-${Date.now()}`;
       const quickTitle = generateQuickTitle(message);
-      
+
       // Add temporary chat to sidebar immediately
       const tempChat: Chat = {
         id: tempChatId,
@@ -209,7 +233,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         updatedAt: new Date(),
         pinned: false,
       };
-      
+
       setChats((prev) => [tempChat, ...prev]);
       setCurrentChatId(tempChatId);
       setIsPendingNewChat(false);
@@ -219,11 +243,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     // Add user message to UI immediately
     const newUserMsg = { sender: "User", text: message };
     setMessages((prev) => [...prev, newUserMsg]);
-    
+
     // Initialize empty AI message immediately
-    setMessages((prev) => [...prev, { sender: "AI", text: "" }]);    // === START AI RESPONSE IMMEDIATELY (don't wait for DB) ===
+    setMessages((prev) => [...prev, { sender: "AI", text: "" }]); // === START AI RESPONSE IMMEDIATELY (don't wait for DB) ===
     const conversationHistory = [...messages, newUserMsg];
-    
+
     // Start AI response without waiting
     const aiResponsePromise = (async () => {
       try {
@@ -268,7 +292,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                 const { token } = parsed;
                 if (typeof token === "string") {
                   completeAiText += token;
-                  
+
                   const newChars = completeAiText.slice(displayedLength);
                   for (let i = 0; i < newChars.length; i++) {
                     const targetLength = displayedLength + i + 1;
@@ -322,61 +346,74 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               prev.map((c) =>
                 c.id === tempChatId
                   ? { ...newChatFromDB, title: c.title } // Use newChatFromDB, preserve quickTitle
-                  : c
-              )
+                  : c,
+              ),
             );
             setCurrentChatId(newChatFromDB.id);
           } else {
-            console.error("Failed to create real chat. Removing temporary chat.");
+            console.error(
+              "Failed to create real chat. Removing temporary chat.",
+            );
             // Remove the temp chat from UI if creation fails
-            setChats(prev => prev.filter(c => c.id !== tempChatId));
+            setChats((prev) => prev.filter((c) => c.id !== tempChatId));
             if (currentChatId === tempChatId) {
-                // Reset to a state where user can start another new chat or select existing
-                setCurrentChatId(null);
-                setMessages([]);
-                setIsPendingNewChat(true); // Or call startNewChat() if it has the desired reset logic
+              // Reset to a state where user can start another new chat or select existing
+              setCurrentChatId(null);
+              setMessages([]);
+              setIsPendingNewChat(true); // Or call startNewChat() if it has the desired reset logic
             }
             return; // Stop further background processing for this failed chat
           }
         }
 
         // Save user message to database (async, non-blocking)
-        const saveUserMessagePromise = realChatId ? saveMessage(realChatId, message, "user") : Promise.resolve();
+        const saveUserMessagePromise = realChatId
+          ? saveMessage(realChatId, message, "user")
+          : Promise.resolve();
 
         // Generate and update title (async, non-blocking)
         const titlePromise = (async () => {
           if (isNewChat && realChatId && chatToUpdateInDB) {
             let betterTitle = chatToUpdateInDB.title; // Default to quick title
             try {
-              const titleGenResponse = await fetch("/api/chats/generate-title", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ message }),
-              });
+              const titleGenResponse = await fetch(
+                "/api/chats/generate-title",
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ message }),
+                },
+              );
               if (titleGenResponse.ok) {
-                const titleData = (await titleGenResponse.json()) as GenerateTitleResponse;
+                const titleData =
+                  (await titleGenResponse.json()) as GenerateTitleResponse;
                 betterTitle = titleData.title;
               } else {
-                console.warn("Failed to generate title from AI, using local fallback.");
+                console.warn(
+                  "Failed to generate title from AI, using local fallback.",
+                );
                 // Fallback to local generation if API fails
-                betterTitle = message.length > 30
-                  ? message.substring(0, 30) + "..."
-                  : message;
+                betterTitle =
+                  message.length > 30
+                    ? message.substring(0, 30) + "..."
+                    : message;
               }
             } catch (error) {
-              console.error("Error calling generate-title API, using local fallback:", error);
-              betterTitle = message.length > 30
-                ? message.substring(0, 30) + "..."
-                : message;
+              console.error(
+                "Error calling generate-title API, using local fallback:",
+                error,
+              );
+              betterTitle =
+                message.length > 30
+                  ? message.substring(0, 30) + "..."
+                  : message;
             }
 
             // Update the chat title in local state immediately
             setChats((prev) =>
               prev.map((chat) =>
-                chat.id === realChatId
-                  ? { ...chat, title: betterTitle }
-                  : chat
-              )
+                chat.id === realChatId ? { ...chat, title: betterTitle } : chat,
+              ),
             );
 
             // Update title in DB
@@ -387,10 +424,16 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                 body: JSON.stringify({ title: betterTitle }),
               });
               if (!res.ok) {
-                console.error("Failed to update chat title in DB:", await res.text());
+                console.error(
+                  "Failed to update chat title in DB:",
+                  await res.text(),
+                );
                 // Optionally revert local title if DB update fails, or notify user
               } else {
-                console.log("Chat title updated in DB successfully:", betterTitle);
+                console.log(
+                  "Chat title updated in DB successfully:",
+                  betterTitle,
+                );
                 // If server returns updated chat, can use it: const updatedChatFromDB = await res.json();
                 // setChats(prev => prev.map(c => c.id === realChatId ? { ...c, ...updatedChatFromDB.chat } : c));
               }
@@ -402,7 +445,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
         // Wait for AI response and save it
         const completeAiText = await aiResponsePromise;
-        const saveAiMessagePromise = completeAiText 
+        const saveAiMessagePromise = completeAiText
           ? saveMessage(realChatId!, completeAiText, "assistant")
           : Promise.resolve();
 
@@ -411,7 +454,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           saveUserMessagePromise,
           titlePromise,
           saveAiMessagePromise,
-        ]);      } catch (error) {
+        ]);
+      } catch (error) {
         console.error("Error in background database operations:", error);
       }
     })();
@@ -498,7 +542,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       void fetchChats();
     }
   }, [isSignedIn, fetchChats]);
-
   return (
     <ChatContext.Provider
       value={{
@@ -516,6 +559,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         deleteChat,
         renameChat,
         pinChat,
+        loginDialogOpen,
+        loginDialogAction,
+        setLoginDialogOpen,
+        setLoginDialogAction,
       }}
     >
       {children}
