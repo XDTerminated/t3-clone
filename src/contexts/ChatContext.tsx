@@ -1383,120 +1383,123 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       >();
       const newCurrentSelections = new Map<number, number>();
 
-      // Group AI messages by their conversation position across branches
-      // Only consider them alternatives if they have the same conversation history up to that point
-      const conversationPositionMap = new Map<
-        number,
-        Array<{ branchId: string; text: string; messageIndex: number }>
+      // To properly detect regenerated messages, we need to find branches that share
+      // a common conversation history and have different AI responses at the same position
+
+      // First, build a map of conversation histories for each branch
+      const branchHistories = new Map<
+        string,
+        {
+          fullHistory: string[];
+          lastUserMessageIndex: number;
+          lastAIMessageIndex: number;
+          lastAIMessage: string;
+        }
       >();
 
       branches.forEach((branch) => {
-        let userMessageCount = 0;
-        branch.messages.forEach((message, messageIndex) => {
+        const fullHistory: string[] = [];
+        let lastUserMessageIndex = -1;
+        let lastAIMessageIndex = -1;
+        let lastAIMessage = "";
+
+        branch.messages.forEach((message, index) => {
+          fullHistory.push(`${message.sender}:${message.text}`);
           if (message.sender === "User") {
-            userMessageCount++;
+            lastUserMessageIndex = index;
           } else if (message.sender === "AI") {
-            const conversationPosition = userMessageCount;
-
-            if (!conversationPositionMap.has(conversationPosition)) {
-              conversationPositionMap.set(conversationPosition, []);
-            }
-
-            const existingEntry = conversationPositionMap
-              .get(conversationPosition)!
-              .find((entry) => entry.text === message.text);
-
-            if (!existingEntry) {
-              conversationPositionMap.get(conversationPosition)!.push({
-                branchId: branch.id,
-                text: message.text,
-                messageIndex,
-              });
-            }
+            lastAIMessageIndex = index;
+            lastAIMessage = message.text;
           }
+        });
+
+        branchHistories.set(branch.id, {
+          fullHistory,
+          lastUserMessageIndex,
+          lastAIMessageIndex,
+          lastAIMessage,
         });
       });
 
-      // For each conversation position, verify that alternatives have the same conversation history
-      for (const [
-        conversationPosition,
-        alternatives,
-      ] of conversationPositionMap) {
-        if (alternatives.length > 1) {
-          // Check if all alternatives have the same conversation history up to this point
-          const branchHistories = alternatives.map((alt) => {
-            const branch = branches.find((b) => b.id === alt.branchId);
-            if (!branch) return null;
+      // Find regenerated messages by looking for branches with identical history up to a point,
+      // but different AI responses at that point
+      for (const [branchId1, history1] of branchHistories) {
+        for (const [branchId2, history2] of branchHistories) {
+          if (branchId1 >= branchId2) continue; // Avoid duplicates
 
-            const historyUpToPosition = [];
-            let userCount = 0;
-            for (const msg of branch.messages) {
-              if (msg.sender === "User") {
-                userCount++;
-                if (userCount < conversationPosition) {
-                  historyUpToPosition.push(msg.text);
-                } else {
-                  break;
-                }
-              }
-            }
-            return historyUpToPosition.join("|");
-          });
-
-          // Check if all alternatives have the same conversation history
-          const firstHistory = branchHistories[0];
-          const allSameHistory = branchHistories.every(
-            (h) => h === firstHistory,
+          // Check if these branches have a common prefix but diverge at an AI response
+          let commonPrefixLength = 0;
+          const minLength = Math.min(
+            history1.fullHistory.length,
+            history2.fullHistory.length,
           );
 
-          if (allSameHistory) {
-            // Convert to message indices for the current branch
-            if (currentBranchId) {
-              const currentBranch = branches.find(
-                (b) => b.id === currentBranchId,
-              );
-              if (currentBranch) {
-                let currentUserCount = 0;
-                let targetMessageIndex = -1;
+          for (let i = 0; i < minLength; i++) {
+            if (history1.fullHistory[i] === history2.fullHistory[i]) {
+              commonPrefixLength++;
+            } else {
+              break;
+            }
+          }
 
-                for (let i = 0; i < currentBranch.messages.length; i++) {
-                  const msg = currentBranch.messages[i];
-                  if (msg && msg.sender === "User") {
-                    currentUserCount++;
-                  } else if (
-                    msg &&
-                    msg.sender === "AI" &&
-                    currentUserCount === conversationPosition
-                  ) {
-                    targetMessageIndex = i;
-                    break;
-                  }
-                }
+          // If there's a divergence and both branches have at least one more message after the common prefix
+          if (commonPrefixLength < minLength && commonPrefixLength > 0) {
+            // Check if the divergence is at an AI message position
+            const divergentMessage1 = history1.fullHistory[commonPrefixLength];
+            const divergentMessage2 = history2.fullHistory[commonPrefixLength];
 
-                if (targetMessageIndex >= 0) {
-                  // Map conversation position alternatives to message index alternatives
-                  const messageAlternatives = alternatives.map((alt) => ({
-                    branchId: alt.branchId,
-                    text: alt.text,
-                  }));
+            if (
+              divergentMessage1?.startsWith("AI:") &&
+              divergentMessage2?.startsWith("AI:")
+            ) {
+              // This indicates a regeneration - same conversation up to this point, different AI responses
+              const aiText1 = divergentMessage1.substring(3); // Remove "AI:" prefix
+              const aiText2 = divergentMessage2.substring(3); // Remove "AI:" prefix
 
-                  newMessageAlternatives.set(
-                    targetMessageIndex,
-                    messageAlternatives,
-                  );
+              // Find the message index in each branch for this regenerated position
+              const branch1 = branches.find((b) => b.id === branchId1);
+              const branch2 = branches.find((b) => b.id === branchId2);
 
-                  // Set current selection based on current message text
-                  const currentMessage =
-                    currentBranch.messages[targetMessageIndex];
-                  if (currentMessage) {
-                    const currentIndex = messageAlternatives.findIndex(
-                      (alt) => alt.text === currentMessage.text,
+              if (branch1 && branch2) {
+                const messageIndex1 = commonPrefixLength;
+                const messageIndex2 = commonPrefixLength;
+
+                // Add alternatives for both branches if they're within valid range
+                if (
+                  messageIndex1 < branch1.messages.length &&
+                  messageIndex2 < branch2.messages.length
+                ) {
+                  // For branch 1
+                  if (branchId1 === currentBranchId) {
+                    const alternatives = [
+                      { branchId: branchId1, text: aiText1 },
+                      { branchId: branchId2, text: aiText2 },
+                    ];
+                    newMessageAlternatives.set(messageIndex1, alternatives);
+
+                    // Set current selection
+                    const currentIndex = alternatives.findIndex(
+                      (alt) => alt.text === aiText1,
                     );
                     if (currentIndex >= 0) {
-                      newCurrentSelections.set(
-                        targetMessageIndex,
-                        currentIndex,
-                      );
+                      newCurrentSelections.set(messageIndex1, currentIndex);
+                    }
+                  }
+
+                  // For branch 2
+                  if (branchId2 === currentBranchId) {
+                    const alternatives = [
+                      { branchId: branchId1, text: aiText1 },
+                      { branchId: branchId2, text: aiText2 },
+                    ];
+                    newMessageAlternatives.set(messageIndex2, alternatives);
+
+                    // Set current selection
+                    const currentIndex = alternatives.findIndex(
+                      (alt) => alt.text === aiText2,
+                    );
+                    if (currentIndex >= 0) {
+                      newCurrentSelections.set(messageIndex2, currentIndex);
                     }
                   }
                 }
