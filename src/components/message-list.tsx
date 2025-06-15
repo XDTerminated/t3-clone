@@ -199,10 +199,8 @@ function InitializeMarkdownPlugin({ markdownText }: { markdownText: string }) {
 export default function MessageList({ messages }: MessageListProps) {
   const {
     regenerateResponse,
-    prevBranch,
-    nextBranch,
-    branchIndex,
-    branchCount,
+    getMessageAlternativeInfo,
+    selectMessageAlternative,
   } = useChat();
 
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
@@ -317,63 +315,84 @@ export default function MessageList({ messages }: MessageListProps) {
                     <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
                     <path d="M16 16h5v5" />
                   </svg>
-                </button>
-              </div>
+                </button>{" "}
+              </div>{" "}
+              {/* Message-level alternative navigation controls - show for AI messages that have alternatives */}
+              {msg.sender === "AI" &&
+                (() => {
+                  const alternativeInfo = getMessageAlternativeInfo(idx);
+                  if (!alternativeInfo) return null;
 
-              {/* Branch navigation controls - show for AI messages when there are multiple branches */}
-              {branchCount > 1 && idx === messages.length - 1 && (
-                <div className="mt-3 flex items-center justify-center gap-2">
-                  <button
-                    onClick={prevBranch}
-                    disabled={branchIndex <= 0}
-                    className="focus-visible:ring-ring hover:text-foreground disabled:hover:text-foreground/50 hover:bg-muted-foreground/10 inline-flex h-8 w-8 items-center justify-center gap-2 rounded-lg p-0 text-xs font-medium whitespace-nowrap transition-colors focus-visible:ring-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0"
-                    aria-label="Previous branch"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="24"
-                      height="24"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="h-4 w-4"
-                      aria-hidden="true"
-                    >
-                      <path d="m15 18-6-6 6-6" />
-                    </svg>
-                  </button>
+                  const handlePrevAlternative = () => {
+                    const newIndex = alternativeInfo.current - 2; // Convert to 0-based and go to previous
+                    if (newIndex >= 0) {
+                      selectMessageAlternative(idx, newIndex);
+                    }
+                  };
 
-                  <span className="text-muted-foreground bg-muted/50 rounded px-2 py-1 text-sm">
-                    {branchIndex + 1} / {branchCount}
-                  </span>
+                  const handleNextAlternative = () => {
+                    const newIndex = alternativeInfo.current; // Current is 1-based, so this is next in 0-based
+                    if (newIndex < alternativeInfo.total) {
+                      selectMessageAlternative(idx, newIndex);
+                    }
+                  };
 
-                  <button
-                    onClick={nextBranch}
-                    disabled={branchIndex >= branchCount - 1}
-                    className="focus-visible:ring-ring hover:text-foreground disabled:hover:text-foreground/50 hover:bg-muted-foreground/10 inline-flex h-8 w-8 items-center justify-center gap-2 rounded-lg p-0 text-xs font-medium whitespace-nowrap transition-colors focus-visible:ring-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0"
-                    aria-label="Next branch"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="24"
-                      height="24"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="h-4 w-4"
-                      aria-hidden="true"
-                    >
-                      <path d="m9 18 6-6-6-6" />
-                    </svg>
-                  </button>
-                </div>
-              )}
+                  return (
+                    <div className="mt-3 flex items-center justify-center gap-2">
+                      <button
+                        onClick={handlePrevAlternative}
+                        disabled={alternativeInfo.current <= 1}
+                        className="focus-visible:ring-ring hover:text-foreground disabled:hover:text-foreground/50 hover:bg-muted-foreground/10 inline-flex h-8 w-8 items-center justify-center gap-2 rounded-lg p-0 text-xs font-medium whitespace-nowrap transition-colors focus-visible:ring-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0"
+                        aria-label="Previous alternative"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="24"
+                          height="24"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth={2}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="h-4 w-4"
+                          aria-hidden="true"
+                        >
+                          <path d="m15 18-6-6 6-6" />
+                        </svg>
+                      </button>
+
+                      <span className="text-muted-foreground bg-muted/50 rounded px-2 py-1 text-sm">
+                        {alternativeInfo.current} / {alternativeInfo.total}
+                      </span>
+
+                      <button
+                        onClick={handleNextAlternative}
+                        disabled={
+                          alternativeInfo.current >= alternativeInfo.total
+                        }
+                        className="focus-visible:ring-ring hover:text-foreground disabled:hover:text-foreground/50 hover:bg-muted-foreground/10 inline-flex h-8 w-8 items-center justify-center gap-2 rounded-lg p-0 text-xs font-medium whitespace-nowrap transition-colors focus-visible:ring-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0"
+                        aria-label="Next alternative"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="24"
+                          height="24"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth={2}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="h-4 w-4"
+                          aria-hidden="true"
+                        >
+                          <path d="m9 18 6-6-6-6" />
+                        </svg>
+                      </button>
+                    </div>
+                  );
+                })()}
             </div>
           )}
         </div>
