@@ -46,7 +46,17 @@ export async function POST() {
         userId,
         title: null, // Will be generated later
       },
-    });
+    }); // Ensure default branch exists, but don't block chat creation
+    try {
+      await prisma.branch.create({
+        data: {
+          chatId: chat.id,
+          name: "Main",
+        },
+      });
+    } catch (branchError: unknown) {
+      console.error("Error creating default branch:", branchError);
+    }
 
     return NextResponse.json({ chat });
   } catch (error) {

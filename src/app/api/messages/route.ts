@@ -12,6 +12,7 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const chatId = searchParams.get("chatId");
+    const branchId = searchParams.get("branchId");
 
     if (!chatId) {
       return NextResponse.json(
@@ -31,7 +32,7 @@ export async function GET(request: Request) {
 
     // Get messages for the chat
     const messages = await prisma.message.findMany({
-      where: { chatId },
+      where: branchId ? { chatId, branchId } : { chatId },
       orderBy: { createdAt: "asc" },
     });
 
@@ -52,13 +53,13 @@ export async function POST(request: Request) {
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
     const body = (await request.json()) as {
       chatId: string;
       content: string;
       role: string;
+      branchId?: string;
     };
-    const { chatId, content, role } = body;
+    const { chatId, content, role, branchId } = body;
 
     if (!chatId || !content || !role) {
       return NextResponse.json(
@@ -78,14 +79,34 @@ export async function POST(request: Request) {
 
     if (!chat) {
       return NextResponse.json({ error: "Chat not found" }, { status: 404 });
+    } // Get or create the appropriate branch for this chat
+    let branch;
+    if (branchId) {
+      // Use the provided branchId
+      branch = await prisma.branch.findFirst({
+        where: { id: branchId, chatId },
+      });
+      if (!branch) {
+        return NextResponse.json(
+          { error: "Branch not found" },
+          { status: 404 },
+        );
+      }
+    } else {
+      // Get or create the 'Main' branch for this chat (fallback for old behavior)
+      branch = await prisma.branch.findFirst({
+        where: { chatId, name: "Main" },
+      });
+      branch ??= await prisma.branch.create({ data: { chatId, name: "Main" } });
     }
 
-    // Create the message
+    // Create the message, associating it with the branch
     const message = await prisma.message.create({
       data: {
         chatId,
         content,
         role,
+        branchId: branch.id,
       },
     });
 

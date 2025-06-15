@@ -6,8 +6,10 @@ import {
   useEffect,
   useState,
   useCallback,
+  useRef,
 } from "react";
 import { useAuth } from "@clerk/nextjs";
+// Using built-in crypto for UUIDs
 
 // Types
 interface Chat {
@@ -39,6 +41,18 @@ interface ChatContextType {
   loginDialogAction: "send" | "chat" | null;
   setLoginDialogOpen: (open: boolean) => void;
   setLoginDialogAction: (action: "send" | "chat" | null) => void;
+  branches: {
+    id: string;
+    name: string;
+    messages: Array<{ sender: string; text: string }>;
+  }[];
+  currentBranchId: string | null;
+  selectBranch: (branchId: string) => void;
+  regenerateResponse: (userMessageIndex: number) => Promise<void>;
+  prevBranch: () => void;
+  nextBranch: () => void;
+  branchIndex: number;
+  branchCount: number;
 }
 
 // API Response Types
@@ -70,6 +84,15 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [loginDialogAction, setLoginDialogAction] = useState<
     "send" | "chat" | null
   >(null);
+  // Branching support
+  const [branches, setBranches] = useState<
+    {
+      id: string;
+      name: string;
+      messages: Array<{ sender: string; text: string }>;
+    }[]
+  >([]);
+  const [currentBranchId, setCurrentBranchId] = useState<string | null>(null);
   const { isSignedIn, isLoaded } = useAuth();
   const fetchChats = useCallback(async () => {
     if (!isSignedIn) return;
@@ -102,13 +125,15 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       (!currentChatId && messages.length === 0)
     ) {
       return;
-    }
-
-    // Start a new chat session without creating it in the database
+    } // Start a new chat session without creating it in the database
     setIsLoadingChat(true);
     setCurrentChatId(null);
     setMessages([]);
     setIsPendingNewChat(true);
+
+    // Clear branches and branch ID - they will be set when chat is created
+    setBranches([]);
+    setCurrentBranchId(null);
 
     // Add a small delay for smooth transition
     setTimeout(() => {
@@ -146,31 +171,73 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     setIsPendingNewChat(false); // Clear pending new chat state when selecting an existing chat
 
     // Add a small delay to ensure smooth transition
-    await new Promise((resolve) => setTimeout(resolve, 150));
-
-    // Load messages for the selected chat
+    await new Promise((resolve) => setTimeout(resolve, 150)); // Load branches for the chat
+    let firstBranchId: string | null = null;
     try {
-      const response = await fetch(`/api/messages?chatId=${chatId}`);
-      if (response.ok) {
-        const data = (await response.json()) as {
-          messages: Array<{ role: string; content: string }>;
+      const branchRes = await fetch(`/api/branches?chatId=${chatId}`);
+      if (branchRes.ok) {
+        const data = (await branchRes.json()) as {
+          branches: Array<{ id: string; name: string }>;
         };
-        // Convert database messages to UI format
-        const uiMessages = data.messages.map((msg) => ({
-          sender: msg.role === "user" ? "User" : "AI",
-          text: msg.content,
-        }));
-        setMessages(uiMessages);
-      } else {
-        console.error("Failed to load messages for chat:", chatId);
-        setMessages([]); // Clear messages on error
+
+        // Load messages for ALL branches to ensure persistence
+        const branchesWithMessages = await Promise.all(
+          data.branches.map(async (branch) => {
+            try {
+              const msgRes = await fetch(
+                `/api/messages?chatId=${chatId}&branchId=${branch.id}`,
+              );
+              if (msgRes.ok) {
+                const msgData = (await msgRes.json()) as {
+                  messages: Array<{ role: string; content: string }>;
+                };
+                const uiMessages = msgData.messages.map((msg) => ({
+                  sender: msg.role === "user" ? "User" : "AI",
+                  text: msg.content,
+                }));
+                return { ...branch, messages: uiMessages };
+              }
+            } catch (err) {
+              console.error(
+                `Failed to load messages for branch ${branch.id}:`,
+                err,
+              );
+            }
+            return { ...branch, messages: [] };
+          }),
+        );
+
+        setBranches(branchesWithMessages);
+
+        if (branchesWithMessages.length > 0) {
+          firstBranchId = branchesWithMessages[0]!.id;
+          setCurrentBranchId(firstBranchId);
+          // Set messages from the first branch
+          setMessages(branchesWithMessages[0]!.messages);
+        }
       }
-    } catch (error) {
-      console.error("Error loading messages:", error);
-      setMessages([]); // Clear messages on error
-    } finally {
-      setIsLoadingChat(false);
+    } catch (err) {
+      console.error("Failed to fetch branches:", err);
+      // Fallback to loading messages without branches
+      try {
+        const response = await fetch(`/api/messages?chatId=${chatId}`);
+        if (response.ok) {
+          const msgData = (await response.json()) as {
+            messages: Array<{ role: string; content: string }>;
+          };
+          const uiMessages = msgData.messages.map((msg) => ({
+            sender: msg.role === "user" ? "User" : "AI",
+            text: msg.content,
+          }));
+          setMessages(uiMessages);
+        }
+      } catch (fallbackErr) {
+        console.error("Failed to load messages:", fallbackErr);
+        setMessages([]);
+      }
     }
+
+    setIsLoadingChat(false);
   };
   const saveMessage = async (
     chatId: string,
@@ -183,10 +250,26 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         content: content.substring(0, 50) + "...",
         role,
       });
+      const requestBody: {
+        chatId: string;
+        content: string;
+        role: string;
+        branchId?: string;
+      } = {
+        chatId,
+        content,
+        role,
+      };
+
+      // Only include branchId if we have one
+      if (currentBranchId) {
+        requestBody.branchId = currentBranchId;
+      }
+
       const response = await fetch("/api/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chatId, content, role }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
@@ -237,19 +320,37 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         updatedAt: new Date(),
         pinned: false,
       };
-
       setChats((prev) => [tempChat, ...prev]);
       setCurrentChatId(tempChatId);
       setIsPendingNewChat(false);
       isNewChat = true;
-    }
 
-    // Add user message to UI immediately
+      // Don't set branch ID yet - will be set after chat is created in DB
+    } // Add user message to UI immediately
     const newUserMsg = { sender: "User", text: message };
+
+    // Update both UI state and branch state together
+    setBranches((prev) => {
+      if (!currentBranchId) return prev;
+      return prev.map((branch) =>
+        branch.id === currentBranchId
+          ? { ...branch, messages: [...branch.messages, newUserMsg] }
+          : branch,
+      );
+    });
     setMessages((prev) => [...prev, newUserMsg]);
 
     // Initialize empty AI message immediately
-    setMessages((prev) => [...prev, { sender: "AI", text: "" }]); // === START AI RESPONSE IMMEDIATELY (don't wait for DB) ===
+    const emptyAIMsg = { sender: "AI", text: "" };
+    setBranches((prev) => {
+      if (!currentBranchId) return prev;
+      return prev.map((branch) =>
+        branch.id === currentBranchId
+          ? { ...branch, messages: [...branch.messages, emptyAIMsg] }
+          : branch,
+      );
+    });
+    setMessages((prev) => [...prev, emptyAIMsg]); // === START AI RESPONSE IMMEDIATELY (don't wait for DB) ===
     const conversationHistory = [...messages, newUserMsg];
 
     // Start AI response without waiting
@@ -302,16 +403,39 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                     const targetLength = displayedLength + i + 1;
                     setTimeout(
                       () => {
+                        const updatedText = completeAiText.slice(
+                          0,
+                          targetLength,
+                        );
                         setMessages((prev) => {
                           const msgs = [...prev];
                           if (msgs[msgs.length - 1]?.sender === "AI") {
                             msgs[msgs.length - 1] = {
                               ...msgs[msgs.length - 1]!,
-                              text: completeAiText.slice(0, targetLength),
+                              text: updatedText,
                             };
                           }
                           return msgs;
                         });
+                        // Update branch in a separate state update
+                        if (currentBranchId) {
+                          setBranches((prevBranches) =>
+                            prevBranches.map((branch) =>
+                              branch.id === currentBranchId
+                                ? {
+                                    ...branch,
+                                    messages: branch.messages.map(
+                                      (msg, idx, arr) =>
+                                        idx === arr.length - 1 &&
+                                        msg.sender === "AI"
+                                          ? { ...msg, text: updatedText }
+                                          : msg,
+                                    ),
+                                  }
+                                : branch,
+                            ),
+                          );
+                        }
                       },
                       (displayedLength + i) * charDelay,
                     );
@@ -343,9 +467,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           const newChatFromDB = await createNewChat(); // Returns Chat | null
           if (newChatFromDB) {
             realChatId = newChatFromDB.id;
-            chatToUpdateInDB = newChatFromDB; // Store for title update
-
-            // Update the temporary chat entry with real data from DB, keeping quickTitle for now
+            chatToUpdateInDB = newChatFromDB; // Store for title update            // Update the temporary chat entry with real data from DB, keeping quickTitle for now
             setChats((prev) =>
               prev.map((c) =>
                 c.id === tempChatId
@@ -354,6 +476,28 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               ),
             );
             setCurrentChatId(newChatFromDB.id);
+
+            // Load branches for the new chat
+            try {
+              const branchRes = await fetch(
+                `/api/branches?chatId=${newChatFromDB.id}`,
+              );
+              if (branchRes.ok) {
+                const data = (await branchRes.json()) as {
+                  branches: Array<{ id: string; name: string }>;
+                };
+                const branchesWithMessages = data.branches.map((b) => ({
+                  ...b,
+                  messages: [],
+                }));
+                setBranches(branchesWithMessages);
+                if (branchesWithMessages.length > 0) {
+                  setCurrentBranchId(branchesWithMessages[0]!.id);
+                }
+              }
+            } catch (err) {
+              console.error("Failed to fetch branches for new chat:", err);
+            }
           } else {
             console.error(
               "Failed to create real chat. Removing temporary chat.",
@@ -554,7 +698,242 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       setIsPendingNewChat(false);
       setIsLoadingChats(false);
     }
-  }, [isSignedIn, isLoaded, fetchChats]);
+  }, [isSignedIn, isLoaded, fetchChats]); // Sync messages to current branch when messages change (but avoid infinite loops)
+  // Use a ref to track if we're in the middle of a branch switch to avoid syncing
+  const isSwitchingBranch = useRef(false);
+  // REMOVED: The useEffect that was causing infinite loops
+  // We'll handle syncing manually in specific functions instead
+
+  // Switch branches
+  const selectBranch = (branchId: string) => {
+    const branch = branches.find((b) => b.id === branchId);
+    if (!branch) return;
+
+    // Set flag to prevent syncing during branch switch
+    isSwitchingBranch.current = true;
+    setCurrentBranchId(branchId);
+    setMessages(branch.messages);
+
+    // Reset flag after state updates
+    setTimeout(() => {
+      isSwitchingBranch.current = false;
+    }, 0);
+  }; // Compute branchIndex and count
+  const branchIndex = branches.findIndex((b) => b.id === currentBranchId);
+  const branchCount = branches.length;
+  const prevBranch = () => {
+    if (branchIndex > 0 && branches[branchIndex - 1]) {
+      const prevId = branches[branchIndex - 1]!.id;
+      selectBranch(prevId);
+    }
+  };
+  const nextBranch = () => {
+    if (branchIndex < branches.length - 1 && branches[branchIndex + 1]) {
+      const nextId = branches[branchIndex + 1]!.id;
+      selectBranch(nextId);
+    }
+  }; // Regenerate AI response for a given user message index
+  const regenerateResponse = async (userMessageIndex: number) => {
+    if (!currentChatId || !currentBranchId) return;
+    const oldBranch = branches.find((b) => b.id === currentBranchId);
+    if (!oldBranch) return;
+
+    // IMPORTANT: Save current messages to the old branch before switching
+    const currentMessages = [...messages];
+    setBranches((prev) =>
+      prev.map((branch) =>
+        branch.id === currentBranchId
+          ? { ...branch, messages: currentMessages }
+          : branch,
+      ),
+    );
+
+    // Get messages up to the point we want to regenerate from
+    const initialMessages = currentMessages.slice(0, userMessageIndex + 1);
+    const newBranchName = `Branch ${branches.length + 1}`;
+
+    try {
+      // Create new branch on server WITHOUT copying parent messages
+      const response = await fetch("/api/branches", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chatId: currentChatId,
+          name: newBranchName,
+          // Don't include parentBranchId to avoid copying messages
+        }),
+      });
+
+      if (response.ok) {
+        const data = (await response.json()) as {
+          branch: { id: string; name: string };
+        };
+
+        // Save the initial messages to the new branch in the database
+        for (const msg of initialMessages) {
+          await fetch("/api/messages", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              chatId: currentChatId,
+              content: msg.text,
+              role: msg.sender === "User" ? "user" : "assistant",
+              branchId: data.branch.id,
+            }),
+          });
+        }
+
+        // Add new branch to local state
+        setBranches((prev) => [
+          ...prev,
+          {
+            id: data.branch.id,
+            name: data.branch.name,
+            messages: initialMessages,
+          },
+        ]);
+
+        // Switch to new branch
+        isSwitchingBranch.current = true;
+        setCurrentBranchId(data.branch.id);
+        setMessages(initialMessages);
+        isSwitchingBranch.current = false;
+
+        // Generate new AI response directly without using sendMessage
+        const lastUserMessage = initialMessages[userMessageIndex];
+        if (lastUserMessage && lastUserMessage.sender === "User") {
+          // Add empty AI message to UI
+          const emptyAIMsg = { sender: "AI", text: "" };
+          setMessages((prev) => [...prev, emptyAIMsg]);
+          setBranches((prev) =>
+            prev.map((branch) =>
+              branch.id === data.branch.id
+                ? { ...branch, messages: [...branch.messages, emptyAIMsg] }
+                : branch,
+            ),
+          );
+
+          // Get conversation history for AI context
+          const conversationHistory = initialMessages.map((msg) => ({
+            sender: msg.sender,
+            text: msg.text,
+          }));
+
+          // Start AI response generation
+          try {
+            const aiResponse = await fetch("/api/chat", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                chatId: currentChatId,
+                history: conversationHistory,
+              }),
+            });
+
+            if (aiResponse.ok) {
+              const contentType = aiResponse.headers.get("content-type") ?? "";
+              if (contentType.includes("text/event-stream")) {
+                const reader = aiResponse.body!.getReader();
+                const decoder = new TextDecoder();
+                let buffer = "";
+                let completeAiText = "";
+                let displayedLength = 0;
+                const charDelay = 1;
+
+                while (true) {
+                  const { done, value } = await reader.read();
+                  if (done) break;
+
+                  buffer += decoder.decode(value, { stream: true });
+                  const parts = buffer.split(/\r?\n\r?\n/);
+                  buffer = parts.pop() ?? "";
+
+                  for (const part of parts) {
+                    if (!part.startsWith("data: ")) continue;
+                    const dataStr = part.replace(/^data: /, "").trim();
+                    if (dataStr === "[DONE]") break;
+
+                    try {
+                      const parsed = JSON.parse(dataStr) as { token?: unknown };
+                      const { token } = parsed;
+                      if (typeof token === "string") {
+                        completeAiText += token;
+
+                        const newChars = completeAiText.slice(displayedLength);
+                        for (let i = 0; i < newChars.length; i++) {
+                          const targetLength = displayedLength + i + 1;
+                          setTimeout(
+                            () => {
+                              const updatedText = completeAiText.slice(
+                                0,
+                                targetLength,
+                              );
+                              setMessages((prev) => {
+                                const msgs = [...prev];
+                                if (msgs[msgs.length - 1]?.sender === "AI") {
+                                  msgs[msgs.length - 1] = {
+                                    ...msgs[msgs.length - 1]!,
+                                    text: updatedText,
+                                  };
+                                }
+                                return msgs;
+                              });
+                              // Update branch in a separate state update
+                              setBranches((prevBranches) =>
+                                prevBranches.map((branch) =>
+                                  branch.id === data.branch.id
+                                    ? {
+                                        ...branch,
+                                        messages: branch.messages.map(
+                                          (msg, idx, arr) =>
+                                            idx === arr.length - 1 &&
+                                            msg.sender === "AI"
+                                              ? { ...msg, text: updatedText }
+                                              : msg,
+                                        ),
+                                      }
+                                    : branch,
+                                ),
+                              );
+                            },
+                            (displayedLength + i) * charDelay,
+                          );
+                        }
+                        displayedLength = completeAiText.length;
+                      }
+                    } catch {
+                      // Ignore parse errors
+                    }
+                  }
+                }
+
+                // Save final AI response to database
+                if (completeAiText) {
+                  await fetch("/api/messages", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      chatId: currentChatId,
+                      content: completeAiText,
+                      role: "assistant",
+                      branchId: data.branch.id,
+                    }),
+                  });
+                }
+              }
+            }
+          } catch (error) {
+            console.error("Error generating AI response:", error);
+          }
+        }
+      } else {
+        console.error("Failed to create branch on server");
+      }
+    } catch (error) {
+      console.error("Error creating branch:", error);
+    }
+  };
+
   return (
     <ChatContext.Provider
       value={{
@@ -565,6 +944,14 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         isLoadingChat,
         isPendingNewChat,
         isLoadingChats,
+        branches,
+        currentBranchId,
+        selectBranch,
+        regenerateResponse,
+        prevBranch,
+        nextBranch,
+        branchIndex,
+        branchCount,
         createNewChat,
         startNewChat,
         selectChat,

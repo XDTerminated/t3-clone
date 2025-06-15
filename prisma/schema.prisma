@@ -20,9 +20,8 @@ model Chat {
   pinned    Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
   messages Message[]
-  
+  branches Branch[]
   @@map("chats")
 }
 
@@ -31,9 +30,19 @@ model Message {
   content   String
   role      String   // "user" or "assistant"
   chatId    String
+  branchId  String?
+  branch    Branch?  @relation(fields: [branchId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
-  
-  chat Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
-  
+  chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
   @@map("messages")
+}
+
+model Branch {
+  id        String    @id @default(cuid())
+  name      String?
+  chat      Chat      @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  chatId    String
+  createdAt DateTime  @default(now())
+  messages  Message[]
+  @@map("branches")
 }
