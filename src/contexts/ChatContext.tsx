@@ -1013,6 +1013,13 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           "messages to new branch",
           data.branch.id,
         );
+        console.log(
+          "Initial messages being saved:",
+          initialMessages.map((m) => ({
+            sender: m.sender,
+            text: m.text.substring(0, 50) + "...",
+          })),
+        );
 
         // Save the initial messages to the new branch in the database using robust saveMessage
         // Pass the new branch ID directly to avoid async state update issues
@@ -1327,8 +1334,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         number,
         Array<{ branchId: string; text: string }>
       >();
-      const newCurrentSelections = new Map<number, number>(); // Group AI messages by their conversation position (based on preceding user messages)
-      // This ensures we match the right AI responses even if branches have different structures
+      const newCurrentSelections = new Map<number, number>(); // Group AI messages by their conversation position, but only for messages that were actually regenerated
+      // We need to be smarter about detecting regeneration: it should only happen when the same conversation
+      // position has different AI responses across branches that share the same conversation history up to that point
+
       branches.forEach((branch) => {
         let userMessageCount = 0;
         console.log(
@@ -1339,8 +1348,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           if (message.sender === "User") {
             userMessageCount++;
           } else if (message.sender === "AI") {
-            // This AI message responds to the userMessageCount-th user message
-            // So its conversation position is based on the number of user messages before it
             const conversationPosition = userMessageCount;
 
             if (!newMessageAlternatives.has(conversationPosition)) {
@@ -1348,6 +1355,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             }
             const alternatives =
               newMessageAlternatives.get(conversationPosition)!;
+
             // Only add if this text isn't already present for this conversation position
             const existingAlternative = alternatives.find(
               (alt) => alt.text === message.text,
@@ -1378,6 +1386,53 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         newMessageAlternatives,
       );
 
+      // CRITICAL FIX: Only keep conversation positions where we have multiple DIFFERENT responses
+      // AND those responses come from branches that have the same conversation history up to that point
+      const validRegeneratedPositions = new Set<number>();
+
+      for (const [
+        conversationPosition,
+        alternatives,
+      ] of newMessageAlternatives) {
+        if (alternatives.length > 1) {
+          // Verify that these alternatives come from branches with the same conversation history
+          // up to this point (meaning they're truly alternatives, not just different branches)
+          const branchHistories = alternatives
+            .map((alt) => {
+              const branch = branches.find((b) => b.id === alt.branchId);
+              if (!branch) return null;
+              // Get the conversation history up to but NOT including this position
+              const historyUpToPosition = [];
+              let userCount = 0;
+              for (const msg of branch.messages) {
+                if (msg.sender === "User") {
+                  userCount++;
+                  if (userCount < conversationPosition) {
+                    historyUpToPosition.push(msg.text);
+                  } else {
+                    break; // Stop before including the current position
+                  }
+                }
+              }
+              return historyUpToPosition.join("|"); // Create a signature of the conversation history
+            })
+            .filter((h) => h !== null);
+          // Check if all alternatives have the same conversation history up to this point
+          const firstHistory = branchHistories[0];
+          const allSameHistory = branchHistories.every(
+            (h) => h === firstHistory,
+          );
+          if (allSameHistory && alternatives.length > 1) {
+            validRegeneratedPositions.add(conversationPosition);
+          }
+        }
+      } // Remove conversation positions that weren't actually regenerated
+      for (const [conversationPosition] of newMessageAlternatives) {
+        if (!validRegeneratedPositions.has(conversationPosition)) {
+          newMessageAlternatives.delete(conversationPosition);
+        }
+      }
+
       // Rebuild regeneratedMessageIndices based on which conversation positions have multiple alternatives
       const newRegeneratedIndices = new Set<number>();
 
@@ -1402,18 +1457,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           });
         }
       }
-
       setRegeneratedMessageIndices(newRegeneratedIndices);
-
-      // Remove conversation positions that only have one option (not regenerated)
-      for (const [
-        conversationPosition,
-        alternatives,
-      ] of newMessageAlternatives) {
-        if (alternatives.length <= 1) {
-          newMessageAlternatives.delete(conversationPosition);
-        }
-      }
 
       // Convert conversation positions to message indices for the current branch
       const newMessageAlternativesByIndex = new Map<
