@@ -28,11 +28,16 @@ export async function GET(request: Request) {
 
     if (!chat) {
       return NextResponse.json({ error: "Chat not found" }, { status: 404 });
-    }
-
-    // Get messages for the chat
+    } // Get messages for the chat
     const messages = await prisma.message.findMany({
       where: branchId ? { chatId, branchId } : { chatId },
+      select: {
+        id: true,
+        content: true,
+        role: true,
+        createdAt: true,
+        branchId: true,
+      },
       orderBy: { createdAt: "asc" },
     });
 

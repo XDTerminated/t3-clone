@@ -201,6 +201,7 @@ export default function MessageList({ messages }: MessageListProps) {
     regenerateResponse,
     getMessageAlternativeInfo,
     selectMessageAlternative,
+    isMessageNavigable,
   } = useChat();
 
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
@@ -321,7 +322,10 @@ export default function MessageList({ messages }: MessageListProps) {
               {msg.sender === "AI" &&
                 (() => {
                   const alternativeInfo = getMessageAlternativeInfo(idx);
-                  if (!alternativeInfo) return null;
+                  const isNavigable = isMessageNavigable(idx);
+
+                  // Only show navigation if the message has alternatives AND is navigable
+                  if (!alternativeInfo || !isNavigable) return null;
 
                   const handlePrevAlternative = () => {
                     const newIndex = alternativeInfo.current - 2; // Convert to 0-based and go to previous

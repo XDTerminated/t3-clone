@@ -64,6 +64,8 @@ interface ChatContextType {
   getMessageAlternativeInfo: (
     messageIndex: number,
   ) => { current: number; total: number } | null;
+  // New: Check if a message allows navigation (no unregenerated messages after it)
+  isMessageNavigable: (messageIndex: number) => boolean;
 }
 
 // API Response Types
@@ -105,9 +107,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [currentBranchId, setCurrentBranchId] = useState<string | null>(null);
   const [regeneratedMessageIndices, setRegeneratedMessageIndices] = useState<
     Set<number>
-  >(new Set());
-
-  // Message-level alternative tracking
+  >(new Set()); // Message-level alternative tracking
   const [messageAlternatives, setMessageAlternatives] = useState<
     Map<number, Array<{ branchId: string; text: string }>>
   >(new Map());
@@ -137,9 +137,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       setLoginDialogAction("chat");
       setLoginDialogOpen(true);
       return;
-    }
-
-    // Don't do anything if we're already in a pending new chat state
+    } // Don't do anything if we're already in a pending new chat state
     // OR if we're already on the welcome screen (no current chat and no messages)
     if (
       (isPendingNewChat && !currentChatId) ||
@@ -151,6 +149,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     setCurrentChatId(null);
     setMessages([]);
     setRegeneratedMessageIndices(new Set());
+    setMessageAlternatives(new Map());
+    setCurrentMessageAlternatives(new Map());
     setIsPendingNewChat(true);
 
     // Clear branches and branch ID - they will be set when chat is created
@@ -213,9 +213,22 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               );
               if (msgRes.ok) {
                 const msgData = (await msgRes.json()) as {
-                  messages: Array<{ role: string; content: string }>;
+                  messages: Array<{
+                    role: string;
+                    content: string;
+                    createdAt: string;
+                  }>;
                 };
-                const uiMessages = msgData.messages.map((msg) => ({
+
+                // Simple sort by createdAt timestamp
+                const sortedMessages = [...msgData.messages];
+                sortedMessages.sort((a, b) => {
+                  const dateA = new Date(a.createdAt).getTime();
+                  const dateB = new Date(b.createdAt).getTime();
+                  return dateA - dateB;
+                });
+
+                const uiMessages = sortedMessages.map((msg) => ({
                   sender: msg.role === "user" ? "User" : "AI",
                   text: msg.content,
                 }));
@@ -253,15 +266,27 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         }
       }
     } catch (err) {
-      console.error("Failed to fetch branches:", err);
-      // Fallback to loading messages without branches
+      console.error("Failed to fetch branches:", err); // Fallback to loading messages without branches
       try {
         const response = await fetch(`/api/messages?chatId=${chatId}`);
         if (response.ok) {
           const msgData = (await response.json()) as {
-            messages: Array<{ role: string; content: string }>;
+            messages: Array<{
+              role: string;
+              content: string;
+              createdAt: string;
+            }>;
           };
-          const uiMessages = msgData.messages.map((msg) => ({
+
+          // Simple sort by createdAt timestamp
+          const sortedMessages = [...msgData.messages];
+          sortedMessages.sort((a, b) => {
+            const dateA = new Date(a.createdAt).getTime();
+            const dateB = new Date(b.createdAt).getTime();
+            return dateA - dateB;
+          });
+
+          const uiMessages = sortedMessages.map((msg) => ({
             sender: msg.role === "user" ? "User" : "AI",
             text: msg.content,
           }));
@@ -839,8 +864,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           setCurrentChatId(null);
           setMessages([]);
           setIsPendingNewChat(false);
-          // Clear branch state to prevent stale data
-          setBranches([]);
+          // Clear branch state to prevent stale data          setBranches([]);
           setCurrentBranchId(null);
           setRegeneratedMessageIndices(new Set());
           setMessageAlternatives(new Map());
@@ -918,6 +942,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       setMessages([]);
       setIsPendingNewChat(false);
       setIsLoadingChats(false);
+      setMessageAlternatives(new Map());
+      setCurrentMessageAlternatives(new Map());
     }
   }, [isSignedIn, isLoaded, fetchChats]); // Sync messages to current branch when messages change (but avoid infinite loops)  // Use a ref to track if we're in the middle of a branch switch to avoid syncing
   const isSwitchingBranch = useRef(false);
@@ -1061,21 +1087,22 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           setMessages((prev) => [...prev, emptyAIMsg]); // Track that this AI message (at userMessageIndex + 1) is regenerated
           setRegeneratedMessageIndices((prev) =>
             new Set(prev).add(userMessageIndex + 1),
-          ); // Add the new alternative to our tracking
+          );
+
+          // Add the new alternative to our tracking
           const aiMessageIndex = userMessageIndex + 1;
           setMessageAlternatives((prev) => {
             const newMap = new Map(prev);
-            let alternatives = newMap.get(aiMessageIndex) ?? []; // If this is the first time regenerating, add the original message as the first alternative
+            let alternatives = newMap.get(aiMessageIndex) ?? [];
+
+            // If this is the first time regenerating this specific message position,
+            // add the original message as the first alternative
             if (alternatives.length === 0) {
               const originalMessage = currentMessages[aiMessageIndex];
-              if (
-                originalMessage &&
-                originalMessage.sender === "AI" &&
-                currentBranchId
-              ) {
+              if (originalMessage && originalMessage.sender === "AI") {
                 alternatives = [
                   {
-                    branchId: currentBranchId,
+                    branchId: currentBranchId || "unknown", // Use current branch as the source
                     text: originalMessage.text,
                   },
                 ];
@@ -1291,36 +1318,55 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     setTimeout(() => {
       isSelectingMessageAlternative.current = false;
     }, 0);
-  };
-
-  // Get alternative info for a specific message
+  }; // Get alternative info for a specific message
   const getMessageAlternativeInfo = (
     messageIndex: number,
   ): { current: number; total: number } | null => {
     const alternatives = messageAlternatives.get(messageIndex);
     if (!alternatives || alternatives.length <= 1) return null;
 
-    const currentIndex = currentMessageAlternatives.get(messageIndex) ?? 0;
+    // CRITICAL FIX: Only show alternatives if the current message text actually exists in the alternatives
+    // This prevents showing alternatives for messages that were never regenerated in the current context
+    const currentMessage = messages[messageIndex];
+    if (!currentMessage) return null;
+
+    // Check if the current message text exists in the alternatives
+    const matchingAlternativeIndex = alternatives.findIndex(
+      (alt) => alt.text === currentMessage.text,
+    );
+
+    // If the current message text is not found in alternatives, don't show navigation
+    if (matchingAlternativeIndex === -1) return null;
+
+    const currentIndex =
+      currentMessageAlternatives.get(messageIndex) ?? matchingAlternativeIndex;
     return {
       current: currentIndex + 1,
       total: alternatives.length,
     };
   };
+  // Check if a message allows navigation - simplified: just check if it has alternatives
+  const isMessageNavigable = (messageIndex: number): boolean => {
+    const alternatives = messageAlternatives.get(messageIndex);
+    return alternatives ? alternatives.length > 1 : false;
+  };
   // Update message alternatives when branches change
   useEffect(() => {
     // Don't update if we're in the middle of selecting a message alternative or switching branches
     if (isSelectingMessageAlternative.current || isSwitchingBranch.current)
-      return;
+      return; // Don't update if we're still loading a chat to prevent interference
+    if (isLoadingChat) return;
 
-    // Don't update if we're still loading a chat to prevent interference
-    if (isLoadingChat) return; // Don't update if there's no current branch selected
+    // Don't update if there's no current branch selected
     if (!currentBranchId) return;
 
     // Don't update if branches are empty
-    if (branches.length === 0) return; // Debounce the effect to prevent infinite loops
+    if (branches.length === 0) return;
+
+    // Debounce the effect to prevent infinite loops
     const timeoutId = setTimeout(() => {
       console.log(
-        "useEffect: rebuilding message alternatives for",
+        "useEffect: updating indices for",
         branches.length,
         "branches",
       );
@@ -1329,235 +1375,152 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         setMessageAlternatives(new Map());
         setCurrentMessageAlternatives(new Map());
         return;
-      }
+      } // Rebuild alternatives from loaded branch data
+      // This is needed after reload to restore the alternatives that were created through regeneration
       const newMessageAlternatives = new Map<
         number,
         Array<{ branchId: string; text: string }>
       >();
-      const newCurrentSelections = new Map<number, number>(); // Group AI messages by their conversation position, but only for messages that were actually regenerated
-      // We need to be smarter about detecting regeneration: it should only happen when the same conversation
-      // position has different AI responses across branches that share the same conversation history up to that point
+      const newCurrentSelections = new Map<number, number>();
+
+      // Group AI messages by their conversation position across branches
+      // Only consider them alternatives if they have the same conversation history up to that point
+      const conversationPositionMap = new Map<
+        number,
+        Array<{ branchId: string; text: string; messageIndex: number }>
+      >();
 
       branches.forEach((branch) => {
         let userMessageCount = 0;
-        console.log(
-          `Processing branch ${branch.id} with ${branch.messages.length} messages`,
-        );
-
-        branch.messages.forEach((message, _messageIndex) => {
+        branch.messages.forEach((message, messageIndex) => {
           if (message.sender === "User") {
             userMessageCount++;
           } else if (message.sender === "AI") {
             const conversationPosition = userMessageCount;
 
-            if (!newMessageAlternatives.has(conversationPosition)) {
-              newMessageAlternatives.set(conversationPosition, []);
+            if (!conversationPositionMap.has(conversationPosition)) {
+              conversationPositionMap.set(conversationPosition, []);
             }
-            const alternatives =
-              newMessageAlternatives.get(conversationPosition)!;
 
-            // Only add if this text isn't already present for this conversation position
-            const existingAlternative = alternatives.find(
-              (alt) => alt.text === message.text,
-            );
-            if (!existingAlternative) {
-              alternatives.push({
+            const existingEntry = conversationPositionMap
+              .get(conversationPosition)!
+              .find((entry) => entry.text === message.text);
+
+            if (!existingEntry) {
+              conversationPositionMap.get(conversationPosition)!.push({
                 branchId: branch.id,
                 text: message.text,
+                messageIndex,
               });
-              console.log(
-                `Added alternative for conversation position ${conversationPosition} from branch ${branch.id}`,
-              );
-            } else {
-              console.log(
-                `Skipped duplicate alternative for conversation position ${conversationPosition} from branch ${branch.id}`,
-                "Existing text:",
-                existingAlternative.text.substring(0, 100) + "...",
-                "New text:",
-                message.text.substring(0, 100) + "...",
-              );
             }
           }
         });
       });
 
-      console.log(
-        "Raw message alternatives before filtering:",
-        newMessageAlternatives,
-      );
-
-      // CRITICAL FIX: Only keep conversation positions where we have multiple DIFFERENT responses
-      // AND those responses come from branches that have the same conversation history up to that point
-      const validRegeneratedPositions = new Set<number>();
-
+      // For each conversation position, verify that alternatives have the same conversation history
       for (const [
         conversationPosition,
         alternatives,
-      ] of newMessageAlternatives) {
+      ] of conversationPositionMap) {
         if (alternatives.length > 1) {
-          // Verify that these alternatives come from branches with the same conversation history
-          // up to this point (meaning they're truly alternatives, not just different branches)
-          const branchHistories = alternatives
-            .map((alt) => {
-              const branch = branches.find((b) => b.id === alt.branchId);
-              if (!branch) return null;
-              // Get the conversation history up to but NOT including this position
-              const historyUpToPosition = [];
-              let userCount = 0;
-              for (const msg of branch.messages) {
-                if (msg.sender === "User") {
-                  userCount++;
-                  if (userCount < conversationPosition) {
-                    historyUpToPosition.push(msg.text);
-                  } else {
-                    break; // Stop before including the current position
-                  }
+          // Check if all alternatives have the same conversation history up to this point
+          const branchHistories = alternatives.map((alt) => {
+            const branch = branches.find((b) => b.id === alt.branchId);
+            if (!branch) return null;
+
+            const historyUpToPosition = [];
+            let userCount = 0;
+            for (const msg of branch.messages) {
+              if (msg.sender === "User") {
+                userCount++;
+                if (userCount < conversationPosition) {
+                  historyUpToPosition.push(msg.text);
+                } else {
+                  break;
                 }
               }
-              return historyUpToPosition.join("|"); // Create a signature of the conversation history
-            })
-            .filter((h) => h !== null);
-          // Check if all alternatives have the same conversation history up to this point
+            }
+            return historyUpToPosition.join("|");
+          });
+
+          // Check if all alternatives have the same conversation history
           const firstHistory = branchHistories[0];
           const allSameHistory = branchHistories.every(
             (h) => h === firstHistory,
           );
-          if (allSameHistory && alternatives.length > 1) {
-            validRegeneratedPositions.add(conversationPosition);
-          }
-        }
-      } // Remove conversation positions that weren't actually regenerated
-      for (const [conversationPosition] of newMessageAlternatives) {
-        if (!validRegeneratedPositions.has(conversationPosition)) {
-          newMessageAlternatives.delete(conversationPosition);
-        }
-      }
 
-      // Rebuild regeneratedMessageIndices based on which conversation positions have multiple alternatives
-      const newRegeneratedIndices = new Set<number>();
+          if (allSameHistory) {
+            // Convert to message indices for the current branch
+            if (currentBranchId) {
+              const currentBranch = branches.find(
+                (b) => b.id === currentBranchId,
+              );
+              if (currentBranch) {
+                let currentUserCount = 0;
+                let targetMessageIndex = -1;
 
-      // Convert conversation positions back to message indices in the current branch
-      if (currentBranchId) {
-        const currentBranch = branches.find((b) => b.id === currentBranchId);
-        if (currentBranch) {
-          let userMessageCount = 0;
+                for (let i = 0; i < currentBranch.messages.length; i++) {
+                  const msg = currentBranch.messages[i];
+                  if (msg && msg.sender === "User") {
+                    currentUserCount++;
+                  } else if (
+                    msg &&
+                    msg.sender === "AI" &&
+                    currentUserCount === conversationPosition
+                  ) {
+                    targetMessageIndex = i;
+                    break;
+                  }
+                }
 
-          currentBranch.messages.forEach((message, messageIndex) => {
-            if (message.sender === "User") {
-              userMessageCount++;
-            } else if (message.sender === "AI") {
-              const conversationPosition = userMessageCount;
-              const alternatives =
-                newMessageAlternatives.get(conversationPosition);
+                if (targetMessageIndex >= 0) {
+                  // Map conversation position alternatives to message index alternatives
+                  const messageAlternatives = alternatives.map((alt) => ({
+                    branchId: alt.branchId,
+                    text: alt.text,
+                  }));
 
-              if (alternatives && alternatives.length > 1) {
-                newRegeneratedIndices.add(messageIndex);
-              }
-            }
-          });
-        }
-      }
-      setRegeneratedMessageIndices(newRegeneratedIndices);
+                  newMessageAlternatives.set(
+                    targetMessageIndex,
+                    messageAlternatives,
+                  );
 
-      // Convert conversation positions to message indices for the current branch
-      const newMessageAlternativesByIndex = new Map<
-        number,
-        Array<{ branchId: string; text: string }>
-      >();
-
-      if (currentBranchId) {
-        const currentBranch = branches.find((b) => b.id === currentBranchId);
-        if (currentBranch) {
-          let userMessageCount = 0;
-
-          currentBranch.messages.forEach((message, messageIndex) => {
-            if (message.sender === "User") {
-              userMessageCount++;
-            } else if (message.sender === "AI") {
-              const conversationPosition = userMessageCount;
-              const alternatives =
-                newMessageAlternatives.get(conversationPosition);
-
-              if (alternatives && alternatives.length > 1) {
-                newMessageAlternativesByIndex.set(messageIndex, alternatives);
-              }
-            }
-          });
-        }
-      } // Set current selections based on current branch using the correct message indices
-      if (currentBranchId) {
-        const currentBranch = branches.find((b) => b.id === currentBranchId);
-        if (currentBranch) {
-          let userMessageCount = 0;
-
-          currentBranch.messages.forEach((message, messageIndex) => {
-            if (message.sender === "User") {
-              userMessageCount++;
-            } else if (message.sender === "AI") {
-              const conversationPosition = userMessageCount;
-              const alternatives =
-                newMessageAlternatives.get(conversationPosition);
-
-              if (alternatives && alternatives.length > 1) {
-                const currentIndex = alternatives.findIndex(
-                  (alt) => alt.text === message.text,
-                );
-                if (currentIndex >= 0) {
-                  newCurrentSelections.set(messageIndex, currentIndex);
+                  // Set current selection based on current message text
+                  const currentMessage =
+                    currentBranch.messages[targetMessageIndex];
+                  if (currentMessage) {
+                    const currentIndex = messageAlternatives.findIndex(
+                      (alt) => alt.text === currentMessage.text,
+                    );
+                    if (currentIndex >= 0) {
+                      newCurrentSelections.set(
+                        targetMessageIndex,
+                        currentIndex,
+                      );
+                    }
+                  }
                 }
               }
             }
-          });
+          }
+        }
+      }
+      const newRegeneratedIndices = new Set<number>();
+
+      // Get regenerated indices from the newly built messageAlternatives
+      for (const [messageIndex, alternatives] of newMessageAlternatives) {
+        if (alternatives.length > 1) {
+          newRegeneratedIndices.add(messageIndex);
         }
       }
 
-      setMessageAlternatives((prev) => {
-        // Check if the new data is different from the previous data
-        if (prev.size !== newMessageAlternativesByIndex.size) {
-          return newMessageAlternativesByIndex;
-        }
-
-        // Compare each entry
-        for (const [key, value] of newMessageAlternativesByIndex) {
-          const prevValue = prev.get(key);
-          if (!prevValue || prevValue.length !== value.length) {
-            return newMessageAlternativesByIndex;
-          }
-          // Compare alternatives
-          for (let i = 0; i < value.length; i++) {
-            const prevItem = prevValue[i];
-            const valueItem = value[i];
-            if (
-              !prevItem ||
-              !valueItem ||
-              prevItem.branchId !== valueItem.branchId ||
-              prevItem.text !== valueItem.text
-            ) {
-              return newMessageAlternativesByIndex;
-            }
-          }
-        }
-
-        return prev; // No changes, return previous value
-      });
-
-      setCurrentMessageAlternatives((prev) => {
-        // Check if the new selections are different
-        if (prev.size !== newCurrentSelections.size) {
-          return newCurrentSelections;
-        }
-
-        for (const [key, value] of newCurrentSelections) {
-          if (prev.get(key) !== value) {
-            return newCurrentSelections;
-          }
-        }
-        return prev; // No changes, return previous value
-      });
+      setRegeneratedMessageIndices(newRegeneratedIndices);
+      setMessageAlternatives(newMessageAlternatives);
+      setCurrentMessageAlternatives(newCurrentSelections);
     }, 100); // 100ms debounce delay
 
     return () => clearTimeout(timeoutId);
-  }, [branches, currentBranchId, isLoadingChat]);
+  }, [branches, currentBranchId, isLoadingChat, messageAlternatives]);
 
   return (
     <ChatContext.Provider
@@ -1582,6 +1545,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         currentMessageAlternatives,
         selectMessageAlternative,
         getMessageAlternativeInfo,
+        isMessageNavigable,
         createNewChat,
         startNewChat,
         selectChat,
