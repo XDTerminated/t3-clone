@@ -205,6 +205,9 @@ export default function MessageList({ messages }: MessageListProps) {
   } = useChat();
 
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
+  const [copiedStates, setCopiedStates] = React.useState<
+    Record<number, boolean>
+  >({});
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -213,6 +216,19 @@ export default function MessageList({ messages }: MessageListProps) {
   React.useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Copy functionality with visual feedback
+  const handleCopy = async (text: string, messageIndex: number) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedStates((prev) => ({ ...prev, [messageIndex]: true }));
+      setTimeout(() => {
+        setCopiedStates((prev) => ({ ...prev, [messageIndex]: false }));
+      }, 2000); // Reset after 2 seconds
+    } catch (err) {
+      console.error("Failed to copy text: ", err);
+    }
+  };
   return (
     <div
       role="log"
@@ -226,6 +242,7 @@ export default function MessageList({ messages }: MessageListProps) {
           data-message-id={`${idx}`}
           className={`flex ${msg.sender === "User" ? "justify-end" : "justify-start"}`}
         >
+          {" "}
           {msg.sender === "User" ? (
             <div
               role="article"
@@ -237,23 +254,13 @@ export default function MessageList({ messages }: MessageListProps) {
                 <div className="prose dark:prose-invert max-w-none leading-relaxed [&_ol:last-child]:mb-0 [&_p:last-child]:mb-0 [&_ul:last-child]:mb-0">
                   <LexicalMessage text={msg.text} />
                 </div>
-              </div>
-            </div>
-          ) : (
-            <div className="group relative w-full max-w-full break-words">
-              <div
-                role="article"
-                aria-label="Assistant message"
-                className="prose dark:prose-invert animate-fadeIn max-w-none leading-relaxed opacity-0"
-              >
-                <span className="sr-only">Assistant Reply: </span>
-                <LexicalMessage text={msg.text} />
-              </div>
-              <div className="absolute left-0 mt-5 -ml-0.5 flex items-center gap-1 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 group-focus:opacity-100">
-                {" "}
+              </div>{" "}
+              {/* Copy button for user messages */}
+              <div className="absolute right-0 mt-5 -mr-0.5 flex items-center gap-1 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 group-focus:opacity-100">
                 <button
-                  className="focus-visible:ring-ring hover:text-foreground disabled:hover:text-foreground/50 hover:bg-muted-foreground/10 inline-flex h-8 w-8 items-center justify-center gap-2 rounded-lg p-0 text-xs font-medium whitespace-nowrap transition-colors focus-visible:ring-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0"
-                  aria-label="Copy response to clipboard"
+                  onClick={() => handleCopy(msg.text, idx)}
+                  className="focus-visible:ring-ring hover:text-foreground disabled:hover:text-foreground/50 hover:bg-muted-foreground/10 inline-flex h-8 w-8 items-center justify-center gap-2 rounded-lg p-0 text-xs font-medium whitespace-nowrap transition-colors focus-visible:ring-1 focus-visible:outline-none disabled:opacity-50 disabled:hover:bg-transparent [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0"
+                  aria-label="Copy message to clipboard"
                   data-state="closed"
                 >
                   <div className="relative size-4">
@@ -267,7 +274,11 @@ export default function MessageList({ messages }: MessageListProps) {
                       strokeWidth={2}
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      className="lucide lucide-copy ease-snappy absolute inset-0 scale-100 opacity-100 transition-all duration-200"
+                      className={`lucide lucide-copy ease-snappy absolute inset-0 transition-all duration-200 ${
+                        copiedStates[idx]
+                          ? "scale-0 opacity-0"
+                          : "scale-100 opacity-100"
+                      }`}
                       aria-hidden="true"
                     >
                       <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
@@ -283,7 +294,73 @@ export default function MessageList({ messages }: MessageListProps) {
                       strokeWidth={2}
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      className="lucide lucide-check ease-snappy absolute inset-0 scale-0 opacity-0 transition-all duration-200"
+                      className={`lucide lucide-check ease-snappy absolute inset-0 transition-all duration-200 ${
+                        copiedStates[idx]
+                          ? "scale-100 opacity-100"
+                          : "scale-0 opacity-0"
+                      }`}
+                      aria-hidden="true"
+                    >
+                      <path d="M20 6 9 17l-5-5" />
+                    </svg>
+                  </div>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="group relative w-full max-w-full break-words">
+              <div
+                role="article"
+                aria-label="Assistant message"
+                className="prose dark:prose-invert animate-fadeIn max-w-none leading-relaxed opacity-0"
+              >
+                <span className="sr-only">Assistant Reply: </span>
+                <LexicalMessage text={msg.text} />
+              </div>
+              <div className="absolute left-0 mt-5 -ml-0.5 flex items-center gap-1 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 group-focus:opacity-100">
+                {" "}
+                <button
+                  onClick={() => handleCopy(msg.text, idx)}
+                  className="focus-visible:ring-ring hover:text-foreground disabled:hover:text-foreground/50 hover:bg-muted-foreground/10 inline-flex h-8 w-8 items-center justify-center gap-2 rounded-lg p-0 text-xs font-medium whitespace-nowrap transition-colors focus-visible:ring-1 focus-visible:outline-none disabled:opacity-50 disabled:hover:bg-transparent [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0"
+                  aria-label="Copy response to clipboard"
+                  data-state="closed"
+                >
+                  <div className="relative size-4">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className={`lucide lucide-copy ease-snappy absolute inset-0 transition-all duration-200 ${
+                        copiedStates[idx]
+                          ? "scale-0 opacity-0"
+                          : "scale-100 opacity-100"
+                      }`}
+                      aria-hidden="true"
+                    >
+                      <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                    </svg>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className={`lucide lucide-check ease-snappy absolute inset-0 transition-all duration-200 ${
+                        copiedStates[idx]
+                          ? "scale-100 opacity-100"
+                          : "scale-0 opacity-0"
+                      }`}
                       aria-hidden="true"
                     >
                       <path d="M20 6 9 17l-5-5" />
@@ -293,7 +370,7 @@ export default function MessageList({ messages }: MessageListProps) {
                 <button
                   aria-label="Regenerate response"
                   onClick={() => regenerateResponse(idx - 1)}
-                  className="focus-visible:ring-ring hover:text-foreground disabled:hover:text-foreground/50 hover:bg-muted-foreground/10 inline-flex h-8 w-8 items-center justify-center gap-2 rounded-lg p-0 text-xs font-medium whitespace-nowrap transition-colors focus-visible:ring-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0"
+                  className="focus-visible:ring-ring hover:text-foreground disabled:hover:text-foreground/50 hover:bg-muted-foreground/10 inline-flex h-8 w-8 items-center justify-center gap-2 rounded-lg p-0 text-xs font-medium whitespace-nowrap transition-colors focus-visible:ring-1 focus-visible:outline-none disabled:opacity-50 disabled:hover:bg-transparent [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0"
                   data-action="retry"
                   data-state="closed"
                 >
@@ -343,10 +420,11 @@ export default function MessageList({ messages }: MessageListProps) {
 
                   return (
                     <div className="mt-3 flex items-center justify-center gap-2">
+                      {" "}
                       <button
                         onClick={handlePrevAlternative}
                         disabled={alternativeInfo.current <= 1}
-                        className="focus-visible:ring-ring hover:text-foreground disabled:hover:text-foreground/50 hover:bg-muted-foreground/10 inline-flex h-8 w-8 items-center justify-center gap-2 rounded-lg p-0 text-xs font-medium whitespace-nowrap transition-colors focus-visible:ring-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0"
+                        className="focus-visible:ring-ring hover:text-foreground disabled:hover:text-foreground/50 hover:bg-muted-foreground/10 inline-flex h-8 w-8 items-center justify-center gap-2 rounded-lg p-0 text-xs font-medium whitespace-nowrap transition-colors focus-visible:ring-1 focus-visible:outline-none disabled:opacity-50 disabled:hover:bg-transparent [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0"
                         aria-label="Previous alternative"
                       >
                         <svg
@@ -365,17 +443,15 @@ export default function MessageList({ messages }: MessageListProps) {
                           <path d="m15 18-6-6 6-6" />
                         </svg>
                       </button>
-
                       <span className="text-muted-foreground bg-muted/50 rounded px-2 py-1 text-sm">
                         {alternativeInfo.current} / {alternativeInfo.total}
-                      </span>
-
+                      </span>{" "}
                       <button
                         onClick={handleNextAlternative}
                         disabled={
                           alternativeInfo.current >= alternativeInfo.total
                         }
-                        className="focus-visible:ring-ring hover:text-foreground disabled:hover:text-foreground/50 hover:bg-muted-foreground/10 inline-flex h-8 w-8 items-center justify-center gap-2 rounded-lg p-0 text-xs font-medium whitespace-nowrap transition-colors focus-visible:ring-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0"
+                        className="focus-visible:ring-ring hover:text-foreground disabled:hover:text-foreground/50 hover:bg-muted-foreground/10 inline-flex h-8 w-8 items-center justify-center gap-2 rounded-lg p-0 text-xs font-medium whitespace-nowrap transition-colors focus-visible:ring-1 focus-visible:outline-none disabled:opacity-50 disabled:hover:bg-transparent [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0"
                         aria-label="Next alternative"
                       >
                         <svg
