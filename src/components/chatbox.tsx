@@ -1,15 +1,18 @@
 "use client";
 
-import { ChevronDown, ArrowUp } from "lucide-react";
+import { ArrowUp } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
 import { useSidebar } from "~/components/ui/sidebar";
 import { useRef, useState, useLayoutEffect } from "react";
+import { ModelSelector } from "./model-selector";
+import { useModel } from "~/contexts/ModelContext";
 
 const INITIAL_TEXTAREA_HEIGHT = 48; // slightly reduced initial textarea height
 
 export function Chatbox({ onSend }: { onSend: (message: string) => void }) {
   const sidebar = useSidebar();
+  const { selectedModel, setSelectedModel } = useModel();
   const isSidebarOpenDesktop = sidebar
     ? sidebar.open && !sidebar.isMobile
     : false;
@@ -114,13 +117,10 @@ export function Chatbox({ onSend }: { onSend: (message: string) => void }) {
             />{" "}
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                <button
-                  className="text-secondary-foreground hover:bg-secondary/50 active:bg-secondary/70 flex items-center gap-2 rounded-lg bg-transparent px-1 py-2 transition-colors"
-                  type="button"
-                >
-                  <span className="text-sm font-medium">Gemini 2.5 Flash</span>
-                  <ChevronDown className="h-4 w-4" />
-                </button>
+                <ModelSelector
+                  selectedModel={selectedModel}
+                  onModelChange={setSelectedModel}
+                />
               </div>
               {/* Right: send button */}
               <div className="flex items-center gap-2">

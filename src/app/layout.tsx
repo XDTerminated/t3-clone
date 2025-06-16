@@ -8,6 +8,8 @@ import { SidebarProvider } from "~/components/ui/sidebar";
 import ContentWrapper from "~/components/content-wrapper";
 import { DataProvider } from "~/contexts/DataContext";
 import { ChatProvider } from "~/contexts/ChatContext";
+import { ModelProvider } from "~/contexts/ModelContext";
+import { ApiKeyProvider } from "~/contexts/ApiKeyContext";
 
 export const metadata: Metadata = {
   title: "T3 Chat",
@@ -38,9 +40,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         >
           <SidebarProvider>
             <DataProvider>
-              <ChatProvider>
-                <ContentWrapper>{children}</ContentWrapper>
-              </ChatProvider>
+              <ApiKeyProvider>
+                <ModelProvider>
+                  <ChatProvider>
+                    <ContentWrapper>{children}</ContentWrapper>
+                  </ChatProvider>
+                </ModelProvider>
+              </ApiKeyProvider>
             </DataProvider>
           </SidebarProvider>
         </body>

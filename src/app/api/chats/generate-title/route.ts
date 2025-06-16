@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
 import {
@@ -35,7 +39,6 @@ export async function POST(request: Request) {
     // Truncate very long messages for faster processing
     const truncatedMessage =
       message.length > 200 ? message.substring(0, 200) + "..." : message;
-
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       console.error("GEMINI_API_KEY is not set.");
@@ -64,7 +67,9 @@ export async function POST(request: Request) {
         category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
         threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
       },
-    ]; // Improved prompt for single, clean title generation
+    ];
+
+    // Improved prompt for single, clean title generation
     const prompt = `Generate exactly one short title (3-5 words) for this message. Return only the title, nothing else: "${truncatedMessage}"`;
 
     const parts = [{ text: prompt }];
@@ -113,7 +118,9 @@ export async function POST(request: Request) {
           }
         }
       }
-    } // Fallback if title is empty or too short after generation
+    }
+
+    // Fallback if title is empty or too short after generation
     if (!generatedTitle || generatedTitle.length < 3) {
       console.warn(
         "Generated title was empty or too short, using a local fallback.",

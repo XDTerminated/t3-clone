@@ -4,6 +4,8 @@ import * as React from "react";
 import { useSidebar } from "~/components/ui/sidebar";
 import { AppSidebar } from "~/components/app-sidebar";
 import { cn } from "~/lib/utils";
+import { useChat } from "~/contexts/ChatContext";
+import { ApiKeyDialog } from "~/components/api-key-dialog";
 
 /**
  * Client-side wrapper that renders the sidebar and main content with a conditional border
@@ -14,6 +16,7 @@ export default function ContentWrapper({
   children: React.ReactNode;
 }) {
   const { open } = useSidebar();
+  const { apiKeyDialogOpen, handleApiKeySubmit } = useChat();
   const mainRef = React.useRef<HTMLElement>(null);
 
   return (
@@ -41,6 +44,12 @@ export default function ContentWrapper({
           {children}
         </main>
       </div>
+
+      {/* API Key Dialog */}
+      <ApiKeyDialog
+        open={apiKeyDialogOpen}
+        onApiKeySubmit={handleApiKeySubmit}
+      />
     </div>
   );
 }

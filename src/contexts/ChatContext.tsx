@@ -8,7 +8,9 @@ import {
   useCallback,
   useRef,
 } from "react";
+import { useModel } from "./ModelContext";
 import { useAuth } from "@clerk/nextjs";
+import { useApiKey } from "./ApiKeyContext";
 // Using built-in crypto for UUIDs
 
 // Types
@@ -36,11 +38,15 @@ interface ChatContextType {
   fetchChats: () => Promise<void>;
   deleteChat: (chatId: string) => Promise<void>;
   renameChat: (chatId: string, newTitle: string) => Promise<void>;
-  pinChat: (chatId: string) => Promise<void>; // Login dialog state
+  pinChat: (chatId: string) => Promise<void>;
+  // Login dialog state
   loginDialogOpen: boolean;
   loginDialogAction: "send" | "chat" | null;
   setLoginDialogOpen: (open: boolean) => void;
-  setLoginDialogAction: (action: "send" | "chat" | null) => void;
+  setLoginDialogAction: (action: "send" | "chat" | null) => void; // API Key dialog state
+  apiKeyDialogOpen: boolean;
+  setApiKeyDialogOpen: (open: boolean) => void;
+  handleApiKeySubmit: (apiKey: string) => void;
   branches: {
     id: string;
     name: string;
@@ -84,6 +90,8 @@ interface GenerateTitleResponse {
 const ChatContext = createContext<ChatContextType | null>(null);
 
 export function ChatProvider({ children }: { children: React.ReactNode }) {
+  const { selectedModel } = useModel();
+  const { hasApiKey, setApiKey, apiKey } = useApiKey();
   const [chats, setChats] = useState<Chat[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const [messages, setMessages] = useState<
@@ -96,7 +104,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [loginDialogOpen, setLoginDialogOpen] = useState(false);
   const [loginDialogAction, setLoginDialogAction] = useState<
     "send" | "chat" | null
-  >(null); // Branching support
+  >(null);
+  const [apiKeyDialogOpen, setApiKeyDialogOpen] = useState(false);
+
+  // Branching support
   const [branches, setBranches] = useState<
     {
       id: string;
@@ -137,7 +148,15 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       setLoginDialogAction("chat");
       setLoginDialogOpen(true);
       return;
-    } // Don't do anything if we're already in a pending new chat state
+    }
+
+    // Check if user has API key
+    if (!hasApiKey) {
+      setApiKeyDialogOpen(true);
+      return;
+    }
+
+    // Don't do anything if we're already in a pending new chat state
     // OR if we're already on the welcome screen (no current chat and no messages)
     if (
       (isPendingNewChat && !currentChatId) ||
@@ -546,6 +565,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    // Check if user has API key
+    if (!hasApiKey) {
+      setApiKeyDialogOpen(true);
+      return;
+    }
+
     const chatId = currentChatId;
     let isNewChat = false;
     let tempChatId: string | null = null;
@@ -607,6 +632,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           body: JSON.stringify({
             chatId: isNewChat ? null : chatId, // Use null for new chats, actual chatId for existing
             history: conversationHistory,
+            model: selectedModel.id,
+            apiKey: apiKey, // Send user's API key
           }),
         });
 
@@ -1157,6 +1184,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               body: JSON.stringify({
                 chatId: currentChatId,
                 history: conversationHistory,
+                model: selectedModel.id,
+                apiKey: apiKey, // Send user's API key
               }),
             });
 
@@ -1525,6 +1554,22 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     return () => clearTimeout(timeoutId);
   }, [branches, currentBranchId, isLoadingChat, messageAlternatives]);
 
+  // Auto-show API key dialog when user is signed in but has no API key
+  useEffect(() => {
+    if (isLoaded && isSignedIn && !hasApiKey) {
+      setApiKeyDialogOpen(true);
+    }
+  }, [isLoaded, isSignedIn, hasApiKey]);
+
+  // Handle API key submission
+  const handleApiKeySubmit = useCallback(
+    (apiKey: string) => {
+      setApiKey(apiKey);
+      setApiKeyDialogOpen(false);
+    },
+    [setApiKey],
+  );
+
   return (
     <ChatContext.Provider
       value={{
@@ -1561,6 +1606,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         loginDialogAction,
         setLoginDialogOpen,
         setLoginDialogAction,
+        apiKeyDialogOpen,
+        setApiKeyDialogOpen,
+        handleApiKeySubmit,
       }}
     >
       {children}
