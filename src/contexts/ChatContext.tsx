@@ -23,6 +23,12 @@ interface Chat {
   pinned?: boolean;
 }
 
+interface ChatMessage {
+  message: string;
+  searchEnabled?: boolean;
+  files?: File[];
+}
+
 interface ChatContextType {
   chats: Chat[];
   currentChatId: string | null;
@@ -34,7 +40,7 @@ interface ChatContextType {
   createNewChat: () => Promise<Chat | null>; // Changed return type
   startNewChat: () => void;
   selectChat: (chatId: string) => Promise<void>;
-  sendMessage: (message: string) => Promise<void>;
+  sendMessage: (data: ChatMessage) => Promise<void>;
   fetchChats: () => Promise<void>;
   deleteChat: (chatId: string) => Promise<void>;
   renameChat: (chatId: string, newTitle: string) => Promise<void>;
@@ -450,6 +456,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     content: string,
     role: "user" | "assistant",
     forceBranchId?: string, // Add optional parameter to force specific branch
+    files?: Array<{ name: string; type: string; data: string }>, // Add files parameter
   ) => {
     console.log("Saving message:", {
       chatId,
@@ -483,10 +490,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           content: string;
           role: string;
           branchId?: string;
+          files?: Array<{ name: string; type: string; data: string }>;
         } = {
           chatId,
           content,
           role,
+          files,
         };
 
         // Only include branchId if we have one
@@ -557,7 +566,31 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     const words = message.trim().split(/\s+/).slice(0, 6);
     return words.join(" ") + (words.length >= 6 ? "..." : "");
   };
-  const sendMessage = async (message: string) => {
+  // Helper function to convert files to base64
+  const convertFilesToBase64 = async (files: File[]) => {
+    const conversions = files.map(async (file) => {
+      return new Promise<{ name: string; type: string; data: string }>(
+        (resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            resolve({
+              name: file.name,
+              type: file.type,
+              data: reader.result as string,
+            });
+          };
+          reader.onerror = () =>
+            reject(new Error(`Failed to read file: ${file.name}`));
+          reader.readAsDataURL(file);
+        },
+      );
+    });
+
+    return Promise.all(conversions);
+  };
+
+  const sendMessage = async (data: ChatMessage) => {
+    const message = data.message;
     // Check if user is signed in first
     if (!isSignedIn) {
       setLoginDialogAction("send");
@@ -626,6 +659,14 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     // Start AI response without waiting
     const aiResponsePromise = (async () => {
       try {
+        // Convert files to base64 if present
+        let fileData:
+          | { name: string; type: string; data: string }[]
+          | undefined;
+        if (data.files && data.files.length > 0) {
+          fileData = await convertFilesToBase64(data.files);
+        }
+
         const response = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -634,6 +675,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             history: conversationHistory,
             model: selectedModel.id,
             apiKey: apiKey, // Send user's API key
+            searchEnabled: data.searchEnabled,
+            files: fileData, // Send the converted file data
           }),
         });
 
@@ -782,7 +825,20 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         } // Save user message to database FIRST (ensure proper ordering)
         if (realChatId) {
           try {
-            await saveMessage(realChatId, message, "user");
+            // Convert files for database storage
+            let userFileData:
+              | { name: string; type: string; data: string }[]
+              | undefined;
+            if (data.files && data.files.length > 0) {
+              userFileData = await convertFilesToBase64(data.files);
+            }
+            await saveMessage(
+              realChatId,
+              message,
+              "user",
+              undefined,
+              userFileData,
+            );
           } catch (error) {
             console.error("Failed to save user message:", error);
           }

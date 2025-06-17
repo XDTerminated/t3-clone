@@ -4,8 +4,14 @@ import { useState } from "react";
 import { Sparkles, Newspaper, Code, GraduationCap } from "lucide-react";
 import { cn } from "~/lib/utils";
 
+interface ChatMessage {
+  message: string;
+  searchEnabled?: boolean;
+  files?: File[];
+}
+
 interface WelcomeScreenProps {
-  onPromptSelect: (prompt: string) => void;
+  onPromptSelect: (chatMessage: ChatMessage) => void;
 }
 
 const categories = [
@@ -100,7 +106,7 @@ export default function WelcomeScreen({ onPromptSelect }: WelcomeScreenProps) {
           {currentCategory?.prompts.map((prompt, index) => (
             <button
               key={index}
-              onClick={() => onPromptSelect(prompt)}
+              onClick={() => onPromptSelect({ message: prompt })}
               className="text-secondary-foreground hover:bg-secondary/50 active:bg-secondary/70 w-full rounded-lg px-4 py-3 text-center transition-colors"
             >
               <span>{prompt}</span>

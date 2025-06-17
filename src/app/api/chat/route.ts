@@ -9,6 +9,8 @@ type ChatRequest = {
   history?: Array<{ sender: string; text: string }>;
   model?: string;
   apiKey?: string; // User's OpenRouter API key
+  searchEnabled?: boolean;
+  files?: Array<{ name: string; type: string; data: string }>; // Base64 file data
 };
 
 export async function POST(request: Request) {
@@ -134,7 +136,6 @@ export async function POST(request: Request) {
         return "You are a helpful AI assistant.";
       }
     };
-
     const openRouter = new OpenRouterAPI(requestBody.apiKey);
 
     // Convert conversation history to OpenRouter format
@@ -162,10 +163,13 @@ export async function POST(request: Request) {
         });
       }
     }
-
     const response = await openRouter.generateChatStream(
       messages,
       selectedModel,
+      {
+        searchEnabled: requestBody.searchEnabled,
+        files: requestBody.files,
+      },
     );
 
     const encoder = new TextEncoder();

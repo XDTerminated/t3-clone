@@ -21,8 +21,18 @@ import { LinkNode } from "@lexical/link";
 import { HeadingNode, QuoteNode } from "@lexical/rich-text";
 import type { LexicalNode, TextNode } from "lexical";
 import { useChat } from "~/contexts/ChatContext";
+import { Image as ImageIcon, FileText, Paperclip } from "lucide-react";
+import NextImage from "next/image";
 
-export type Message = { sender: string; text: string };
+export type Message = {
+  sender: string;
+  text: string;
+  files?: Array<{
+    filename: string;
+    type: string;
+    data: string;
+  }>;
+};
 
 interface MessageListProps {
   messages: Message[];
@@ -72,6 +82,49 @@ const editorConfig = {
   },
   editable: false,
 };
+
+// Component to display file attachments
+function FileAttachments({
+  files,
+}: {
+  files: Array<{ filename: string; type: string; data: string }>;
+}) {
+  return (
+    <div className="mt-2 flex flex-wrap gap-2">
+      {files.map((file, index) => {
+        const isImage = file.type.startsWith("image/");
+        const isPDF = file.type === "application/pdf";
+
+        return (
+          <div
+            key={index}
+            className="bg-secondary/20 flex items-center gap-2 rounded-md border px-2 py-1 text-xs"
+          >
+            {" "}
+            {isImage ? (
+              <ImageIcon className="h-3 w-3" />
+            ) : isPDF ? (
+              <FileText className="h-3 w-3" />
+            ) : (
+              <Paperclip className="h-3 w-3" />
+            )}
+            <span className="max-w-[120px] truncate">{file.filename}</span>{" "}
+            {isImage && (
+              <NextImage
+                src={file.data}
+                alt={file.filename}
+                width={200}
+                height={200}
+                className="mt-1 max-h-[200px] max-w-[200px] rounded border object-contain"
+                loading="lazy"
+              />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 // Custom component to render Lexical editor for each message
 function LexicalMessage({ text }: { text: string }) {
@@ -249,11 +302,14 @@ export default function MessageList({ messages }: MessageListProps) {
               aria-label="Your message"
               className="group border-secondary/50 bg-muted relative inline-block max-w-[80%] rounded-xl border px-4 py-3 text-left break-words"
             >
-              <span className="sr-only">Your message: </span>
+              <span className="sr-only">Your message: </span>{" "}
               <div className="flex flex-col">
                 <div className="prose dark:prose-invert max-w-none leading-relaxed [&_ol:last-child]:mb-0 [&_p:last-child]:mb-0 [&_ul:last-child]:mb-0">
                   <LexicalMessage text={msg.text} />
                 </div>
+                {msg.files && msg.files.length > 0 && (
+                  <FileAttachments files={msg.files} />
+                )}
               </div>{" "}
               {/* Copy button for user messages */}
               <div className="absolute right-0 mt-5 -mr-0.5 flex items-center gap-1 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 group-focus:opacity-100">

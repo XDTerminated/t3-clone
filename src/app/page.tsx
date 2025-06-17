@@ -18,6 +18,7 @@ export default function Page() {
     loginDialogAction,
     setLoginDialogOpen,
   } = useChat();
+
   // Show welcome screen only if:
   // 1. Not loading a chat AND
   // 2. No messages AND

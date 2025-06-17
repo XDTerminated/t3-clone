@@ -31,6 +31,7 @@ model Message {
   role      String   // "user" or "assistant"
   chatId    String
   branchId  String?
+  files     Json?    // Store file attachments as JSON
   branch    Branch?  @relation(fields: [branchId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)

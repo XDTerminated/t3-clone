@@ -35,6 +35,7 @@ export async function GET(request: Request) {
         id: true,
         content: true,
         role: true,
+        files: true,
         createdAt: true,
         branchId: true,
       },
@@ -63,8 +64,9 @@ export async function POST(request: Request) {
       content: string;
       role: string;
       branchId?: string;
+      files?: Array<{ name: string; type: string; data: string }>;
     };
-    const { chatId, content, role, branchId } = body;
+    const { chatId, content, role, branchId, files } = body;
 
     if (!chatId || !content || !role) {
       return NextResponse.json(
@@ -103,15 +105,14 @@ export async function POST(request: Request) {
         where: { chatId, name: "Main" },
       });
       branch ??= await prisma.branch.create({ data: { chatId, name: "Main" } });
-    }
-
-    // Create the message, associating it with the branch
+    } // Create the message, associating it with the branch
     const message = await prisma.message.create({
       data: {
         chatId,
         content,
         role,
         branchId: branch.id,
+        files: files ?? undefined,
       },
     });
 
