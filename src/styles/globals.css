@@ -776,3 +776,72 @@
     0.4
   ) !important; /* dark:active:bg-pink-800/40 equivalent */
 }
+
+/* Reasoning section styles */
+.model-thoughts {
+  --animation-duration: 300ms;
+  --fade-animation-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.thoughts-header-button {
+  position: relative;
+  cursor: pointer;
+  outline: none;
+  user-select: none;
+}
+
+.thoughts-header-button:focus-visible {
+  outline: 2px solid rgb(59 130 246 / 0.5);
+  outline-offset: 2px;
+}
+
+.thoughts-header-button-content {
+  min-height: 44px; /* Ensure good touch target */
+}
+
+.thoughts-content-expanded {
+  animation: thoughtsContentAnimation var(--animation-duration)
+    var(--fade-animation-function);
+}
+
+@keyframes thoughtsContentAnimation {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Enhanced markdown styling for reasoning */
+.thoughts-content .markdown-main-panel {
+  line-height: 1.6;
+}
+
+.thoughts-content .markdown-main-panel p {
+  margin-bottom: 0.75rem;
+}
+
+.thoughts-content .markdown-main-panel p:last-child {
+  margin-bottom: 0;
+}
+
+.thoughts-content .markdown-main-panel strong {
+  font-weight: 600;
+  color: rgb(31 41 55);
+}
+
+.dark .thoughts-content .markdown-main-panel strong {
+  color: rgb(229 231 235);
+}
+
+/* Subtle hover effect */
+.thoughts-header-button:hover .thoughts-header-button-icons svg {
+  transform: scale(1.1);
+}
+
+.thoughts-header-button-icons svg {
+  transition: transform 200ms ease;
+}

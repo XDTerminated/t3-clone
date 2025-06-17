@@ -30,6 +30,7 @@ interface ChatContextType {
     sender: string;
     text: string;
     files?: UploadFileResponse[];
+    reasoning?: string; // Add reasoning field
   }>;
   loading: boolean;
   isLoadingChat: boolean;
@@ -58,6 +59,7 @@ interface ChatContextType {
       sender: string;
       text: string;
       files?: UploadFileResponse[];
+      reasoning?: string; // Add reasoning field to branches too
     }>;
   }[];
   currentBranchId: string | null;
@@ -101,9 +103,13 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const { selectedModel } = useModel();
   const { hasApiKey, setApiKey, apiKey } = useApiKey();
   const [chats, setChats] = useState<Chat[]>([]);
-  const [currentChatId, setCurrentChatId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<
-    Array<{ sender: string; text: string; files?: UploadFileResponse[] }>
+  const [currentChatId, setCurrentChatId] = useState<string | null>(null);  const [messages, setMessages] = useState<
+    Array<{
+      sender: string;
+      text: string;
+      files?: UploadFileResponse[];
+      reasoning?: string;
+    }>
   >([]);
   const [loading] = useState(false);
   const [isLoadingChat, setIsLoadingChat] = useState(false);
@@ -238,12 +244,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               const msgRes = await fetch(
                 `/api/messages?chatId=${chatId}&branchId=${branch.id}`,
               );
-              if (msgRes.ok) {
-                const msgData = (await msgRes.json()) as {
+              if (msgRes.ok) {                const msgData = (await msgRes.json()) as {
                   messages: Array<{
                     role: string;
                     content: string;
                     files?: string; // JSON string from database
+                    reasoning?: string; // Add reasoning field
                     createdAt: string;
                   }>;
                 };
@@ -267,12 +273,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                   } catch (error) {
                     console.error("Failed to parse files for message:", error);
                     parsedFiles = undefined;
-                  }
-
-                  return {
+                  }                  return {
                     sender: msg.role === "user" ? "User" : "AI",
                     text: msg.content,
                     files: parsedFiles,
+                    reasoning: msg.reasoning, // Include reasoning from database
                   };
                 });
                 console.log(
@@ -312,12 +317,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       console.error("Failed to fetch branches:", err); // Fallback to loading messages without branches
       try {
         const response = await fetch(`/api/messages?chatId=${chatId}`);
-        if (response.ok) {
-          const msgData = (await response.json()) as {
+        if (response.ok) {          const msgData = (await response.json()) as {
             messages: Array<{
               role: string;
               content: string;
               files?: string; // JSON string from database
+              reasoning?: string; // Add reasoning field
               createdAt: string;
             }>;
           };
@@ -340,12 +345,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             } catch (error) {
               console.error("Failed to parse files for message:", error);
               parsedFiles = undefined;
-            }
-
-            return {
+            }            return {
               sender: msg.role === "user" ? "User" : "AI",
               text: msg.content,
               files: parsedFiles,
+              reasoning: msg.reasoning, // Include reasoning from database
             };
           });
           setMessages(uiMessages);
@@ -483,14 +487,14 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       console.error("Failed to create Main branch:", error);
       throw new Error("Could not ensure branch exists");
     }
-  };
-  const saveMessage = async (
+  };  const saveMessage = async (
     chatId: string,
     content: string,
     role: "user" | "assistant",
     branchId: string,
     files?: UploadFileResponse[],
     wasRegenerated = false,
+    reasoning?: string,
   ) => {
     try {
       console.log("Saving message:", {
@@ -499,6 +503,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         role,
         currentBranchId: currentBranchId,
         branchId: branchId, // Log the branch ID being used
+        hasReasoning: !!reasoning,
       });
 
       const response = await fetch("/api/messages", {
@@ -511,6 +516,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           branchId,
           files: files ? JSON.stringify(files) : undefined,
           wasRegenerated,
+          reasoning,
         }),
       });
 
@@ -630,11 +636,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           throw new Error(
             `API request failed: ${response.status} ${response.statusText} - ${errorText}`,
           );
-        } // Stream the response
+        }        // Stream the response
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = "";
         let completeAiText = "";
+        let completeReasoning = "";
 
         while (true) {
           const { done, value } = await reader.read();
@@ -660,24 +667,58 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               }
 
               try {
-                const parsed = JSON.parse(dataStr) as { token?: string };
+                const parsed = JSON.parse(dataStr) as { 
+                  token?: string;
+                  reasoning?: string;
+                  choices?: Array<{
+                    delta?: {
+                      content?: string;
+                      reasoning?: string;
+                    };
+                  }>;
+                };
+                
+                // Handle different response formats
+                let contentToken = "";
+                let reasoningToken = "";
+                
                 if (parsed.token) {
-                  completeAiText += parsed.token;
-                  setMessages((prev) => {
-                    const newMessages = [...prev];
-                    const lastMessage = newMessages[newMessages.length - 1];
-                    if (lastMessage?.sender === "AI") {
-                      lastMessage.text = completeAiText;
-                    }
-                    return newMessages;
-                  });
+                  contentToken = parsed.token;
+                } else if (parsed.choices?.[0]?.delta?.content) {
+                  contentToken = parsed.choices[0].delta.content;
                 }
+                
+                if (parsed.reasoning) {
+                  reasoningToken = parsed.reasoning;
+                } else if (parsed.choices?.[0]?.delta?.reasoning) {
+                  reasoningToken = parsed.choices[0].delta.reasoning;
+                }
+
+                if (contentToken) {
+                  completeAiText += contentToken;
+                }
+                
+                if (reasoningToken) {
+                  completeReasoning += reasoningToken;
+                }
+
+                setMessages((prev) => {
+                  const newMessages = [...prev];
+                  const lastMessage = newMessages[newMessages.length - 1];
+                  if (lastMessage?.sender === "AI") {
+                    lastMessage.text = completeAiText;
+                    if (completeReasoning) {
+                      lastMessage.reasoning = completeReasoning;
+                    }
+                  }
+                  return newMessages;
+                });
               } catch (e) {
                 console.warn("Failed to parse stream chunk:", dataStr, e);
               }
             }
           }
-        } // Save complete AI message in the background
+        }        // Save complete AI message in the background
         if (completeAiText) {
           // Clean up the final AI text before saving and displaying
           const cleanedAiText = completeAiText
@@ -690,11 +731,14 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             const lastMessage = newMessages[newMessages.length - 1];
             if (lastMessage?.sender === "AI") {
               lastMessage.text = cleanedAiText;
+              if (completeReasoning) {
+                lastMessage.reasoning = completeReasoning.trim();
+              }
             }
             return newMessages;
           });
 
-          void saveMessage(chatId, cleanedAiText, "assistant", branchId);
+          void saveMessage(chatId, cleanedAiText, "assistant", branchId, undefined, false, completeReasoning.trim() || undefined);
         }
 
         // Generate and update title for new chats in the background
@@ -1070,105 +1114,137 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               if (contentType.includes("text/event-stream")) {
                 const reader = aiResponse.body!.getReader();
                 const decoder = new TextDecoder();
-                let buffer = "";
-                let completeAiText = "";
-                let displayedLength = 0;
-                const charDelay = 1;
+                let buffer = "";                let completeAiText = "";
+                let completeReasoning = "";
 
                 while (true) {
                   const { done, value } = await reader.read();
                   if (done) break;
 
                   buffer += decoder.decode(value, { stream: true });
-                  const parts = buffer.split(/\r?\n\r?\n/);
+
+                  // Split on complete SSE messages (data: ... followed by double newline)
+                  const parts = buffer.split(/\n\n/);
+
+                  // Keep the last part in buffer (might be incomplete)
                   buffer = parts.pop() ?? "";
 
                   for (const part of parts) {
-                    if (!part.startsWith("data: ")) continue;
-                    const dataStr = part.replace(/^data: /, "").trim();
-                    if (dataStr === "[DONE]") break;
+                    const lines = part.trim().split(/\n/);
+                    for (const line of lines) {
+                      if (!line.startsWith("data: ")) continue;
 
-                    try {
-                      const parsed = JSON.parse(dataStr) as { token?: unknown };
-                      const { token } = parsed;
-                      if (typeof token === "string") {
-                        completeAiText += token;
-
-                        const newChars = completeAiText.slice(displayedLength);
-                        for (let i = 0; i < newChars.length; i++) {
-                          const targetLength = displayedLength + i + 1;
-                          setTimeout(
-                            () => {
-                              const updatedText = completeAiText.slice(
-                                0,
-                                targetLength,
-                              );
-                              setMessages((prev) => {
-                                const msgs = [...prev];
-                                if (msgs[msgs.length - 1]?.sender === "AI") {
-                                  msgs[msgs.length - 1] = {
-                                    ...msgs[msgs.length - 1]!,
-                                    text: updatedText,
-                                  };
-                                }
-                                return msgs;
-                              });
-                              // Update branch in a separate state update
-                              setBranches((prevBranches) =>
-                                prevBranches.map((branch) =>
-                                  branch.id === data.branch.id
-                                    ? {
-                                        ...branch,
-                                        messages: branch.messages.map(
-                                          (msg, idx, arr) =>
-                                            idx === arr.length - 1 &&
-                                            msg.sender === "AI"
-                                              ? { ...msg, text: updatedText }
-                                              : msg,
-                                        ),
-                                      }
-                                    : branch,
-                                ),
-                              );
-
-                              // Update the alternative text in real-time
-                              setMessageAlternatives((prev) => {
-                                const newMap = new Map(prev);
-                                const alternatives = newMap.get(
-                                  userMessageIndex + 1,
-                                );
-                                if (alternatives && alternatives.length > 0) {
-                                  const updatedAlternatives = alternatives.map(
-                                    (alt) =>
-                                      alt.branchId === data.branch.id
-                                        ? { ...alt, text: updatedText }
-                                        : alt,
-                                  );
-                                  newMap.set(
-                                    userMessageIndex + 1,
-                                    updatedAlternatives,
-                                  );
-                                }
-                                return newMap;
-                              });
-                            },
-                            (displayedLength + i) * charDelay,
-                          );
-                        }
-                        displayedLength = completeAiText.length;
+                      const dataStr = line.slice(6).trim(); // Remove "data: " prefix
+                      if (dataStr === "[DONE]") {
+                        // End of stream
+                        continue;
                       }
-                    } catch {
-                      // Ignore parse errors
+
+                      try {
+                        const parsed = JSON.parse(dataStr) as { 
+                          token?: string;
+                          reasoning?: string;
+                          choices?: Array<{
+                            delta?: {
+                              content?: string;
+                              reasoning?: string;
+                            };
+                          }>;
+                        };
+                        
+                        // Handle different response formats
+                        let contentToken = "";
+                        let reasoningToken = "";
+                        
+                        if (parsed.token) {
+                          contentToken = parsed.token;
+                        } else if (parsed.choices?.[0]?.delta?.content) {
+                          contentToken = parsed.choices[0].delta.content;
+                        }
+                        
+                        if (parsed.reasoning) {
+                          reasoningToken = parsed.reasoning;
+                        } else if (parsed.choices?.[0]?.delta?.reasoning) {
+                          reasoningToken = parsed.choices[0].delta.reasoning;
+                        }
+
+                        if (contentToken) {
+                          completeAiText += contentToken;
+                        }
+                        
+                        if (reasoningToken) {
+                          completeReasoning += reasoningToken;
+                        }
+
+                        setMessages((prev) => {
+                          const newMessages = [...prev];
+                          const lastMessage = newMessages[newMessages.length - 1];
+                          if (lastMessage?.sender === "AI") {
+                            lastMessage.text = completeAiText;
+                            if (completeReasoning) {
+                              lastMessage.reasoning = completeReasoning;
+                            }
+                          }
+                          return newMessages;
+                        });
+
+                        // Update branch state as well
+                        setBranches((prevBranches) =>
+                          prevBranches.map((branch) =>
+                            branch.id === data.branch.id
+                              ? {
+                                  ...branch,
+                                  messages: branch.messages.map(
+                                    (msg, idx, arr) =>
+                                      idx === arr.length - 1 &&
+                                      msg.sender === "AI"
+                                        ? { 
+                                            ...msg, 
+                                            text: completeAiText,
+                                            reasoning: completeReasoning
+                                          }
+                                        : msg,
+                                  ),
+                                }
+                              : branch,
+                          ),
+                        );
+
+                        // Update the alternative text in real-time
+                        setMessageAlternatives((prev) => {
+                          const newMap = new Map(prev);
+                          const alternatives = newMap.get(
+                            userMessageIndex + 1,
+                          );
+                          if (alternatives && alternatives.length > 0) {
+                            const updatedAlternatives = alternatives.map(
+                              (alt) =>
+                                alt.branchId === data.branch.id
+                                  ? { ...alt, text: completeAiText }
+                                  : alt,
+                            );
+                            newMap.set(
+                              userMessageIndex + 1,
+                              updatedAlternatives,
+                            );
+                          }
+                          return newMap;
+                        });
+                      } catch (e) {
+                        console.warn("Failed to parse stream chunk:", dataStr, e);
+                      }
                     }
                   }
-                } // Save final AI response to database using robust saveMessage
+                }                // Save final AI response to database using robust saveMessage
                 if (completeAiText) {
-                  try {
-                    await saveMessage(
+                  try {                    await saveMessage(
                       currentChatId,
                       completeAiText,
                       "assistant",
                       data.branch.id, // Force use of the new branch ID
+                      undefined, // No files for AI response
+                      false, // wasRegenerated
+                      completeReasoning || undefined // Include reasoning if present
                     );
                     console.log("AI response saved successfully");
                   } catch (error) {

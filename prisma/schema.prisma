@@ -1,3 +1,9 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -8,39 +14,37 @@ datasource db {
 }
 
 model Chat {
-  id        String    @id @default(cuid())
+  id        String   @id @default(cuid())
   title     String?
   userId    String
-  pinned    Boolean   @default(false)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  branches  Branch[]
-  messages  Message[]
-
+  pinned    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  messages Message[]
+  branches Branch[]
   @@map("chats")
 }
 
 model Message {
   id        String   @id @default(cuid())
   content   String
-  role      String
+  role      String   // "user" or "assistant"
   chatId    String
-  createdAt DateTime @default(now())
   branchId  String?
-  files     Json?
+  files     Json?    // Store file attachments as JSON
+  reasoning String?  // Store AI reasoning for reasoning models
   branch    Branch?  @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
   chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
-
   @@map("messages")
 }
 
 model Branch {
   id        String    @id @default(cuid())
   name      String?
+  chat      Chat      @relation(fields: [chatId], references: [id], onDelete: Cascade)
   chatId    String
   createdAt DateTime  @default(now())
-  chat      Chat      @relation(fields: [chatId], references: [id], onDelete: Cascade)
   messages  Message[]
-
   @@map("branches")
 }

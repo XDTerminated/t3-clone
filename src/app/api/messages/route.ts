@@ -36,6 +36,7 @@ export async function GET(request: Request) {
         content: true,
         role: true,
         files: true,
+        reasoning: true, // Include reasoning field
         createdAt: true,
         branchId: true,
       },
@@ -65,8 +66,9 @@ export async function POST(request: Request) {
       role: string;
       branchId?: string;
       files?: Array<{ name: string; type: string; data: string }>;
+      reasoning?: string;
     };
-    const { chatId, content, role, branchId, files } = body;
+    const { chatId, content, role, branchId, files, reasoning } = body;
 
     if (!chatId || !content || !role) {
       return NextResponse.json(
@@ -113,6 +115,7 @@ export async function POST(request: Request) {
         role,
         branchId: branch.id,
         files: files ?? undefined,
+        reasoning: reasoning ?? undefined,
       },
     });
 

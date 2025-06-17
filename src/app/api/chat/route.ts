@@ -202,19 +202,24 @@ export async function POST(request: Request) {
                   controller.close();
                   return;
                 }
-
                 try {
                   const parsed = JSON.parse(data) as {
                     choices?: Array<{
                       delta?: {
                         content?: string;
+                        reasoning?: string;
                       };
                     }>;
                   };
 
                   const token = parsed.choices?.[0]?.delta?.content ?? "";
-                  if (token) {
-                    const payload = JSON.stringify({ token });
+                  const reasoning = parsed.choices?.[0]?.delta?.reasoning ?? "";
+
+                  if (token || reasoning) {
+                    const payload = JSON.stringify({
+                      token: token || "",
+                      reasoning: reasoning || "",
+                    });
                     controller.enqueue(encoder.encode(`data: ${payload}\n\n`));
                   }
                 } catch {
