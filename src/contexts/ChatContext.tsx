@@ -26,7 +26,11 @@ interface Chat {
 interface ChatContextType {
   chats: Chat[];
   currentChatId: string | null;
-  messages: Array<{ sender: string; text: string }>;
+  messages: Array<{
+    sender: string;
+    text: string;
+    files?: UploadFileResponse[];
+  }>;
   loading: boolean;
   isLoadingChat: boolean;
   isPendingNewChat: boolean;
@@ -50,7 +54,11 @@ interface ChatContextType {
   branches: {
     id: string;
     name: string;
-    messages: Array<{ sender: string; text: string }>;
+    messages: Array<{
+      sender: string;
+      text: string;
+      files?: UploadFileResponse[];
+    }>;
   }[];
   currentBranchId: string | null;
   selectBranch: (branchId: string) => void;
@@ -95,7 +103,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [chats, setChats] = useState<Chat[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const [messages, setMessages] = useState<
-    Array<{ sender: string; text: string }>
+    Array<{ sender: string; text: string; files?: UploadFileResponse[] }>
   >([]);
   const [loading] = useState(false);
   const [isLoadingChat, setIsLoadingChat] = useState(false);
@@ -622,9 +630,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           throw new Error(
             `API request failed: ${response.status} ${response.statusText} - ${errorText}`,
           );
-        }
-
-        // Stream the response
+        } // Stream the response
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = "";
@@ -635,36 +641,60 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           if (done) break;
 
           buffer += decoder.decode(value, { stream: true });
-          const parts = buffer.split(/\r?\n\r?\n/);
+
+          // Split on complete SSE messages (data: ... followed by double newline)
+          const parts = buffer.split(/\n\n/);
+
+          // Keep the last part in buffer (might be incomplete)
           buffer = parts.pop() ?? "";
 
           for (const part of parts) {
-            if (!part.startsWith("data: ")) continue;
-            const dataStr = part.replace(/^data: /, "").trim();
-            if (dataStr === "[DONE]") break;
+            const lines = part.trim().split(/\n/);
+            for (const line of lines) {
+              if (!line.startsWith("data: ")) continue;
 
-            try {
-              const parsed = JSON.parse(dataStr) as { token?: string };
-              if (parsed.token) {
-                completeAiText += parsed.token;
-                setMessages((prev) => {
-                  const newMessages = [...prev];
-                  const lastMessage = newMessages[newMessages.length - 1];
-                  if (lastMessage?.sender === "AI") {
-                    lastMessage.text = completeAiText;
-                  }
-                  return newMessages;
-                });
+              const dataStr = line.slice(6).trim(); // Remove "data: " prefix
+              if (dataStr === "[DONE]") {
+                // End of stream
+                continue;
               }
-            } catch (e) {
-              console.warn("Failed to parse stream chunk", e);
+
+              try {
+                const parsed = JSON.parse(dataStr) as { token?: string };
+                if (parsed.token) {
+                  completeAiText += parsed.token;
+                  setMessages((prev) => {
+                    const newMessages = [...prev];
+                    const lastMessage = newMessages[newMessages.length - 1];
+                    if (lastMessage?.sender === "AI") {
+                      lastMessage.text = completeAiText;
+                    }
+                    return newMessages;
+                  });
+                }
+              } catch (e) {
+                console.warn("Failed to parse stream chunk:", dataStr, e);
+              }
             }
           }
-        }
-
-        // Save complete AI message in the background
+        } // Save complete AI message in the background
         if (completeAiText) {
-          void saveMessage(chatId, completeAiText, "assistant", branchId);
+          // Clean up the final AI text before saving and displaying
+          const cleanedAiText = completeAiText
+            .replace(/^[\s\u200B-\u200D\uFEFF]+/, "") // Remove leading whitespace/invisible chars
+            .trim();
+
+          // Update the UI with the cleaned text
+          setMessages((prev) => {
+            const newMessages = [...prev];
+            const lastMessage = newMessages[newMessages.length - 1];
+            if (lastMessage?.sender === "AI") {
+              lastMessage.text = cleanedAiText;
+            }
+            return newMessages;
+          });
+
+          void saveMessage(chatId, cleanedAiText, "assistant", branchId);
         }
 
         // Generate and update title for new chats in the background
@@ -916,9 +946,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             sender: m.sender,
             text: m.text.substring(0, 50) + "...",
           })),
-        );
-
-        // Save the initial messages to the new branch in the database using robust saveMessage
+        ); // Save the initial messages to the new branch in the database using robust saveMessage
         // Pass the new branch ID directly to avoid async state update issues
         for (const msg of initialMessages) {
           try {
@@ -931,6 +959,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               msg.text,
               msg.sender === "User" ? "user" : "assistant",
               data.branch.id, // Force use of the new branch ID
+              msg.files, // Include files from the original message
             );
           } catch (error) {
             console.error("Error saving message to new branch:", error);
@@ -954,7 +983,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         const lastUserMessage = initialMessages[userMessageIndex];
         if (lastUserMessage && lastUserMessage.sender === "User") {
           // Add empty AI message to UI
-          const emptyAIMsg = { sender: "AI", text: "" };
+          const emptyAIMsg = { sender: "AI", text: "", files: undefined };
           setMessages((prev) => [...prev, emptyAIMsg]); // Track that this AI message (at userMessageIndex + 1) is regenerated
           setRegeneratedMessageIndices((prev) =>
             new Set(prev).add(userMessageIndex + 1),
@@ -1012,13 +1041,15 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                 ? { ...branch, messages: [...branch.messages, emptyAIMsg] }
                 : branch,
             ),
-          );
-
-          // Get conversation history for AI context
+          ); // Get conversation history for AI context and extract files from user message
           const conversationHistory = initialMessages.map((msg) => ({
             sender: msg.sender,
             text: msg.text,
           }));
+
+          // Extract files from the last user message for regeneration
+          const lastUserMsg = initialMessages[userMessageIndex];
+          const userFiles = lastUserMsg?.files;
 
           // Start AI response generation
           try {
@@ -1030,6 +1061,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                 history: conversationHistory,
                 model: selectedModel.id,
                 apiKey: apiKey, // Send user's API key
+                files: userFiles, // Include the files from the original user message
               }),
             });
 
@@ -1256,131 +1288,81 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       >();
       const newCurrentSelections = new Map<number, number>();
 
-      // To properly detect regenerated messages, we need to find branches that share
-      // a common conversation history and have different AI responses at the same position
-
-      // First, build a map of conversation histories for each branch
-      const branchHistories = new Map<
-        string,
-        {
-          fullHistory: string[];
-          lastUserMessageIndex: number;
-          lastAIMessageIndex: number;
-          lastAIMessage: string;
-        }
+      // Group branches by their conversation history up to each message position
+      // This allows us to find all alternatives for each regenerated message
+      const messagePositionGroups = new Map<
+        string, // historyKey (conversation up to this point)
+        Map<number, Array<{ branchId: string; text: string }>> // messageIndex -> alternatives
       >();
 
       branches.forEach((branch) => {
-        const fullHistory: string[] = [];
-        let lastUserMessageIndex = -1;
-        let lastAIMessageIndex = -1;
-        let lastAIMessage = "";
+        const branchHistory: string[] = [];
 
-        branch.messages.forEach((message, index) => {
-          fullHistory.push(`${message.sender}:${message.text}`);
-          if (message.sender === "User") {
-            lastUserMessageIndex = index;
-          } else if (message.sender === "AI") {
-            lastAIMessageIndex = index;
-            lastAIMessage = message.text;
-          }
-        });
+        branch.messages.forEach((message, messageIndex) => {
+          // Build history key up to this message (excluding current message)
+          const historyKey = branchHistory.join("|");
 
-        branchHistories.set(branch.id, {
-          fullHistory,
-          lastUserMessageIndex,
-          lastAIMessageIndex,
-          lastAIMessage,
-        });
-      });
+          if (message.sender === "AI") {
+            // This is an AI message - check if we have alternatives for this position
+            if (!messagePositionGroups.has(historyKey)) {
+              messagePositionGroups.set(historyKey, new Map());
+            }
 
-      // Find regenerated messages by looking for branches with identical history up to a point,
-      // but different AI responses at that point
-      for (const [branchId1, history1] of branchHistories) {
-        for (const [branchId2, history2] of branchHistories) {
-          if (branchId1 >= branchId2) continue; // Avoid duplicates
+            const positionMap = messagePositionGroups.get(historyKey)!;
+            if (!positionMap.has(messageIndex)) {
+              positionMap.set(messageIndex, []);
+            }
 
-          // Check if these branches have a common prefix but diverge at an AI message
-          let commonPrefixLength = 0;
-          const minLength = Math.min(
-            history1.fullHistory.length,
-            history2.fullHistory.length,
-          );
+            // Add this AI response as an alternative
+            const alternatives = positionMap.get(messageIndex)!;
+            const existingIndex = alternatives.findIndex(
+              (alt) => alt.branchId === branch.id,
+            );
 
-          for (let i = 0; i < minLength; i++) {
-            if (history1.fullHistory[i] === history2.fullHistory[i]) {
-              commonPrefixLength++;
-            } else {
-              break;
+            if (existingIndex === -1) {
+              alternatives.push({
+                branchId: branch.id,
+                text: message.text,
+              });
             }
           }
 
-          // If there's a divergence and both branches have at least one more message after the common prefix
-          if (commonPrefixLength < minLength && commonPrefixLength > 0) {
-            // Check if the divergence is at an AI message position
-            const divergentMessage1 = history1.fullHistory[commonPrefixLength];
-            const divergentMessage2 = history2.fullHistory[commonPrefixLength];
+          // Add current message to history for next iteration
+          branchHistory.push(`${message.sender}:${message.text}`);
+        });
+      });
 
-            if (
-              divergentMessage1?.startsWith("AI:") &&
-              divergentMessage2?.startsWith("AI:")
-            ) {
-              // This indicates a regeneration - same conversation up to this point, different AI responses
-              const aiText1 = divergentMessage1.substring(3); // Remove "AI:" prefix
-              const aiText2 = divergentMessage2.substring(3); // Remove "AI:" prefix
+      // Now process the groups to find regenerated messages (positions with multiple alternatives)
+      for (const [, positionMap] of messagePositionGroups) {
+        for (const [messageIndex, alternatives] of positionMap) {
+          // Only consider positions with multiple alternatives (i.e., regenerated messages)
+          if (alternatives.length > 1) {
+            // Check if any of these alternatives belong to the current branch
+            const currentBranchAlternative = alternatives.find(
+              (alt) => alt.branchId === currentBranchId,
+            );
 
-              // Find the message index in each branch for this regenerated position
-              const branch1 = branches.find((b) => b.id === branchId1);
-              const branch2 = branches.find((b) => b.id === branchId2);
+            if (currentBranchAlternative) {
+              // Sort alternatives by creation order (branch ID should correlate with creation time)
+              const sortedAlternatives = [...alternatives].sort((a, b) =>
+                a.branchId.localeCompare(b.branchId),
+              );
 
-              if (branch1 && branch2) {
-                const messageIndex1 = commonPrefixLength;
-                const messageIndex2 = commonPrefixLength;
+              newMessageAlternatives.set(messageIndex, sortedAlternatives);
 
-                // Add alternatives for both branches if they're within valid range
-                if (
-                  messageIndex1 < branch1.messages.length &&
-                  messageIndex2 < branch2.messages.length
-                ) {
-                  // For branch 1
-                  if (branchId1 === currentBranchId) {
-                    const alternatives = [
-                      { branchId: branchId1, text: aiText1 },
-                      { branchId: branchId2, text: aiText2 },
-                    ];
-                    newMessageAlternatives.set(messageIndex1, alternatives);
+              // Set current selection to the alternative from the current branch
+              const currentIndex = sortedAlternatives.findIndex(
+                (alt) => alt.branchId === currentBranchId,
+              );
 
-                    // Set current selection
-                    const currentIndex = alternatives.findIndex(
-                      (alt) => alt.text === aiText1,
-                    );
-                    if (currentIndex >= 0) {
-                      newCurrentSelections.set(messageIndex1, currentIndex);
-                    }
-                  }
-
-                  // For branch 2
-                  if (branchId2 === currentBranchId) {
-                    const alternatives = [
-                      { branchId: branchId1, text: aiText1 },
-                      { branchId: branchId2, text: aiText2 },
-                    ];
-                    newMessageAlternatives.set(messageIndex2, alternatives);
-
-                    // Set current selection
-                    const currentIndex = alternatives.findIndex(
-                      (alt) => alt.text === aiText2,
-                    );
-                    if (currentIndex >= 0) {
-                      newCurrentSelections.set(messageIndex2, currentIndex);
-                    }
-                  }
-                }
+              if (currentIndex >= 0) {
+                newCurrentSelections.set(messageIndex, currentIndex);
               }
             }
           }
         }
       }
+
       const newRegeneratedIndices = new Set<number>();
 
       // Get regenerated indices from the newly built messageAlternatives

@@ -30,15 +30,25 @@ import {
 } from "lucide-react";
 import NextImage from "next/image";
 import { useState } from "react";
+import type { UploadFileResponse } from "~/lib/types";
 
-// HACK: Manual type definition to avoid client-side import issues
-type UploadFileResponse<T = unknown> = {
-  name: string;
-  size: number;
-  key: string;
-  url: string;
-  serverData: T;
-};
+// Function to clean and normalize AI response text
+function normalizeAIResponse(text: string): string {
+  if (!text) return text;
+
+  // Remove any leading whitespace or invisible characters
+  let cleaned = text.replace(/^[\s\u200B-\u200D\uFEFF]+/, "");
+
+  // Ensure first character is capitalized if it's a letter
+  if (cleaned.length > 0) {
+    const firstChar = cleaned.charAt(0);
+    if (/[a-z]/.test(firstChar)) {
+      cleaned = firstChar.toUpperCase() + cleaned.slice(1);
+    }
+  }
+
+  return cleaned;
+}
 
 export type Message = {
   sender: string;
@@ -217,6 +227,7 @@ function FileAttachments({ files }: { files: UploadFileResponse[] }) {
 
 // Custom component to render Lexical editor for each message
 function LexicalMessage({ text }: { text: string }) {
+  const normalizedText = normalizeAIResponse(text);
   const initialConfig = { ...editorConfig };
   return (
     <LexicalComposer initialConfig={initialConfig}>
@@ -226,7 +237,7 @@ function LexicalMessage({ text }: { text: string }) {
         ErrorBoundary={LexicalErrorBoundary}
       />
       <HistoryPlugin />
-      <InitializeMarkdownPlugin markdownText={text} />
+      <InitializeMarkdownPlugin markdownText={normalizedText} />
     </LexicalComposer>
   );
 }
