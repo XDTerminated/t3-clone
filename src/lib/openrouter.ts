@@ -3,42 +3,62 @@ export interface OpenRouterModel {
   name: string;
   contextLength: number;
   provider: string;
+  capabilities?: string[]; // e.g. ['vision','search','pdf','reasoning','image']
 }
 
 export const AVAILABLE_MODELS: OpenRouterModel[] = [
   {
-    id: "deepseek/deepseek-chat:free",
-    name: "DeepSeek V3",
-    contextLength: 163840,
-    provider: "DeepSeek",
-  },
-  {
-    id: "google/gemini-2.0-flash-exp:free",
-    name: "Gemini 2.0 Flash",
+    id: "google/gemini-2.5-flash",
+    name: "Gemini 2.5 Flash",
     contextLength: 1048576,
     provider: "Google",
+    capabilities: ["vision", "search", "pdf"],
   },
   {
-    id: "meta-llama/llama-3.3-70b-instruct:free",
-    name: "Llama 3.3 70B",
-    contextLength: 131072,
-    provider: "Meta",
+    id: "google/gemini-2.5-pro",
+    name: "Gemini 2.5 Pro",
+    contextLength: 2097152,
+    provider: "Google",
+    capabilities: ["vision", "search", "pdf", "reasoning"],
   },
   {
-    id: "mistralai/mistral-nemo:free",
-    name: "Mistral Nemo",
-    contextLength: 131072,
-    provider: "Mistral",
+    id: "openai/gpt-4o-mini",
+    name: "GPT ImageGen",
+    contextLength: 128000,
+    provider: "OpenAI",
+    capabilities: ["vision", "image"],
   },
   {
-    id: "qwen/qwen-2.5-72b-instruct:free",
-    name: "Qwen 2.5 72B",
-    contextLength: 32768,
-    provider: "Qwen",
+    id: "openai/o1-mini",
+    name: "o4-mini",
+    contextLength: 65536,
+    provider: "OpenAI",
+    capabilities: ["vision", "reasoning"],
+  },
+  {
+    id: "anthropic/claude-3.5-sonnet",
+    name: "Claude 4 Sonnet",
+    contextLength: 200000,
+    provider: "Anthropic",
+    capabilities: ["vision", "pdf"],
+  },
+  {
+    id: "anthropic/claude-3.5-sonnet:beta",
+    name: "Claude 4 Sonnet (Reasoning)",
+    contextLength: 200000,
+    provider: "Anthropic",
+    capabilities: ["vision", "pdf", "reasoning"],
+  },
+  {
+    id: "deepseek/deepseek-r1-distill-llama-70b",
+    name: "DeepSeek R1 (Llama Distilled)",
+    contextLength: 65536,
+    provider: "DeepSeek",
+    capabilities: ["reasoning"],
   },
 ];
 
-export const DEFAULT_MODEL = AVAILABLE_MODELS[0]!; // DeepSeek V3 as default
+export const DEFAULT_MODEL = AVAILABLE_MODELS[0]!; // Gemini 2.5 Flash as default
 
 export class OpenRouterAPI {
   private apiKey: string;
