@@ -118,9 +118,10 @@ function ReasoningSection({ reasoning }: { reasoning: string }) {
   return (
     <div className="model-thoughts mb-4">
       <div className="thoughts-header">
+        {" "}
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="thoughts-header-button flex items-center gap-1 rounded border-0 bg-transparent p-0 transition-opacity duration-200 ease-out hover:opacity-70 focus:ring-2 focus:ring-blue-500/30 focus:ring-offset-1 focus:outline-none"
+          className="thoughts-header-button flex items-center gap-1 rounded border-0 bg-transparent p-0 transition-opacity duration-200 ease-out hover:opacity-70 focus:outline-none"
           aria-expanded={isExpanded}
           aria-label={isExpanded ? "Hide thinking" : "Show thinking"}
         >
