@@ -3,6 +3,15 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma } from "~/lib/prisma";
 import { OpenRouterAPI, DEFAULT_MODEL } from "~/lib/openrouter";
 
+// HACK: Manual type definition to avoid client-side import issues
+type UploadFileResponse<T = unknown> = {
+  name: string;
+  size: number;
+  key: string;
+  url: string;
+  serverData: T;
+};
+
 type ChatRequest = {
   message?: string;
   chatId?: string;
@@ -10,7 +19,7 @@ type ChatRequest = {
   model?: string;
   apiKey?: string; // User's OpenRouter API key
   searchEnabled?: boolean;
-  files?: Array<{ name: string; type: string; data: string }>; // Base64 file data
+  files?: UploadFileResponse[];
 };
 
 export async function POST(request: Request) {

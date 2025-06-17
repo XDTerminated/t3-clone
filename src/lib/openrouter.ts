@@ -1,3 +1,11 @@
+type UploadFileResponse<T = unknown> = {
+  name: string;
+  size: number;
+  key: string;
+  url: string;
+  serverData: T;
+};
+
 interface MessageContent {
   type: "text" | "image_url" | "file";
   text?: string;
@@ -95,7 +103,7 @@ export class OpenRouterAPI {
     model: string = DEFAULT_MODEL.id,
     options?: {
       searchEnabled?: boolean;
-      files?: Array<{ name: string; type: string; data: string }>;
+      files?: UploadFileResponse[];
     },
   ) {
     // Process files and add them to the last user message if provided
@@ -110,20 +118,26 @@ export class OpenRouterAPI {
           { type: "text", text: lastMessage.content },
         ]; // Process each file
         for (const file of options.files) {
-          const isImage = file.type.startsWith("image/");
-          const isPDF = file.type === "application/pdf";
+          const fileType = (file.serverData as { type: string })?.type ?? "";
+          const isImage = fileType.startsWith("image/");
+          const isPDF = fileType === "application/pdf";
 
           if (isImage) {
             messageContent.push({
               type: "image_url",
-              image_url: { url: file.data },
+              image_url: { url: file.url },
             });
           } else if (isPDF) {
+            const response = await fetch(file.url);
+            const blob = await response.blob();
+            const buffer = await blob.arrayBuffer();
+            const base64data = Buffer.from(buffer).toString("base64");
+
             messageContent.push({
               type: "file",
               file: {
                 filename: file.name,
-                file_data: file.data,
+                file_data: `data:${fileType};base64,${base64data}`,
               },
             });
           }
@@ -164,7 +178,8 @@ export class OpenRouterAPI {
       }
     } // Add PDF processing plugin if any PDF files are present
     const hasPDFFiles = options?.files?.some(
-      (file) => file.type === "application/pdf",
+      (file) =>
+        (file.serverData as { type: string })?.type === "application/pdf",
     );
     if (hasPDFFiles) {
       const pdfPlugin = {

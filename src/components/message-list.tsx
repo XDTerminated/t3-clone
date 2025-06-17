@@ -21,17 +21,29 @@ import { LinkNode } from "@lexical/link";
 import { HeadingNode, QuoteNode } from "@lexical/rich-text";
 import type { LexicalNode, TextNode } from "lexical";
 import { useChat } from "~/contexts/ChatContext";
-import { Image as ImageIcon, FileText, Paperclip } from "lucide-react";
+import {
+  Image as ImageIcon,
+  FileText,
+  Paperclip,
+  Eye,
+  Download,
+} from "lucide-react";
 import NextImage from "next/image";
+import { useState } from "react";
+
+// HACK: Manual type definition to avoid client-side import issues
+type UploadFileResponse<T = unknown> = {
+  name: string;
+  size: number;
+  key: string;
+  url: string;
+  serverData: T;
+};
 
 export type Message = {
   sender: string;
   text: string;
-  files?: Array<{
-    filename: string;
-    type: string;
-    data: string;
-  }>;
+  files?: UploadFileResponse[];
 };
 
 interface MessageListProps {
@@ -84,45 +96,122 @@ const editorConfig = {
 };
 
 // Component to display file attachments
-function FileAttachments({
-  files,
-}: {
-  files: Array<{ filename: string; type: string; data: string }>;
-}) {
-  return (
-    <div className="mt-2 flex flex-wrap gap-2">
-      {files.map((file, index) => {
-        const isImage = file.type.startsWith("image/");
-        const isPDF = file.type === "application/pdf";
+function FileAttachments({ files }: { files: UploadFileResponse[] }) {
+  const [selectedFile, setSelectedFile] = useState<UploadFileResponse | null>(
+    null,
+  );
 
-        return (
+  const downloadFile = (file: UploadFileResponse) => {
+    // Open in a new tab, letting the browser handle download/display
+    window.open(file.url, "_blank", "noopener,noreferrer");
+  };
+
+  const viewFile = (file: UploadFileResponse) => {
+    const fileType = (file.serverData as { type: string })?.type ?? "";
+    if (fileType.startsWith("image/")) {
+      setSelectedFile(file);
+    } else {
+      // For PDFs and other types, open in a new tab
+      window.open(file.url, "_blank", "noopener,noreferrer");
+    }
+  };
+
+  return (
+    <>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {files.map((file, index) => {
+          const fileType =
+            (file.serverData as { type: string })?.type ??
+            "application/octet-stream";
+          const isImage = fileType.startsWith("image/");
+          const isPDF = fileType === "application/pdf";
+
+          return (
+            <div
+              key={index}
+              className="bg-secondary/10 hover:bg-secondary/20 border-secondary/20 group flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors"
+              onClick={() => viewFile(file)}
+            >
+              <div className="flex items-center gap-2">
+                {isImage ? (
+                  <ImageIcon className="h-4 w-4 text-blue-500" />
+                ) : isPDF ? (
+                  <FileText className="h-4 w-4 text-red-500" />
+                ) : (
+                  <Paperclip className="h-4 w-4 text-gray-500" />
+                )}
+                <span className="max-w-[150px] truncate font-medium">
+                  {file.name}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    viewFile(file);
+                  }}
+                  className="hover:bg-secondary/40 rounded p-1 transition-colors"
+                  title="View file"
+                >
+                  <Eye className="h-3 w-3" />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    downloadFile(file);
+                  }}
+                  className="hover:bg-secondary/40 rounded p-1 transition-colors"
+                  title="Download file"
+                >
+                  <Download className="h-3 w-3" />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Image preview modal */}
+      {selectedFile &&
+        ((selectedFile.serverData as { type: string })?.type ?? "").startsWith(
+          "image/",
+        ) && (
           <div
-            key={index}
-            className="bg-secondary/20 flex items-center gap-2 rounded-md border px-2 py-1 text-xs"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+            onClick={() => setSelectedFile(null)}
           >
-            {" "}
-            {isImage ? (
-              <ImageIcon className="h-3 w-3" />
-            ) : isPDF ? (
-              <FileText className="h-3 w-3" />
-            ) : (
-              <Paperclip className="h-3 w-3" />
-            )}
-            <span className="max-w-[120px] truncate">{file.filename}</span>{" "}
-            {isImage && (
+            <div className="bg-background max-h-[90vh] max-w-4xl overflow-auto rounded-lg p-4">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-lg font-semibold">{selectedFile.name}</h3>
+                <button
+                  onClick={() => setSelectedFile(null)}
+                  className="hover:bg-secondary/40 rounded p-2 transition-colors"
+                >
+                  ×
+                </button>
+              </div>
               <NextImage
-                src={file.data}
-                alt={file.filename}
-                width={200}
-                height={200}
-                className="mt-1 max-h-[200px] max-w-[200px] rounded border object-contain"
+                src={selectedFile.url}
+                alt={selectedFile.name}
+                width={800}
+                height={600}
+                className="h-auto max-w-full rounded border object-contain"
                 loading="lazy"
               />
-            )}
+              <div className="mt-4 flex gap-2">
+                <button
+                  onClick={() => downloadFile(selectedFile)}
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2 rounded px-3 py-2 transition-colors"
+                >
+                  <Download className="h-4 w-4" />
+                  Download
+                </button>
+              </div>
+            </div>
           </div>
-        );
-      })}
-    </div>
+        )}
+    </>
   );
 }
 
@@ -289,7 +378,7 @@ export default function MessageList({ messages }: MessageListProps) {
       aria-live="polite"
       className="pt-safe-offset-10 mx-auto flex w-full max-w-3xl flex-col space-y-16 px-4 pt-12 pb-40"
     >
-      {messages.map((msg, idx) => (
+      {messages.map((msg: Message, idx: number) => (
         <div
           key={idx}
           data-message-id={`${idx}`}

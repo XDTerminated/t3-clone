@@ -11,7 +11,7 @@ import {
 import { useModel } from "./ModelContext";
 import { useAuth } from "@clerk/nextjs";
 import { useApiKey } from "./ApiKeyContext";
-// Using built-in crypto for UUIDs
+import type { UploadFileResponse, ChatMessage } from "~/lib/types";
 
 // Types
 interface Chat {
@@ -21,12 +21,6 @@ interface Chat {
   createdAt: Date;
   updatedAt: Date;
   pinned?: boolean;
-}
-
-interface ChatMessage {
-  message: string;
-  searchEnabled?: boolean;
-  files?: File[];
 }
 
 interface ChatContextType {
@@ -241,6 +235,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                   messages: Array<{
                     role: string;
                     content: string;
+                    files?: string; // JSON string from database
                     createdAt: string;
                   }>;
                 };
@@ -253,10 +248,25 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                   return dateA - dateB;
                 });
 
-                const uiMessages = sortedMessages.map((msg) => ({
-                  sender: msg.role === "user" ? "User" : "AI",
-                  text: msg.content,
-                }));
+                const uiMessages = sortedMessages.map((msg) => {
+                  let parsedFiles: UploadFileResponse[] | undefined;
+                  try {
+                    parsedFiles = msg.files
+                      ? typeof msg.files === "string"
+                        ? (JSON.parse(msg.files) as UploadFileResponse[])
+                        : (msg.files as UploadFileResponse[])
+                      : undefined;
+                  } catch (error) {
+                    console.error("Failed to parse files for message:", error);
+                    parsedFiles = undefined;
+                  }
+
+                  return {
+                    sender: msg.role === "user" ? "User" : "AI",
+                    text: msg.content,
+                    files: parsedFiles,
+                  };
+                });
                 console.log(
                   `Loaded ${uiMessages.length} messages for branch ${branch.id}`,
                 );
@@ -299,6 +309,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             messages: Array<{
               role: string;
               content: string;
+              files?: string; // JSON string from database
               createdAt: string;
             }>;
           };
@@ -310,11 +321,25 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             const dateB = new Date(b.createdAt).getTime();
             return dateA - dateB;
           });
+          const uiMessages = sortedMessages.map((msg) => {
+            let parsedFiles: UploadFileResponse[] | undefined;
+            try {
+              parsedFiles = msg.files
+                ? typeof msg.files === "string"
+                  ? (JSON.parse(msg.files) as UploadFileResponse[])
+                  : (msg.files as UploadFileResponse[])
+                : undefined;
+            } catch (error) {
+              console.error("Failed to parse files for message:", error);
+              parsedFiles = undefined;
+            }
 
-          const uiMessages = sortedMessages.map((msg) => ({
-            sender: msg.role === "user" ? "User" : "AI",
-            text: msg.content,
-          }));
+            return {
+              sender: msg.role === "user" ? "User" : "AI",
+              text: msg.content,
+              files: parsedFiles,
+            };
+          });
           setMessages(uiMessages);
         }
       } catch (fallbackErr) {
@@ -455,109 +480,44 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     chatId: string,
     content: string,
     role: "user" | "assistant",
-    forceBranchId?: string, // Add optional parameter to force specific branch
-    files?: Array<{ name: string; type: string; data: string }>, // Add files parameter
+    branchId: string,
+    files?: UploadFileResponse[],
+    wasRegenerated = false,
   ) => {
-    console.log("Saving message:", {
-      chatId,
-      content: content.substring(0, 50) + "...",
-      role,
-      currentBranchId: currentBranchId,
-      forceBranchId: forceBranchId, // Log the forced branch ID
-    });
+    try {
+      console.log("Saving message:", {
+        chatId,
+        content: content.substring(0, 50) + "...",
+        role,
+        currentBranchId: currentBranchId,
+        branchId: branchId, // Log the branch ID being used
+      });
 
-    // Use forced branch ID if provided, otherwise ensure we have a valid branch
-    let branchIdToUse: string;
-    if (forceBranchId) {
-      branchIdToUse = forceBranchId;
-      console.log("Using forced branch ID:", branchIdToUse);
-    } else {
-      try {
-        branchIdToUse = await ensureBranchExists(chatId);
-        console.log("Branch ID to use for saving:", branchIdToUse);
-      } catch (error) {
-        console.error("Failed to ensure branch exists:", error);
-        // Fallback: try to save without branchId (let the API create the Main branch)
-        branchIdToUse = "";
-      }
-    }
-
-    // Retry logic with exponential backoff
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        const requestBody: {
-          chatId: string;
-          content: string;
-          role: string;
-          branchId?: string;
-          files?: Array<{ name: string; type: string; data: string }>;
-        } = {
+      const response = await fetch("/api/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           chatId,
           content,
           role,
-          files,
-        };
+          branchId,
+          files: files ? JSON.stringify(files) : undefined,
+          wasRegenerated,
+        }),
+      });
 
-        // Only include branchId if we have one
-        if (branchIdToUse) {
-          requestBody.branchId = branchIdToUse;
-        }
-
-        const response = await fetch("/api/messages", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(requestBody),
-        });
-
-        if (response.ok) {
-          console.log("Message saved successfully");
-          return;
-        }
-
+      if (!response.ok) {
         const errorText = await response.text();
         console.error(
-          `Save attempt ${attempt + 1} failed:`,
-          response.status,
-          errorText,
+          `Failed to save message: ${response.status} ${response.statusText} - ${errorText}`,
         );
-
-        // If it's a branch not found error, try to refresh and get a new branch
-        if (response.status === 404 && errorText.includes("Branch not found")) {
-          console.log("Branch not found, attempting to refresh branch...");
-          try {
-            branchIdToUse = await ensureBranchExists(chatId);
-          } catch (refreshError) {
-            console.error("Failed to refresh branch:", refreshError);
-            // On last attempt, try without branchId
-            if (attempt === 2) {
-              branchIdToUse = "";
-            }
-          }
-        }
-
-        // On last attempt, throw the error
-        if (attempt === 2) {
-          throw new Error(
-            `Failed to save message after 3 attempts: ${response.status} "${response.statusText}"`,
-          );
-        }
-
-        // Wait before retrying (exponential backoff)
-        await new Promise((resolve) =>
-          setTimeout(resolve, Math.pow(2, attempt) * 200),
-        );
-      } catch (fetchError) {
-        console.error(`Network error on attempt ${attempt + 1}:`, fetchError);
-
-        if (attempt === 2) {
-          throw fetchError;
-        }
-
-        // Wait before retrying
-        await new Promise((resolve) =>
-          setTimeout(resolve, Math.pow(2, attempt) * 200),
-        );
+        throw new Error("Failed to save message");
       }
+
+      console.log("Message saved successfully");
+    } catch (error) {
+      console.error("Error saving message:", error);
+      throw error;
     }
   };
 
@@ -566,288 +526,150 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     const words = message.trim().split(/\s+/).slice(0, 6);
     return words.join(" ") + (words.length >= 6 ? "..." : "");
   };
-  // Helper function to convert files to base64
-  const convertFilesToBase64 = async (files: File[]) => {
-    const conversions = files.map(async (file) => {
-      return new Promise<{ name: string; type: string; data: string }>(
-        (resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => {
-            resolve({
-              name: file.name,
-              type: file.type,
-              data: reader.result as string,
-            });
-          };
-          reader.onerror = () =>
-            reject(new Error(`Failed to read file: ${file.name}`));
-          reader.readAsDataURL(file);
-        },
-      );
-    });
 
-    return Promise.all(conversions);
-  };
-
-  const sendMessage = async (data: ChatMessage) => {
-    const message = data.message;
-    // Check if user is signed in first
+  const sendMessage = (data: ChatMessage): Promise<void> => {
     if (!isSignedIn) {
       setLoginDialogAction("send");
       setLoginDialogOpen(true);
-      return;
+      return Promise.resolve();
     }
-
-    // Check if user has API key
     if (!hasApiKey) {
       setApiKeyDialogOpen(true);
-      return;
+      return Promise.resolve();
     }
 
-    const chatId = currentChatId;
-    let isNewChat = false;
-    let tempChatId: string | null = null;
+    const { message, searchEnabled, files } = data;
+    const userMessage = { sender: "User", text: message, files };
+    const aiPlaceholder = { sender: "AI", text: "", files: undefined };
 
-    // === IMMEDIATE UI UPDATES (no waiting) ===
-    if (!chatId || isPendingNewChat) {
-      // Generate temporary chat ID for immediate UI feedback
-      tempChatId = `temp-${Date.now()}`;
-      const quickTitle = generateQuickTitle(message);
+    // We need the history for the API call *before* we update the state
+    const historyForApi = [...messages, userMessage].map((msg) => ({
+      sender: msg.sender,
+      text: msg.text,
+    }));
 
-      // Add temporary chat to sidebar immediately
-      const tempChat: Chat = {
-        id: tempChatId,
-        title: quickTitle,
-        userId: "temp",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        pinned: false,
-      };
-      setChats((prev) => [tempChat, ...prev]);
-      setCurrentChatId(tempChatId);
-      setIsPendingNewChat(false);
-      isNewChat = true;
+    // Optimistically update UI with user message and AI placeholder
+    setMessages((prev) => [...prev, userMessage, aiPlaceholder]);
 
-      // Don't set branch ID yet - will be set after chat is created in DB
-    } // Add user message to UI immediately
-    const newUserMsg = { sender: "User", text: message };
+    // Fire-and-forget all backend operations, but return the promise to match the type
+    return (async () => {
+      let chatId = currentChatId;
+      let branchId = currentBranchId;
+      const isNewChat = !chatId;
+      let tempChatId: string | null = null;
 
-    // Update both UI state and branch state together
-    setBranches((prev) => {
-      if (!currentBranchId) return prev;
-      return prev.map((branch) =>
-        branch.id === currentBranchId
-          ? { ...branch, messages: [...branch.messages, newUserMsg] }
-          : branch,
-      );
-    });
-    setMessages((prev) => [...prev, newUserMsg]);
-
-    // Initialize empty AI message immediately
-    const emptyAIMsg = { sender: "AI", text: "" };
-    setBranches((prev) => {
-      if (!currentBranchId) return prev;
-      return prev.map((branch) =>
-        branch.id === currentBranchId
-          ? { ...branch, messages: [...branch.messages, emptyAIMsg] }
-          : branch,
-      );
-    });
-    setMessages((prev) => [...prev, emptyAIMsg]); // === START AI RESPONSE IMMEDIATELY (don't wait for DB) ===
-    const conversationHistory = [...messages, newUserMsg];
-
-    // Start AI response without waiting
-    const aiResponsePromise = (async () => {
       try {
-        // Convert files to base64 if present
-        let fileData:
-          | { name: string; type: string; data: string }[]
-          | undefined;
-        if (data.files && data.files.length > 0) {
-          fileData = await convertFilesToBase64(data.files);
+        // Handle chat creation for new conversations
+        if (isNewChat) {
+          tempChatId = `temp-${Date.now()}`;
+          const quickTitle = generateQuickTitle(message);
+          const tempChat: Chat = {
+            id: tempChatId,
+            title: quickTitle,
+            userId: "temp", // Will be updated with real ID
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            pinned: false,
+          };
+          setChats((prev) => [tempChat, ...prev]);
+          setCurrentChatId(tempChatId);
+
+          const newChatFromDB = await createNewChat();
+          if (newChatFromDB) {
+            chatId = newChatFromDB.id;
+            // Update the temporary chat item with the real one from the DB
+            setChats((prev) =>
+              prev.map((c) =>
+                c.id === tempChatId
+                  ? { ...newChatFromDB, title: quickTitle }
+                  : c,
+              ),
+            );
+            setCurrentChatId(chatId);
+          } else {
+            throw new Error("Failed to create new chat in database.");
+          }
         }
 
+        if (!chatId) {
+          throw new Error("Chat ID is not available.");
+        }
+
+        branchId = await ensureBranchExists(chatId);
+        if (!branchId) {
+          throw new Error("Branch is not available.");
+        }
+
+        // Save user message in the background
+        void saveMessage(chatId, message, "user", branchId, files);
+
+        // Get AI response
         const response = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            chatId: isNewChat ? null : chatId, // Use null for new chats, actual chatId for existing
-            history: conversationHistory,
+            history: historyForApi,
             model: selectedModel.id,
-            apiKey: apiKey, // Send user's API key
-            searchEnabled: data.searchEnabled,
-            files: fileData, // Send the converted file data
+            apiKey,
+            searchEnabled,
+            files,
+            chatId,
           }),
         });
 
-        if (!response.ok) {
-          console.error(`HTTP error ${response.status}`);
-          return "";
+        if (!response.ok || !response.body) {
+          const errorText = await response.text();
+          throw new Error(
+            `API request failed: ${response.status} ${response.statusText} - ${errorText}`,
+          );
         }
 
-        const contentType = response.headers.get("content-type") ?? "";
-        if (contentType.includes("text/event-stream")) {
-          const reader = response.body!.getReader();
-          const decoder = new TextDecoder();
-          let buffer = "";
-          let completeAiText = "";
-          let displayedLength = 0;
-          const charDelay = 1;
+        // Stream the response
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let completeAiText = "";
 
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
 
-            buffer += decoder.decode(value, { stream: true });
-            const parts = buffer.split(/\r?\n\r?\n/);
-            buffer = parts.pop() ?? "";
+          buffer += decoder.decode(value, { stream: true });
+          const parts = buffer.split(/\r?\n\r?\n/);
+          buffer = parts.pop() ?? "";
 
-            for (const part of parts) {
-              if (!part.startsWith("data: ")) continue;
-              const dataStr = part.replace(/^data: /, "").trim();
-              if (dataStr === "[DONE]") break;
+          for (const part of parts) {
+            if (!part.startsWith("data: ")) continue;
+            const dataStr = part.replace(/^data: /, "").trim();
+            if (dataStr === "[DONE]") break;
 
-              try {
-                const parsed = JSON.parse(dataStr) as { token?: unknown };
-                const { token } = parsed;
-                if (typeof token === "string") {
-                  completeAiText += token;
-
-                  const newChars = completeAiText.slice(displayedLength);
-                  for (let i = 0; i < newChars.length; i++) {
-                    const targetLength = displayedLength + i + 1;
-                    setTimeout(
-                      () => {
-                        const updatedText = completeAiText.slice(
-                          0,
-                          targetLength,
-                        );
-                        setMessages((prev) => {
-                          const msgs = [...prev];
-                          if (msgs[msgs.length - 1]?.sender === "AI") {
-                            msgs[msgs.length - 1] = {
-                              ...msgs[msgs.length - 1]!,
-                              text: updatedText,
-                            };
-                          }
-                          return msgs;
-                        });
-                        // Update branch in a separate state update
-                        if (currentBranchId) {
-                          setBranches((prevBranches) =>
-                            prevBranches.map((branch) =>
-                              branch.id === currentBranchId
-                                ? {
-                                    ...branch,
-                                    messages: branch.messages.map(
-                                      (msg, idx, arr) =>
-                                        idx === arr.length - 1 &&
-                                        msg.sender === "AI"
-                                          ? { ...msg, text: updatedText }
-                                          : msg,
-                                    ),
-                                  }
-                                : branch,
-                            ),
-                          );
-                        }
-                      },
-                      (displayedLength + i) * charDelay,
-                    );
-                  }
-                  displayedLength = completeAiText.length;
-                }
-              } catch {
-                // Ignore parse errors
-              }
-            }
-          }
-          return completeAiText;
-        }
-      } catch (error) {
-        console.error("Error getting AI response:", error);
-        return "";
-      }
-      return "";
-    })();
-
-    // === BACKGROUND DATABASE OPERATIONS (async, non-blocking) ===
-    void (async () => {
-      try {
-        let realChatId = chatId;
-        let chatToUpdateInDB: Chat | null = null;
-
-        // Create real chat in database if needed
-        if (isNewChat && tempChatId) {
-          const newChatFromDB = await createNewChat(); // Returns Chat | null
-          if (newChatFromDB) {
-            realChatId = newChatFromDB.id;
-            chatToUpdateInDB = newChatFromDB; // Store for title update            // Update the temporary chat entry with real data from DB, keeping quickTitle for now
-            setChats((prev) =>
-              prev.map((c) =>
-                c.id === tempChatId
-                  ? { ...newChatFromDB, title: c.title } // Use newChatFromDB, preserve quickTitle
-                  : c,
-              ),
-            );
-            setCurrentChatId(newChatFromDB.id); // Ensure branches are properly set up for the new chat BEFORE continuing
             try {
-              const branchId = await ensureBranchExists(newChatFromDB.id);
-              console.log(
-                "Successfully ensured branches exist for new chat, branchId:",
-                branchId,
-              );
-              // Make sure the currentBranchId is set before we continue
-              setCurrentBranchId(branchId);
-              // Small delay to ensure state updates have propagated
-              await new Promise((resolve) => setTimeout(resolve, 50));
-            } catch (err) {
-              console.error(
-                "Failed to ensure branches exist for new chat:",
-                err,
-              );
-              return; // Don't continue if we can't set up branches
+              const parsed = JSON.parse(dataStr) as { token?: string };
+              if (parsed.token) {
+                completeAiText += parsed.token;
+                setMessages((prev) => {
+                  const newMessages = [...prev];
+                  const lastMessage = newMessages[newMessages.length - 1];
+                  if (lastMessage?.sender === "AI") {
+                    lastMessage.text = completeAiText;
+                  }
+                  return newMessages;
+                });
+              }
+            } catch (e) {
+              console.warn("Failed to parse stream chunk", e);
             }
-          } else {
-            console.error(
-              "Failed to create real chat. Removing temporary chat.",
-            );
-            // Remove the temp chat from UI if creation fails
-            setChats((prev) => prev.filter((c) => c.id !== tempChatId));
-            if (currentChatId === tempChatId) {
-              // Reset to a state where user can start another new chat or select existing
-              setCurrentChatId(null);
-              setMessages([]);
-              setIsPendingNewChat(true); // Or call startNewChat() if it has the desired reset logic
-            }
-            return; // Stop further background processing for this failed chat
-          }
-        } // Save user message to database FIRST (ensure proper ordering)
-        if (realChatId) {
-          try {
-            // Convert files for database storage
-            let userFileData:
-              | { name: string; type: string; data: string }[]
-              | undefined;
-            if (data.files && data.files.length > 0) {
-              userFileData = await convertFilesToBase64(data.files);
-            }
-            await saveMessage(
-              realChatId,
-              message,
-              "user",
-              undefined,
-              userFileData,
-            );
-          } catch (error) {
-            console.error("Failed to save user message:", error);
           }
         }
 
-        // Generate and update title (async, non-blocking)
-        const titlePromise = (async () => {
-          if (isNewChat && realChatId && chatToUpdateInDB) {
-            let betterTitle = chatToUpdateInDB.title; // Default to quick title
+        // Save complete AI message in the background
+        if (completeAiText) {
+          void saveMessage(chatId, completeAiText, "assistant", branchId);
+        }
+
+        // Generate and update title for new chats in the background
+        if (isNewChat) {
+          void (async () => {
             try {
               const titleGenResponse = await fetch(
                 "/api/chats/generate-title",
@@ -858,82 +680,48 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                 },
               );
               if (titleGenResponse.ok) {
-                const titleData =
+                const { title } =
                   (await titleGenResponse.json()) as GenerateTitleResponse;
-                betterTitle = titleData.title;
-              } else {
-                console.warn(
-                  "Failed to generate title from AI, using local fallback.",
+                // Update title in DB
+                void fetch(`/api/chats/${chatId}`, {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ title }),
+                });
+                // Update title in UI
+                setChats((prev) =>
+                  prev.map((c) => (c.id === chatId ? { ...c, title } : c)),
                 );
-                // Fallback to local generation if API fails
-                betterTitle =
-                  message.length > 30
-                    ? message.substring(0, 30) + "..."
-                    : message;
               }
-            } catch (error) {
-              console.error(
-                "Error calling generate-title API, using local fallback:",
-                error,
-              );
-              betterTitle =
-                message.length > 30
-                  ? message.substring(0, 30) + "..."
-                  : message;
+            } catch (e) {
+              console.error("Title generation failed.", e);
             }
-
-            // Update the chat title in local state immediately
-            setChats((prev) =>
-              prev.map((chat) =>
-                chat.id === realChatId ? { ...chat, title: betterTitle } : chat,
-              ),
-            );
-
-            // Update title in DB
-            try {
-              const res = await fetch(`/api/chats/${realChatId}`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ title: betterTitle }),
-              });
-              if (!res.ok) {
-                console.error(
-                  "Failed to update chat title in DB:",
-                  await res.text(),
-                );
-                // Optionally revert local title if DB update fails, or notify user
-              } else {
-                console.log(
-                  "Chat title updated in DB successfully:",
-                  betterTitle,
-                );
-                // If server returns updated chat, can use it: const updatedChatFromDB = await res.json();
-                // setChats(prev => prev.map(c => c.id === realChatId ? { ...c, ...updatedChatFromDB.chat } : c));
-              }
-            } catch (error) {
-              console.error("Error updating chat title in DB:", error);
-            }
+          })();
+        }
+      } catch (error) {
+        console.error("Error in sendMessage:", error);
+        // Update UI to show the error
+        setMessages((prev) => {
+          const newMessages = [...prev];
+          const lastMessage = newMessages[newMessages.length - 1];
+          if (lastMessage?.sender === "AI") {
+            lastMessage.text = `Sorry, an error occurred. ${
+              error instanceof Error ? error.message : ""
+            }`;
           }
-        })(); // Wait for AI response and save it AFTER user message
-        const completeAiText = await aiResponsePromise;
-        if (completeAiText && realChatId) {
-          try {
-            await saveMessage(realChatId, completeAiText, "assistant");
-          } catch (error) {
-            console.error("Failed to save AI message:", error);
+          return newMessages;
+        });
+        // If chat creation failed, remove the temporary chat from the UI
+        if (isNewChat && tempChatId) {
+          setChats((prev) => prev.filter((c) => c.id !== tempChatId));
+          if (currentChatId === tempChatId) {
+            setCurrentChatId(null);
+            setIsPendingNewChat(true);
           }
         }
-
-        // Wait for title generation to complete (optional)
-        await titlePromise.catch((error) => {
-          console.error("Failed to update title:", error);
-        });
-      } catch (error) {
-        console.error("Error in background database operations:", error);
       }
     })();
   };
-
   const deleteChat = async (chatId: string) => {
     try {
       const response = await fetch(`/api/chats/${chatId}`, {
@@ -1512,7 +1300,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         for (const [branchId2, history2] of branchHistories) {
           if (branchId1 >= branchId2) continue; // Avoid duplicates
 
-          // Check if these branches have a common prefix but diverge at an AI response
+          // Check if these branches have a common prefix but diverge at an AI message
           let commonPrefixLength = 0;
           const minLength = Math.min(
             history1.fullHistory.length,

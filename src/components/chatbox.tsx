@@ -14,14 +14,10 @@ import { useSidebar } from "~/components/ui/sidebar";
 import { useRef, useState, useLayoutEffect } from "react";
 import { ModelSelector } from "./model-selector";
 import { useModel } from "~/contexts/ModelContext";
+import { useUploadThing } from "~/lib/uploadthing";
+import type { UploadFileResponse, ChatMessage } from "~/lib/types";
 
 const INITIAL_TEXTAREA_HEIGHT = 48; // slightly reduced initial textarea height
-
-interface ChatMessage {
-  message: string;
-  searchEnabled?: boolean;
-  files?: File[];
-}
 
 export function Chatbox({ onSend }: { onSend: (data: ChatMessage) => void }) {
   const sidebar = useSidebar();
@@ -36,7 +32,27 @@ export function Chatbox({ onSend }: { onSend: (data: ChatMessage) => void }) {
   const messageRef = useRef("");
   const [sendDisabled, setSendDisabled] = useState(true);
   const [searchEnabled, setSearchEnabled] = useState(false);
-  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<UploadFileResponse[]>([]);
+  const [filesToUpload, setFilesToUpload] = useState<File[]>([]);
+
+  const { startUpload, isUploading } = useUploadThing("chatFiles", {
+    onClientUploadComplete: (res?: UploadFileResponse<{ type: string }>[]) => {
+      if (res) {
+        setUploadedFiles((prev) => [...prev, ...res]);
+        // Remove from filesToUpload
+        const completedNames = res.map((f) => f.name);
+        setFilesToUpload((prev) =>
+          prev.filter((f) => !completedNames.includes(f.name)),
+        );
+      }
+    },
+    onUploadError: (error: Error) => {
+      // Do something with the error.
+      alert(`ERROR! ${error.message}`);
+      // Clear files that were attempted to be uploaded
+      setFilesToUpload([]);
+    },
+  });
 
   // Only adjust height (no component re-render)
   const resizeTextarea = () => {
@@ -76,6 +92,7 @@ export function Chatbox({ onSend }: { onSend: (data: ChatMessage) => void }) {
     ta.value = "";
     messageRef.current = "";
     setUploadedFiles([]);
+    setFilesToUpload([]); // Also clear files to upload
     resizeTextarea();
     setSendDisabled(true);
   };
@@ -124,29 +141,41 @@ export function Chatbox({ onSend }: { onSend: (data: ChatMessage) => void }) {
             onSubmit={onSubmit}
           >
             {" "}
-            {/* Show uploaded files */}
-            {uploadedFiles.length > 0 && (
-              <div className="flex flex-wrap gap-2 px-1">
+            {/* Show uploaded and uploading files */}
+            {(uploadedFiles.length > 0 || filesToUpload.length > 0) && (
+              <div className="mb-2 flex flex-wrap gap-2 px-1">
                 {uploadedFiles.map((file, index) => {
-                  const isImage = file.type.startsWith("image/");
-                  const isPDF = file.type === "application/pdf";
+                  const fileType =
+                    (file.serverData as { type: string })?.type ?? "";
+                  const isImage = fileType.startsWith("image/");
+                  const isPDF = fileType === "application/pdf";
+
+                  const handleFileClick = () => {
+                    window.open(file.url, "_blank", "noopener,noreferrer");
+                  };
 
                   return (
                     <div
                       key={index}
-                      className="bg-secondary/20 flex items-center gap-2 rounded-md px-2 py-1 text-xs"
+                      className="bg-secondary/10 border-secondary/20 flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors"
                     >
-                      {" "}
-                      {isImage ? (
-                        <ImageIcon className="h-3 w-3" />
-                      ) : isPDF ? (
-                        <FileText className="h-3 w-3" />
-                      ) : (
-                        <Paperclip className="h-3 w-3" />
-                      )}
-                      <span className="max-w-[120px] truncate">
-                        {file.name}
-                      </span>
+                      <button
+                        type="button"
+                        onClick={handleFileClick}
+                        className="hover:text-primary flex items-center gap-2 transition-colors"
+                        title={`Click to view ${file.name}`}
+                      >
+                        {isImage ? (
+                          <ImageIcon className="h-4 w-4 text-blue-500" />
+                        ) : isPDF ? (
+                          <FileText className="h-4 w-4 text-red-500" />
+                        ) : (
+                          <Paperclip className="h-4 w-4 text-gray-500" />
+                        )}
+                        <span className="max-w-[120px] truncate font-medium">
+                          {file.name}
+                        </span>
+                      </button>
                       <button
                         type="button"
                         onClick={() =>
@@ -154,7 +183,7 @@ export function Chatbox({ onSend }: { onSend: (data: ChatMessage) => void }) {
                             prev.filter((_, i) => i !== index),
                           )
                         }
-                        className="text-muted-foreground hover:text-foreground"
+                        className="text-muted-foreground hover:text-foreground hover:bg-secondary/40 ml-1 rounded p-1 transition-colors"
                         aria-label="Remove file"
                       >
                         <X className="h-3 w-3" />
@@ -162,6 +191,22 @@ export function Chatbox({ onSend }: { onSend: (data: ChatMessage) => void }) {
                     </div>
                   );
                 })}
+                {filesToUpload.map((file, index) => (
+                  <div
+                    key={index}
+                    className="bg-secondary/10 border-secondary/20 flex animate-pulse items-center gap-2 rounded-lg border px-3 py-2 text-sm"
+                  >
+                    <Paperclip className="h-4 w-4 text-gray-500" />
+                    <span className="max-w-[120px] truncate font-medium text-gray-400">
+                      {file.name}
+                    </span>
+                  </div>
+                ))}
+                {isUploading && (
+                  <div className="bg-secondary/10 border-secondary/20 flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors">
+                    <p className="text-sm text-gray-400">Uploading...</p>
+                  </div>
+                )}
               </div>
             )}
             <textarea
@@ -221,7 +266,8 @@ export function Chatbox({ onSend }: { onSend: (data: ChatMessage) => void }) {
                         onChange={(e) => {
                           const files = Array.from(e.target.files ?? []);
                           if (files.length > 0) {
-                            setUploadedFiles((prev) => [...prev, ...files]);
+                            setFilesToUpload((prev) => [...prev, ...files]);
+                            void startUpload(files);
                             // Reset the input so the same files can be selected again
                             e.target.value = "";
                           }

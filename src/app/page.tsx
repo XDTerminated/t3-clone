@@ -35,7 +35,7 @@ export default function Page() {
         // Show blank area while loading
         <div className="flex-1" />
       ) : shouldShowWelcome ? (
-        <WelcomeScreen onPromptSelect={sendMessage} />
+        <WelcomeScreen onPromptSelect={(message) => sendMessage({ message })} />
       ) : (
         <div className="flex-1">
           <MessageList messages={messages} />
