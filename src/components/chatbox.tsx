@@ -102,12 +102,114 @@ export function Chatbox({ onSend }: { onSend: (data: ChatMessage) => void }) {
     e.preventDefault();
     handleSendMessage(); // Call the new handler
   };
-
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault(); // Prevent newline in textarea
       if (!sendDisabled) {
         handleSendMessage(); // Call the new handler
+      }
+    }
+  };
+  const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    // Only handle image paste if the model supports vision
+    if (!selectedModel.capabilities?.includes("vision")) {
+      return;
+    }
+
+    const clipboardData = e.clipboardData;
+    const items = Array.from(clipboardData.items);
+
+    // Look for image items in clipboard
+    const imageItems = items.filter((item) => item.type.startsWith("image/"));
+
+    if (imageItems.length > 0) {
+      e.preventDefault(); // Prevent default paste behavior for images
+
+      // Convert clipboard images to files
+      const imageFiles: File[] = [];
+      for (const item of imageItems) {
+        const file = item.getAsFile();
+        if (file) {
+          // Create a more descriptive filename
+          const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+          const extension = file.type.split("/")[1] ?? "png";
+          const newFile = new File(
+            [file],
+            `pasted-image-${timestamp}.${extension}`,
+            {
+              type: file.type,
+            },
+          );
+          imageFiles.push(newFile);
+        }
+      }
+
+      if (imageFiles.length > 0) {
+        // Add to files to upload
+        setFilesToUpload((prev) => [...prev, ...imageFiles]);
+
+        // Start upload
+        try {
+          await startUpload(imageFiles);
+        } catch (error) {
+          console.error("Failed to upload pasted images:", error);
+          // Remove failed files from filesToUpload
+          setFilesToUpload((prev) =>
+            prev.filter((f) => !imageFiles.some((img) => img.name === f.name)),
+          );
+        }
+      }
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    // Only allow drag over if model supports vision or document capabilities
+    if (
+      selectedModel.capabilities?.includes("vision") ||
+      selectedModel.capabilities?.includes("pdf")
+    ) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+    }
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    // Only handle drops if model supports vision or document capabilities
+    if (
+      !selectedModel.capabilities?.includes("vision") &&
+      !selectedModel.capabilities?.includes("pdf")
+    ) {
+      return;
+    }
+
+    e.preventDefault();
+
+    const files = Array.from(e.dataTransfer.files);
+    const validFiles = files.filter((file) => {
+      const isImage = file.type.startsWith("image/");
+      const isPDF = file.type === "application/pdf";
+      const supportsImages = selectedModel.capabilities?.includes("vision");
+      const supportsPDF = selectedModel.capabilities?.includes("pdf");
+
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+      return (isImage && supportsImages) || (isPDF && supportsPDF);
+    });
+
+    if (validFiles.length > 0) {
+      // Add to files to upload
+      setFilesToUpload((prev) => [...prev, ...validFiles]);
+
+      // Start upload
+      try {
+        await startUpload(validFiles);
+      } catch (error) {
+        console.error("Failed to upload dropped files:", error);
+        // Remove failed files from filesToUpload
+        setFilesToUpload((prev) =>
+          prev.filter(
+            (f) => !validFiles.some((dropped) => dropped.name === f.name),
+          ),
+        );
       }
     }
   };
@@ -135,10 +237,12 @@ export function Chatbox({ onSend }: { onSend: (data: ChatMessage) => void }) {
         {/* Outer thin border wrapper */}
         <div className="bg-card w-full max-w-4xl rounded-t-2xl p-2 pb-0 shadow-none backdrop-blur-lg dark:bg-[hsla(270,10%,20%,0.4)]">
           {" "}
-          {/* Form now directly contains the styling previously on an inner div */}
+          {/* Form now directly contains the styling previously on an inner div */}{" "}
           <form
             className="text-secondary-foreground border-border bg-card outline-border relative flex w-full flex-col items-stretch gap-2 rounded-t-lg border border-b-0 px-3 pt-3 pb-6 outline-8 sm:pb-3 dark:border-[hsla(0,0%,83%,0.04)] dark:bg-[hsla(273.8,15.1%,20.8%,0.045)] dark:outline-[hsla(270,16.13%,12.16%,0.4)]"
             onSubmit={onSubmit}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
           >
             {" "}
             {/* Show uploaded and uploading files */}
@@ -208,17 +312,22 @@ export function Chatbox({ onSend }: { onSend: (data: ChatMessage) => void }) {
                   </div>
                 )}
               </div>
-            )}
+            )}{" "}
             <textarea
               ref={textareaRef}
               name="input"
               id="chat-input"
-              placeholder="Type your message here..."
+              placeholder={
+                selectedModel.capabilities?.includes("vision")
+                  ? "Type your message here or paste images..."
+                  : "Type your message here..."
+              }
               className="text-foreground placeholder:text-muted-foreground max-h-[200px] min-h-[48px] w-full resize-none overflow-y-auto bg-transparent px-1 outline-none"
               aria-label="Message input"
               defaultValue=""
               onInput={onInput}
               onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
             />{" "}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1">

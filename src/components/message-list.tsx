@@ -21,6 +21,7 @@ import { LinkNode } from "@lexical/link";
 import { HeadingNode, QuoteNode } from "@lexical/rich-text";
 import type { LexicalNode, TextNode } from "lexical";
 import { useChat } from "~/contexts/ChatContext";
+import { useModel } from "~/contexts/ModelContext";
 import {
   Image as ImageIcon,
   FileText,
@@ -171,61 +172,113 @@ function FileAttachments({ files }: { files: UploadFileResponse[] }) {
     }
   };
 
+  // Check if this is a generated image (base64 data URL or has "generated" in name)
+  const isGeneratedImage = (file: UploadFileResponse) => {
+    const fileType = (file.serverData as { type: string })?.type ?? "";
+    return (
+      fileType.startsWith("image/") &&
+      (file.url.startsWith("data:image/") || file.name.toLowerCase().includes("generated"))
+    );
+  };
+
+  // Separate generated images from other files
+  const generatedImages = files.filter(isGeneratedImage);
+  const otherFiles = files.filter(file => !isGeneratedImage(file));
+
   return (
     <>
-      <div className="mt-3 flex flex-wrap gap-2">
-        {files.map((file, index) => {
-          const fileType =
-            (file.serverData as { type: string })?.type ??
-            "application/octet-stream";
-          const isImage = fileType.startsWith("image/");
-          const isPDF = fileType === "application/pdf";
-
-          return (
-            <div
-              key={index}
-              className="bg-secondary/10 hover:bg-secondary/20 border-secondary/20 group flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors"
-              onClick={() => viewFile(file)}
-            >
-              <div className="flex items-center gap-2">
-                {isImage ? (
-                  <ImageIcon className="h-4 w-4 text-blue-500" />
-                ) : isPDF ? (
-                  <FileText className="h-4 w-4 text-red-500" />
-                ) : (
-                  <Paperclip className="h-4 w-4 text-gray-500" />
-                )}
-                <span className="max-w-[150px] truncate font-medium">
-                  {file.name}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+      {/* Display generated images directly */}
+      {generatedImages.length > 0 && (
+        <div className="mt-4 flex flex-col gap-3">
+          {generatedImages.map((file, index) => (
+            <div key={`generated-${index}`} className="group relative">
+              <NextImage
+                src={file.url}
+                alt={file.name}
+                width={512}
+                height={512}
+                className="h-auto max-w-full rounded-lg border object-contain cursor-pointer hover:opacity-90 transition-opacity"
+                loading="lazy"
+                onClick={() => setSelectedFile(file)}
+              />
+              {/* Overlay buttons on hover */}
+              <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    viewFile(file);
-                  }}
-                  className="hover:bg-secondary/40 rounded p-1 transition-colors"
-                  title="View file"
+                  onClick={() => viewFile(file)}
+                  className="bg-black/50 hover:bg-black/70 text-white rounded p-2 transition-colors"
+                  title="View full size"
                 >
-                  <Eye className="h-3 w-3" />
+                  <Eye className="h-4 w-4" />
                 </button>
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    downloadFile(file);
-                  }}
-                  className="hover:bg-secondary/40 rounded p-1 transition-colors"
-                  title="Download file"
+                  onClick={() => downloadFile(file)}
+                  className="bg-black/50 hover:bg-black/70 text-white rounded p-2 transition-colors"
+                  title="Download image"
                 >
-                  <Download className="h-3 w-3" />
+                  <Download className="h-4 w-4" />
                 </button>
               </div>
             </div>
-          );
-        })}
-      </div>
+          ))}
+        </div>
+      )}
+
+      {/* Display other files as before */}
+      {otherFiles.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {otherFiles.map((file, index) => {
+            const fileType =
+              (file.serverData as { type: string })?.type ??
+              "application/octet-stream";
+            const isImage = fileType.startsWith("image/");
+            const isPDF = fileType === "application/pdf";
+
+            return (
+              <div
+                key={index}
+                className="bg-secondary/10 hover:bg-secondary/20 border-secondary/20 group flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors"
+                onClick={() => viewFile(file)}
+              >
+                <div className="flex items-center gap-2">
+                  {isImage ? (
+                    <ImageIcon className="h-4 w-4 text-blue-500" />
+                  ) : isPDF ? (
+                    <FileText className="h-4 w-4 text-red-500" />
+                  ) : (
+                    <Paperclip className="h-4 w-4 text-gray-500" />
+                  )}
+                  <span className="max-w-[150px] truncate font-medium">
+                    {file.name}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      viewFile(file);
+                    }}
+                    className="hover:bg-secondary/40 rounded p-1 transition-colors"
+                    title="View file"
+                  >
+                    <Eye className="h-3 w-3" />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      downloadFile(file);
+                    }}
+                    className="hover:bg-secondary/40 rounded p-1 transition-colors"
+                    title="Download file"
+                  >
+                    <Download className="h-3 w-3" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Image preview modal */}
       {selectedFile &&
@@ -403,6 +456,8 @@ export default function MessageList({ messages }: MessageListProps) {
     isGeneratingResponse,
   } = useChat();
 
+  const { selectedModel } = useModel();
+
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
   const [copiedStates, setCopiedStates] = React.useState<
     Record<number, boolean>
@@ -414,11 +469,32 @@ export default function MessageList({ messages }: MessageListProps) {
 
   React.useEffect(() => {
     scrollToBottom();
-  }, [messages]);
-
-  // Copy functionality with visual feedback
-  const handleCopy = async (text: string, messageIndex: number) => {
+  }, [messages]); // Copy functionality with visual feedback
+  const handleCopy = async (
+    text: string,
+    messageIndex: number,
+    files?: UploadFileResponse[],
+  ) => {
     try {
+      // For messages with generated images, prioritize the image URL
+      if (files && files.length > 0) {
+        const imageFile = files.find((file) => {
+          const fileType = (file.serverData as { type: string })?.type ?? "";
+          return fileType.startsWith("image/");
+        });
+
+        if (imageFile) {
+          // Copy the image URL for generated images
+          await navigator.clipboard.writeText(imageFile.url);
+          setCopiedStates((prev) => ({ ...prev, [messageIndex]: true }));
+          setTimeout(() => {
+            setCopiedStates((prev) => ({ ...prev, [messageIndex]: false }));
+          }, 2000);
+          return;
+        }
+      }
+
+      // Default behavior: copy text content
       await navigator.clipboard.writeText(text);
       setCopiedStates((prev) => ({ ...prev, [messageIndex]: true }));
       setTimeout(() => {
@@ -427,6 +503,24 @@ export default function MessageList({ messages }: MessageListProps) {
     } catch (err) {
       console.error("Failed to copy text: ", err);
     }
+  };
+
+  // Helper function to get copy button label based on message content
+  const getCopyLabel = (msg: Message) => {
+    if (msg.files && msg.files.length > 0) {
+      const hasImage = msg.files.some((file) => {
+        const fileType = (file.serverData as { type: string })?.type ?? "";
+        return fileType.startsWith("image/");
+      });
+      if (hasImage) {
+        return msg.sender === "AI"
+          ? "Copy generated image URL"
+          : "Copy image URL";
+      }
+    }
+    return msg.sender === "AI"
+      ? "Copy response to clipboard"
+      : "Copy message to clipboard";
   };
   return (
     <div
@@ -459,10 +553,11 @@ export default function MessageList({ messages }: MessageListProps) {
               </div>{" "}
               {/* Copy button for user messages */}
               <div className="absolute right-0 mt-5 -mr-0.5 flex items-center gap-1 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 group-focus:opacity-100">
+                {" "}
                 <button
-                  onClick={() => handleCopy(msg.text, idx)}
+                  onClick={() => handleCopy(msg.text, idx, msg.files)}
                   className="focus-visible:ring-ring hover:text-foreground disabled:hover:text-foreground/50 hover:bg-muted-foreground/10 inline-flex h-8 w-8 items-center justify-center gap-2 rounded-lg p-0 text-xs font-medium whitespace-nowrap transition-colors focus-visible:ring-1 focus-visible:outline-none disabled:opacity-50 disabled:hover:bg-transparent [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0"
-                  aria-label="Copy message to clipboard"
+                  aria-label={getCopyLabel(msg)}
                   data-state="closed"
                 >
                   <div className="relative size-4">
@@ -512,7 +607,9 @@ export default function MessageList({ messages }: MessageListProps) {
           ) : (
             <div className="group relative w-full max-w-full break-words">
               {" "}
-              {msg.reasoning && <ReasoningSection reasoning={msg.reasoning} />}
+              {msg.reasoning && (
+                <ReasoningSection reasoning={msg.reasoning} />
+              )}{" "}
               {/* Show typing indicator for empty AI messages when generating, otherwise show the message */}
               {isGeneratingResponse && !msg.text.trim() ? (
                 <div
@@ -529,21 +626,27 @@ export default function MessageList({ messages }: MessageListProps) {
                   </div>
                 </div>
               ) : (
-                <div
-                  role="article"
-                  aria-label="Assistant message"
-                  className="prose dark:prose-invert animate-fadeIn max-w-none leading-relaxed opacity-0"
-                >
-                  <span className="sr-only">Assistant Reply: </span>
-                  <LexicalMessage text={msg.text} />
+                <div className="flex flex-col">
+                  <div
+                    role="article"
+                    aria-label="Assistant message"
+                    className="prose dark:prose-invert animate-fadeIn max-w-none leading-relaxed opacity-0"
+                  >
+                    <span className="sr-only">Assistant Reply: </span>
+                    <LexicalMessage text={msg.text} />
+                  </div>
+                  {/* Show generated images or other files from AI */}
+                  {msg.files && msg.files.length > 0 && (
+                    <FileAttachments files={msg.files} />
+                  )}
                 </div>
               )}
               <div className="absolute left-0 mt-5 -ml-0.5 flex items-center gap-1 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 group-focus:opacity-100">
                 {" "}
                 <button
-                  onClick={() => handleCopy(msg.text, idx)}
+                  onClick={() => handleCopy(msg.text, idx, msg.files)}
                   className="focus-visible:ring-ring hover:text-foreground disabled:hover:text-foreground/50 hover:bg-muted-foreground/10 inline-flex h-8 w-8 items-center justify-center gap-2 rounded-lg p-0 text-xs font-medium whitespace-nowrap transition-colors focus-visible:ring-1 focus-visible:outline-none disabled:opacity-50 disabled:hover:bg-transparent [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0"
-                  aria-label="Copy response to clipboard"
+                  aria-label={getCopyLabel(msg)}
                   data-state="closed"
                 >
                   <div className="relative size-4">
@@ -586,35 +689,38 @@ export default function MessageList({ messages }: MessageListProps) {
                     >
                       <path d="M20 6 9 17l-5-5" />
                     </svg>
-                  </div>
+                  </div>{" "}
                 </button>{" "}
-                <button
-                  aria-label="Regenerate response"
-                  onClick={() => regenerateResponse(idx - 1)}
-                  className="focus-visible:ring-ring hover:text-foreground disabled:hover:text-foreground/50 hover:bg-muted-foreground/10 inline-flex h-8 w-8 items-center justify-center gap-2 rounded-lg p-0 text-xs font-medium whitespace-nowrap transition-colors focus-visible:ring-1 focus-visible:outline-none disabled:opacity-50 disabled:hover:bg-transparent [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0"
-                  data-action="retry"
-                  data-state="closed"
-                >
-                  {/* retry icon */}
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="h-4 w-4"
-                    aria-hidden="true"
+                {/* Only show regenerate button for non-image generation models */}
+                {!selectedModel.capabilities?.includes("image") && (
+                  <button
+                    aria-label="Regenerate response"
+                    onClick={() => regenerateResponse(idx - 1)}
+                    className="focus-visible:ring-ring hover:text-foreground disabled:hover:text-foreground/50 hover:bg-muted-foreground/10 inline-flex h-8 w-8 items-center justify-center gap-2 rounded-lg p-0 text-xs font-medium whitespace-nowrap transition-colors focus-visible:ring-1 focus-visible:outline-none disabled:opacity-50 disabled:hover:bg-transparent [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0"
+                    data-action="retry"
+                    data-state="closed"
                   >
-                    <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                    <path d="M3 3v5h5" />
-                    <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
-                    <path d="M16 16h5v5" />
-                  </svg>
-                </button>{" "}
+                    {/* retry icon */}
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="h-4 w-4"
+                      aria-hidden="true"
+                    >
+                      <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                      <path d="M3 3v5h5" />
+                      <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+                      <path d="M16 16h5v5" />
+                    </svg>
+                  </button>
+                )}{" "}
               </div>{" "}
               {/* Message-level alternative navigation controls - show for AI messages that have alternatives */}
               {msg.sender === "AI" &&

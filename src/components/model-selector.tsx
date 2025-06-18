@@ -87,6 +87,21 @@ const getModelIconSmall = (modelId: string) => {
         className="text-white"
       />
     );
+  } else if (
+    modelId.includes("black-forest-labs") ||
+    modelId.includes("flux")
+  ) {
+    return (
+      <svg
+        className="size-4 text-white"
+        viewBox="0 0 24 24"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="currentColor"
+      >
+        <title>FLUX</title>
+        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+      </svg>
+    );
   } else if (modelId.includes("microsoft") || modelId.includes("phi")) {
     return (
       <svg
@@ -161,6 +176,21 @@ const getModelIcon = (modelId: string, size: "small" | "large" = "small") => {
         height={iconSize}
         className="text-white"
       />
+    );
+  } else if (
+    modelId.includes("black-forest-labs") ||
+    modelId.includes("flux")
+  ) {
+    return (
+      <svg
+        className={`text-white ${sizeClass}`}
+        viewBox="0 0 24 24"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="currentColor"
+      >
+        <title>FLUX</title>
+        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+      </svg>
     );
   } else if (modelId.includes("microsoft") || modelId.includes("phi")) {
     return (

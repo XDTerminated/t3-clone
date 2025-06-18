@@ -64,13 +64,14 @@ export function ApiKeyDialog({ open, onApiKeySubmit }: ApiKeyDialogProps) {
         <DialogHeader className="text-center">
           <div className="bg-primary/10 mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full">
             <Key className="text-primary h-6 w-6" />
-          </div>
+          </div>{" "}
           <DialogTitle className="text-xl font-semibold">
-            OpenRouter API Key Required
-          </DialogTitle>
+            API Key Required
+          </DialogTitle>{" "}
           <p className="text-muted-foreground mt-2 text-sm">
-            To use the AI models, please enter your OpenRouter API key. This
-            will be stored locally in your browser.
+            To use the AI models, please enter your API key. For most models,
+            use your OpenRouter API key. For image generation, you&apos;ll need
+            a Google API key.
           </p>
         </DialogHeader>
 
@@ -102,16 +103,25 @@ export function ApiKeyDialog({ open, onApiKeySubmit }: ApiKeyDialogProps) {
               disabled={!apiKey.trim() || isValidating}
             >
               {isValidating ? "Validating..." : "Continue"}
-            </Button>
-
-            <div className="text-center">
+            </Button>{" "}
+            <div className="space-y-2 text-center">
               <a
                 href="https://openrouter.ai/keys"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm transition-colors"
               >
-                Get your API key from OpenRouter
+                Get OpenRouter API key
+                <ExternalLink className="h-3 w-3" />
+              </a>
+              <br />
+              <a
+                href="https://aistudio.google.com/app/apikey"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm transition-colors"
+              >
+                Get Google API key (for image generation)
                 <ExternalLink className="h-3 w-3" />
               </a>
             </div>

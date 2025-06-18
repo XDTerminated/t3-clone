@@ -719,7 +719,62 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             );
           }
 
-          // Stream the response
+          // Check if this is an image generation response
+          const contentType = response.headers.get("content-type");
+          if (contentType?.includes("application/json")) {
+            // This might be an image generation response
+            try {
+              const jsonResponse = (await response.json()) as {
+                reply?: string;
+                generatedImage?: {
+                  url: string;
+                  prompt: string;
+                };
+              };
+
+              if (jsonResponse.generatedImage) {
+                // Handle image generation response
+                const imageUrl = jsonResponse.generatedImage.url;
+                const prompt = jsonResponse.generatedImage.prompt;
+
+                // Add AI message with generated image
+                const aiMessage = {
+                  sender: "AI",
+                  text: `I've generated an image based on your prompt: "${prompt}"`,
+                  files: [
+                    {
+                      name: "generated-image.png",
+                      size: 0,
+                      key: "",
+                      url: imageUrl,
+                      serverData: { type: "image/png", isGenerated: true },
+                    },
+                  ] as UploadFileResponse[],
+                };
+
+                setMessages((prev) => [...prev, aiMessage]);
+
+                // Save AI message with image
+                void saveMessage(
+                  chatId,
+                  aiMessage.text,
+                  "assistant",
+                  branchId,
+                  aiMessage.files,
+                );
+
+                setIsGeneratingResponse(false);
+                return; // Exit early for image generation
+              }
+            } catch (e) {
+              console.warn(
+                "Failed to parse JSON response, falling back to stream:",
+                e,
+              );
+            }
+          }
+
+          // Stream the response (for regular text models)
           const reader = response.body.getReader();
           const decoder = new TextDecoder();
           let buffer = "";

@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "~/lib/prisma";
-import { OpenRouterAPI, DEFAULT_MODEL } from "~/lib/openrouter";
+import {
+  OpenRouterAPI,
+  GoogleGeminiAPI,
+  DEFAULT_MODEL,
+} from "~/lib/openrouter";
 
 // HACK: Manual type definition to avoid client-side import issues
 type UploadFileResponse<T = unknown> = {
@@ -127,7 +131,72 @@ export async function POST(request: Request) {
   }
   try {
     // Use the specified model or default
-    const selectedModel = requestBody.model ?? DEFAULT_MODEL.id; // Create model-aware system prompt
+    const selectedModel = requestBody.model ?? DEFAULT_MODEL.id; // Check if this is an image generation request
+    const isImageGeneration =
+      selectedModel === "gemini-2.0-flash-preview-image-generation";
+    if (isImageGeneration) {
+      // Handle image generation with Google Gemini
+      const geminiApiKey = process.env.GEMINI_API_KEY;
+      if (!geminiApiKey?.trim()) {
+        return NextResponse.json(
+          {
+            error: "Google API key not configured. Please contact support.",
+          },
+          { status: 500 },
+        );
+      }
+
+      const geminiApi = new GoogleGeminiAPI(geminiApiKey);
+
+      // Get the latest user message as the image prompt
+      const userPrompt =
+        promptContents
+          .filter((content) => content.startsWith("User: "))
+          .pop()
+          ?.substring(6) ?? ""; // Remove "User: " prefix
+
+      if (!userPrompt.trim()) {
+        return NextResponse.json(
+          { error: "No prompt provided for image generation" },
+          { status: 400 },
+        );
+      }
+
+      try {
+        const imageResult = await geminiApi.generateImage(userPrompt);
+
+        if (imageResult.data && imageResult.data.length > 0) {
+          const imageUrl = imageResult.data[0]?.url;
+
+          if (imageUrl) {
+            // Return the image URL in a special format that the frontend can recognize
+            return NextResponse.json({
+              reply: "",
+              generatedImage: {
+                url: imageUrl,
+                prompt: userPrompt,
+              },
+            });
+          }
+        }
+
+        return NextResponse.json(
+          { error: "Failed to generate image" },
+          { status: 500 },
+        );
+      } catch (imageError) {
+        console.error("Image generation error:", imageError);
+        return NextResponse.json(
+          {
+            error:
+              "Image generation failed. Please check your Google API key and try again.",
+          },
+          { status: 500 },
+        );
+      }
+    }
+
+    // Create model-aware system prompt
     const getModelIdentity = (modelId: string) => {
       if (modelId.includes("deepseek")) {
         return "You are DeepSeek, an AI assistant created by DeepSeek. You are helpful, harmless, and honest.";
