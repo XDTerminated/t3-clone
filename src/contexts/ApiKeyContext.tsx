@@ -13,6 +13,7 @@ interface ApiKeyContextType {
   setApiKey: (key: string) => void;
   hasApiKey: boolean;
   clearApiKey: () => void;
+  isLoaded: boolean;
 }
 
 const ApiKeyContext = createContext<ApiKeyContextType | undefined>(undefined);
@@ -41,12 +42,11 @@ export function ApiKeyProvider({ children }: { children: ReactNode }) {
     setApiKeyState(null);
     localStorage.removeItem(API_KEY_STORAGE_KEY);
   };
-
   const hasApiKey = Boolean(apiKey);
 
   return (
     <ApiKeyContext.Provider
-      value={{ apiKey, setApiKey, hasApiKey, clearApiKey }}
+      value={{ apiKey, setApiKey, hasApiKey, clearApiKey, isLoaded }}
     >
       {isLoaded && children}
     </ApiKeyContext.Provider>

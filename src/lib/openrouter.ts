@@ -23,6 +23,13 @@ export interface OpenRouterModel {
 
 export const AVAILABLE_MODELS: OpenRouterModel[] = [
   {
+    id: "google/gemini-2.0-flash-exp:free",
+    name: "Gemini 2.0 Flash",
+    contextLength: 1048576,
+    provider: "Google",
+    capabilities: ["vision", "search", "pdf", "reasoning"],
+  },
+  {
     id: "google/gemini-2.5-flash-preview-05-20",
     name: "Gemini 2.5 Flash",
     contextLength: 1048576,
@@ -65,8 +72,8 @@ export const AVAILABLE_MODELS: OpenRouterModel[] = [
     capabilities: ["vision", "pdf", "reasoning"],
   },
   {
-    id: "deepseek/deepseek-r1-distill-llama-70b",
-    name: "DeepSeek R1 (Llama Distilled)",
+    id: "deepseek/deepseek-r1:free",
+    name: "DeepSeek R1",
     contextLength: 65536,
     provider: "DeepSeek",
     capabilities: ["reasoning"],
@@ -146,55 +153,32 @@ export class OpenRouterAPI {
         // Replace the last message content with the structured content
         lastMessage.content = messageContent;
       }
-    } // If search is enabled, use the web plugin
+    }
+    // If search is enabled, use the web plugin
     let actualModel = model;
-    let plugins:
-      | Array<{
-          id: string;
-          max_results?: number;
-          search_prompt?: string;
-          pdf?: {
-            engine?: string;
-          };
-        }>
+    let tools:
+      | Array<{ type: "function"; function: { name: string } }>
       | undefined;
+
     if (options?.searchEnabled) {
-      // Use the :online suffix for models with search capability
-      if (
-        model.includes("gemini") ||
-        model.includes("gpt") ||
-        model.includes("claude")
-      ) {
+      // Use the :online suffix for Gemini models as recommended by OpenRouter docs
+      if (model.includes("gemini")) {
         actualModel = `${model}:online`;
       } else {
-        // Fallback to web plugin approach
-        plugins = [
+        // Use web plugin for other models
+        tools = [
           {
-            id: "web",
-            max_results: 5,
-            search_prompt: `A web search was conducted on ${new Date().toLocaleDateString()}. Incorporate the following web search results into your response. IMPORTANT: Cite them using markdown links named using the domain of the source. Example: [example.com](https://example.com/page).`,
+            type: "function",
+            function: {
+              name: "web_search",
+            },
           },
         ];
       }
-    } // Add PDF processing plugin if any PDF files are present
-    const hasPDFFiles = options?.files?.some(
-      (file) =>
-        (file.serverData as { type: string })?.type === "application/pdf",
-    );
-    if (hasPDFFiles) {
-      const pdfPlugin = {
-        id: "file-parser",
-        pdf: {
-          engine: "pdf-text", // Use free text extraction engine by default
-        },
-      };
-
-      if (plugins) {
-        plugins.push(pdfPlugin);
-      } else {
-        plugins = [pdfPlugin];
-      }
     }
+
+    // PDF files are handled by adding them to the message content.
+    // The deprecated `file-parser` plugin is no longer needed.
     const requestBody: {
       model: string;
       messages: Array<{
@@ -203,26 +187,15 @@ export class OpenRouterAPI {
         annotations?: Record<string, unknown>;
       }>;
       stream: boolean;
-      temperature: number;
-      max_tokens: number;
-      plugins?: Array<{
-        id: string;
-        max_results?: number;
-        search_prompt?: string;
-        pdf?: {
-          engine?: string;
-        };
-      }>;
+      tools?: typeof tools;
     } = {
       model: actualModel,
       messages,
       stream: true,
-      temperature: 0.7,
-      max_tokens: 4096,
     };
 
-    if (plugins) {
-      requestBody.plugins = plugins;
+    if (tools) {
+      requestBody.tools = tools;
     }
 
     const response = await fetch(`${this.baseUrl}/chat/completions`, {

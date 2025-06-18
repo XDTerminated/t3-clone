@@ -18,7 +18,8 @@ export default function TopRightIconHolder({
   const [isDark, setIsDark] = React.useState(true);
   const { state } = useSidebar();
   const { isSignedIn } = useAuth();
-  const { setLoginDialogOpen, setLoginDialogAction } = useChat();
+  const { setLoginDialogOpen, setLoginDialogAction, setSettingsDialogOpen } =
+    useChat();
   const isCollapsed = state === "collapsed";
 
   // Initialize theme state based on current HTML class
@@ -37,14 +38,12 @@ export default function TopRightIconHolder({
       html.classList.remove("dark");
     }
   };
-
   const handleSettingsClick = () => {
     if (!isSignedIn) {
       setLoginDialogAction("send"); // Use "send" as default action for settings
       setLoginDialogOpen(true);
     } else {
-      // TODO: Add actual settings functionality here
-      console.log("Settings clicked - implement settings panel");
+      setSettingsDialogOpen(true);
     }
   };
   return (

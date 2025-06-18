@@ -186,45 +186,119 @@ export async function POST(request: Request) {
       async start(controller) {
         const reader = response.body!.getReader();
         const decoder = new TextDecoder();
-
         try {
+          let buffer = "";
+
           while (true) {
             const { done, value } = await reader.read();
             if (done) break;
 
-            const chunk = decoder.decode(value);
-            const lines = chunk.split("\n");
+            const chunk = decoder.decode(value, { stream: true });
+            buffer += chunk;
 
+            // Split on double newlines to separate complete SSE events
+            const events = buffer.split(/\r?\n\r?\n/);
+            buffer = events.pop() ?? ""; // Keep the incomplete event in buffer
+
+            for (const event of events) {
+              const lines = event.split(/\r?\n/);
+
+              for (const line of lines) {
+                if (line.startsWith("data: ")) {
+                  const data = line.slice(6).trim();
+                  if (data === "[DONE]") {
+                    console.log("Stream completed with [DONE]");
+                    controller.close();
+                    return;
+                  }
+
+                  if (!data) continue; // Skip empty data lines
+
+                  try {
+                    const parsed = JSON.parse(data) as {
+                      choices?: Array<{
+                        delta?: {
+                          content?: string;
+                          reasoning?: string;
+                        };
+                        finish_reason?: string;
+                      }>;
+                    };
+
+                    const choice = parsed.choices?.[0];
+                    if (!choice) continue;
+
+                    const token = choice.delta?.content ?? "";
+                    const reasoning = choice.delta?.reasoning ?? "";
+
+                    // Log for debugging web search
+                    if (requestBody.searchEnabled && (token || reasoning)) {
+                      console.log("Web search streaming:", {
+                        tokenLength: token.length,
+                        reasoningLength: reasoning.length,
+                        finishReason: choice.finish_reason,
+                      });
+                    }
+
+                    if (token || reasoning) {
+                      const payload = JSON.stringify({
+                        token: token || "",
+                        reasoning: reasoning || "",
+                      });
+                      controller.enqueue(
+                        encoder.encode(`data: ${payload}\n\n`),
+                      );
+                    }
+                  } catch (parseError) {
+                    console.log(
+                      "JSON parse error:",
+                      parseError,
+                      "Data:",
+                      data.substring(0, 100),
+                    );
+                    // Skip invalid JSON lines
+                    continue;
+                  }
+                }
+              }
+            }
+          }
+
+          // Process any remaining buffer content at the end
+          if (buffer.trim()) {
+            console.log(
+              "Processing remaining buffer:",
+              buffer.substring(0, 100),
+            );
+            const lines = buffer.split(/\r?\n/);
             for (const line of lines) {
               if (line.startsWith("data: ")) {
-                const data = line.slice(6);
-                if (data === "[DONE]") {
-                  controller.close();
-                  return;
-                }
-                try {
-                  const parsed = JSON.parse(data) as {
-                    choices?: Array<{
-                      delta?: {
-                        content?: string;
-                        reasoning?: string;
-                      };
-                    }>;
-                  };
-
-                  const token = parsed.choices?.[0]?.delta?.content ?? "";
-                  const reasoning = parsed.choices?.[0]?.delta?.reasoning ?? "";
-
-                  if (token || reasoning) {
-                    const payload = JSON.stringify({
-                      token: token || "",
-                      reasoning: reasoning || "",
-                    });
-                    controller.enqueue(encoder.encode(`data: ${payload}\n\n`));
+                const data = line.slice(6).trim();
+                if (data && data !== "[DONE]") {
+                  try {
+                    const parsed = JSON.parse(data) as {
+                      choices?: Array<{
+                        delta?: {
+                          content?: string;
+                          reasoning?: string;
+                        };
+                      }>;
+                    };
+                    const token = parsed.choices?.[0]?.delta?.content ?? "";
+                    const reasoning =
+                      parsed.choices?.[0]?.delta?.reasoning ?? "";
+                    if (token || reasoning) {
+                      const payload = JSON.stringify({
+                        token: token || "",
+                        reasoning: reasoning || "",
+                      });
+                      controller.enqueue(
+                        encoder.encode(`data: ${payload}\n\n`),
+                      );
+                    }
+                  } catch (finalError) {
+                    console.log("Final buffer parse error:", finalError);
                   }
-                } catch {
-                  // Skip invalid JSON lines
-                  continue;
                 }
               }
             }
@@ -247,6 +321,52 @@ export async function POST(request: Request) {
     });
   } catch (err) {
     console.error("OpenRouter API error:", err);
+
+    // Check if it's an OpenRouter API error with specific status codes
+    if (err instanceof Error && err.message.includes("OpenRouter API error:")) {
+      if (err.message.includes("429")) {
+        return NextResponse.json(
+          {
+            error: "Rate limit exceeded. Please wait a moment and try again.",
+            errorType: "RATE_LIMIT",
+          },
+          { status: 429 },
+        );
+      }
+
+      if (err.message.includes("402")) {
+        return NextResponse.json(
+          {
+            error:
+              "Payment required. Please check your OpenRouter account balance or upgrade your plan.",
+            errorType: "PAYMENT_REQUIRED",
+          },
+          { status: 402 },
+        );
+      }
+
+      if (err.message.includes("401")) {
+        return NextResponse.json(
+          {
+            error: "Invalid API key. Please check your OpenRouter API key.",
+            errorType: "INVALID_API_KEY",
+          },
+          { status: 401 },
+        );
+      }
+
+      if (err.message.includes("403")) {
+        return NextResponse.json(
+          {
+            error:
+              "Access forbidden. Please check your OpenRouter API key permissions.",
+            errorType: "FORBIDDEN",
+          },
+          { status: 403 },
+        );
+      }
+    }
+
     return NextResponse.json(
       { error: "Network or server error" },
       { status: 502 },

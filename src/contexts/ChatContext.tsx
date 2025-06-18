@@ -38,6 +38,13 @@ interface ChatContextType {
   isLoadingChats: boolean; // Loading state for sidebar chats
   isGeneratingResponse: boolean; // New: Track if AI is generating
   queuedMessages: ChatMessage[]; // New: Message queue
+  // Error dialog state
+  errorDialogOpen: boolean;
+  errorDialogTitle: string;
+  errorDialogMessage: string;
+  errorDialogType?: string;
+  setErrorDialogOpen: (open: boolean) => void;
+  showErrorDialog: (title: string, message: string, errorType?: string) => void;
   createNewChat: () => Promise<Chat | null>; // Changed return type
   startNewChat: () => void;
   selectChat: (chatId: string) => Promise<void>;
@@ -50,10 +57,14 @@ interface ChatContextType {
   loginDialogOpen: boolean;
   loginDialogAction: "send" | "chat" | null;
   setLoginDialogOpen: (open: boolean) => void;
-  setLoginDialogAction: (action: "send" | "chat" | null) => void; // API Key dialog state
+  setLoginDialogAction: (action: "send" | "chat" | null) => void;
+  // API Key dialog state
   apiKeyDialogOpen: boolean;
   setApiKeyDialogOpen: (open: boolean) => void;
   handleApiKeySubmit: (apiKey: string) => void;
+  // Settings dialog state
+  settingsDialogOpen: boolean;
+  setSettingsDialogOpen: (open: boolean) => void;
   branches: {
     id: string;
     name: string;
@@ -103,7 +114,7 @@ const ChatContext = createContext<ChatContextType | null>(null);
 
 export function ChatProvider({ children }: { children: React.ReactNode }) {
   const { selectedModel } = useModel();
-  const { hasApiKey, setApiKey, apiKey } = useApiKey();
+  const { hasApiKey, setApiKey, apiKey, isLoaded: apiKeyLoaded } = useApiKey();
   const [chats, setChats] = useState<Chat[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const [messages, setMessages] = useState<
@@ -123,6 +134,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     "send" | "chat" | null
   >(null);
   const [apiKeyDialogOpen, setApiKeyDialogOpen] = useState(false);
+  const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
 
   // Branching support
   const [branches, setBranches] = useState<
@@ -142,9 +154,18 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [currentMessageAlternatives, setCurrentMessageAlternatives] = useState<
     Map<number, number>
   >(new Map()); // messageIndex -> selectedAlternativeIndex
+
   // Message queue system
   const [isGeneratingResponse, setIsGeneratingResponse] = useState(false);
   const [queuedMessages, setQueuedMessages] = useState<ChatMessage[]>([]);
+
+  // Error dialog state
+  const [errorDialogOpen, setErrorDialogOpen] = useState(false);
+  const [errorDialogTitle, setErrorDialogTitle] = useState("");
+  const [errorDialogMessage, setErrorDialogMessage] = useState("");
+  const [errorDialogType, setErrorDialogType] = useState<string | undefined>(
+    undefined,
+  );
 
   // Ref to avoid circular dependency in processQueue
 
@@ -562,6 +583,17 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     const words = message.trim().split(/\s+/).slice(0, 6);
     return words.join(" ") + (words.length >= 6 ? "..." : "");
   }, []);
+
+  const showErrorDialog = useCallback(
+    (title: string, message: string, errorType?: string) => {
+      setErrorDialogTitle(title);
+      setErrorDialogMessage(message);
+      setErrorDialogType(errorType);
+      setErrorDialogOpen(true);
+    },
+    [],
+  );
+
   const sendMessage = useCallback(
     (data: ChatMessage): Promise<void> => {
       if (!isSignedIn) {
@@ -661,11 +693,29 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               chatId,
             }),
           });
-
           if (!response.ok || !response.body) {
-            const errorText = await response.text();
+            let errorMessage =
+              "An error occurred while processing your request.";
+            let errorType: string | undefined;
+
+            try {
+              const errorData = (await response.json()) as {
+                error?: string;
+                errorType?: string;
+              };
+              if (errorData.error) {
+                errorMessage = errorData.error;
+              }
+              if (errorData.errorType) {
+                errorType = errorData.errorType;
+              }
+            } catch {
+              // If JSON parsing fails, use default error
+              errorMessage = `API request failed: ${response.status} ${response.statusText}`;
+            }
+
             throw new Error(
-              `API request failed: ${response.status} ${response.statusText} - ${errorText}`,
+              JSON.stringify({ message: errorMessage, type: errorType }),
             );
           }
 
@@ -817,17 +867,62 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           }
         } catch (error) {
           console.error("Error in sendMessage:", error);
-          // Update UI to show the error
+
+          // Parse structured error if available
+          let errorMessage = "Sorry, an error occurred.";
+          let errorType: string | undefined;
+          let dialogTitle = "Error";
+
+          if (error instanceof Error) {
+            try {
+              // Try to parse structured error
+              const errorData = JSON.parse(error.message) as {
+                message?: string;
+                type?: string;
+              };
+              if (errorData.message) {
+                errorMessage = errorData.message;
+              }
+              if (errorData.type) {
+                errorType = errorData.type;
+                // Set appropriate dialog titles for different error types
+                switch (errorType) {
+                  case "RATE_LIMIT":
+                    dialogTitle = "Rate Limit Exceeded";
+                    break;
+                  case "PAYMENT_REQUIRED":
+                    dialogTitle = "Payment Required";
+                    break;
+                  case "INVALID_API_KEY":
+                    dialogTitle = "Invalid API Key";
+                    break;
+                  case "FORBIDDEN":
+                    dialogTitle = "Access Forbidden";
+                    break;
+                  default:
+                    dialogTitle = "Error";
+                }
+              }
+            } catch {
+              // If not structured error, use the original error message
+              errorMessage = `Sorry, an error occurred. ${error.message}`;
+            }
+          }
+
+          // Show error dialog
+          showErrorDialog(dialogTitle, errorMessage, errorType);
+
+          // Update UI to show generic error in chat
           setMessages((prev) => {
             const newMessages = [...prev];
             const lastMessage = newMessages[newMessages.length - 1];
             if (lastMessage?.sender === "AI") {
-              lastMessage.text = `Sorry, an error occurred. ${
-                error instanceof Error ? error.message : ""
-              }`;
+              lastMessage.text =
+                "Sorry, there was an error processing your request. Please check the error details above.";
             }
             return newMessages;
           });
+
           // If chat creation failed, remove the temporary chat from the UI
           if (isNewChat && tempChatId) {
             setChats((prev) => prev.filter((c) => c.id !== tempChatId));
@@ -855,6 +950,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       ensureBranchExists,
       saveMessage,
       generateQuickTitle,
+      showErrorDialog,
     ],
   );
   const deleteChat = async (chatId: string) => {
@@ -1521,13 +1617,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
     return () => clearTimeout(timeoutId);
   }, [branches, currentBranchId, isLoadingChat, messageAlternatives]);
-
   // Auto-show API key dialog when user is signed in but has no API key
   useEffect(() => {
-    if (isLoaded && isSignedIn && !hasApiKey) {
+    if (apiKeyLoaded && isLoaded && isSignedIn && !hasApiKey) {
       setApiKeyDialogOpen(true);
     }
-  }, [isLoaded, isSignedIn, hasApiKey]);
+  }, [apiKeyLoaded, isLoaded, isSignedIn, hasApiKey]);
 
   // Handle API key submission
   const handleApiKeySubmit = useCallback(
@@ -1592,6 +1687,14 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         apiKeyDialogOpen,
         setApiKeyDialogOpen,
         handleApiKeySubmit,
+        settingsDialogOpen,
+        setSettingsDialogOpen,
+        errorDialogOpen,
+        errorDialogTitle,
+        errorDialogMessage,
+        errorDialogType,
+        setErrorDialogOpen,
+        showErrorDialog,
       }}
     >
       {children}

@@ -400,6 +400,7 @@ export default function MessageList({ messages }: MessageListProps) {
     getMessageAlternativeInfo,
     selectMessageAlternative,
     isMessageNavigable,
+    isGeneratingResponse,
   } = useChat();
 
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
@@ -512,14 +513,31 @@ export default function MessageList({ messages }: MessageListProps) {
             <div className="group relative w-full max-w-full break-words">
               {" "}
               {msg.reasoning && <ReasoningSection reasoning={msg.reasoning} />}
-              <div
-                role="article"
-                aria-label="Assistant message"
-                className="prose dark:prose-invert animate-fadeIn max-w-none leading-relaxed opacity-0"
-              >
-                <span className="sr-only">Assistant Reply: </span>
-                <LexicalMessage text={msg.text} />
-              </div>
+              {/* Show typing indicator for empty AI messages when generating, otherwise show the message */}
+              {isGeneratingResponse && !msg.text.trim() ? (
+                <div
+                  role="article"
+                  aria-label="Assistant is thinking"
+                  className="prose dark:prose-invert animate-fadeIn max-w-none leading-relaxed opacity-100"
+                >
+                  <div className="flex items-center space-x-1 py-2">
+                    <div className="flex space-x-1">
+                      <div className="typing-dot h-2 w-2 rounded-full bg-gray-400 dark:bg-gray-500"></div>
+                      <div className="typing-dot h-2 w-2 rounded-full bg-gray-400 dark:bg-gray-500"></div>
+                      <div className="typing-dot h-2 w-2 rounded-full bg-gray-400 dark:bg-gray-500"></div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  role="article"
+                  aria-label="Assistant message"
+                  className="prose dark:prose-invert animate-fadeIn max-w-none leading-relaxed opacity-0"
+                >
+                  <span className="sr-only">Assistant Reply: </span>
+                  <LexicalMessage text={msg.text} />
+                </div>
+              )}
               <div className="absolute left-0 mt-5 -ml-0.5 flex items-center gap-1 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 group-focus:opacity-100">
                 {" "}
                 <button
@@ -680,6 +698,7 @@ export default function MessageList({ messages }: MessageListProps) {
           )}
         </div>
       ))}
+
       <div ref={messagesEndRef} />
     </div>
   );
