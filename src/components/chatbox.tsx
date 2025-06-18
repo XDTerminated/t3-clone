@@ -225,7 +225,8 @@ export function Chatbox({ onSend }: { onSend: (data: ChatMessage) => void }) {
                 <ModelSelector
                   selectedModel={selectedModel}
                   onModelChange={setSelectedModel}
-                />{" "}                {/* Search button - show if model has search capability */}
+                />{" "}
+                {/* Search button - show if model has search capability */}
                 {selectedModel.capabilities?.includes("search") && (
                   <button
                     type="button"
