@@ -15,6 +15,7 @@ import { cn } from "~/lib/utils";
 import { buttonVariants } from "~/components/ui/button";
 import { useChat } from "~/contexts/ChatContext";
 import { DeleteChatDialog } from "~/components/delete-chat-dialog";
+import { LogoutDialog } from "~/components/logout-dialog";
 
 // Helper function to group chats by time period
 const groupChatsByDate = (
@@ -204,7 +205,7 @@ const ChatItem = ({
 
 export function AppSidebar() {
   const { isMobile, open, openMobile } = useSidebar();
-  const { isSignedIn, isLoaded } = useAuth();
+  const { isSignedIn, isLoaded, signOut } = useAuth();
   // Only fetch user data when signed in to avoid unnecessary API calls
   const { user } = useUser();
   const {
@@ -217,7 +218,6 @@ export function AppSidebar() {
     pinChat,
     isLoadingChats,
   } = useChat();
-
   // Delete dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [chatToDelete, setChatToDelete] = React.useState<{
@@ -225,17 +225,25 @@ export function AppSidebar() {
     title: string | null;
   } | null>(null);
   const [isDeleting, setIsDeleting] = React.useState(false);
+  
+  // Logout dialog state
+  const [logoutDialogOpen, setLogoutDialogOpen] = React.useState(false);
+  const [isLoggingOut, setIsLoggingOut] = React.useState(false);
 
+  // Handler functions
   const handleNewChat = () => {
     startNewChat();
   };
+
   // Chat manipulation handlers
   const handlePinChat = async (chatId: string) => {
     await pinChat(chatId);
   };
+
   const handleRenameChat = (chatId: string, newTitle: string) => {
     void renameChat(chatId, newTitle);
   };
+
   const handleDeleteChat = (chatId: string, chatTitle: string | null) => {
     setChatToDelete({ id: chatId, title: chatTitle });
     setDeleteDialogOpen(true);
@@ -252,14 +260,31 @@ export function AppSidebar() {
       setChatToDelete(null);
     }
   };
+
   // Handle Google sign-in
   const handleSignIn = () => {
     // Navigate directly to Google OAuth using replace for faster navigation
     window.location.replace("/sign-in/google");
   };
+  // Handle logout
+  const handleSignOut = async () => {
+    setIsLoggingOut(true);
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Error signing out:', error);
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
+
+  const confirmLogout = async () => {
+    await handleSignOut();
+  };
 
   const [sidebarFullyClosed, setSidebarFullyClosed] = React.useState(!open); // Initialize based on initial 'open' state
 
+  // Handle clicking outside user menu to close it
   React.useEffect(() => {
     let timer: NodeJS.Timeout;
     if (!isMobile) {
@@ -494,12 +519,13 @@ export function AppSidebar() {
               No chats yet. Start a new conversation!
             </div>
           ) : null}
-        </SidebarContent>{" "}
-        <div className="m-0 flex flex-col gap-2 p-2 pt-0">
+        </SidebarContent>{" "}        <div className="m-0 flex flex-col gap-2 p-2 pt-0">
           {isLoaded && isSignedIn ? (
-            // User is signed in - show user info with profile picture
-            <div className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground flex w-full items-center gap-4 rounded-lg p-4 transition-colors select-none">
-              {" "}
+            // User is signed in - show user info with profile picture that opens logout dialog
+            <button
+              onClick={() => setLogoutDialogOpen(true)}
+              className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground flex w-full items-center gap-4 rounded-lg p-4 transition-colors select-none"
+            >
               {user?.imageUrl ? (
                 <Image
                   src={user.imageUrl}
@@ -521,7 +547,7 @@ export function AppSidebar() {
                   {user?.emailAddresses?.[0]?.emailAddress}
                 </span>
               </div>
-            </div>
+            </button>
           ) : (
             // User is not signed in - show login button
             <button
@@ -534,15 +560,21 @@ export function AppSidebar() {
             </button>
           )}{" "}
         </div>
-      </Sidebar>
-
-      {/* Delete confirmation dialog */}
+      </Sidebar>      {/* Delete confirmation dialog */}
       <DeleteChatDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
         chatTitle={chatToDelete?.title ?? null}
         onConfirm={confirmDelete}
         isDeleting={isDeleting}
+      />
+
+      {/* Logout confirmation dialog */}
+      <LogoutDialog
+        open={logoutDialogOpen}
+        onOpenChange={setLogoutDialogOpen}
+        onConfirm={confirmLogout}
+        isLoggingOut={isLoggingOut}
       />
     </>
   );
