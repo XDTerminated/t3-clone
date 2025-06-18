@@ -225,8 +225,7 @@ export function Chatbox({ onSend }: { onSend: (data: ChatMessage) => void }) {
                 <ModelSelector
                   selectedModel={selectedModel}
                   onModelChange={setSelectedModel}
-                />{" "}
-                {/* Search button - show if model has search capability */}
+                />{" "}                {/* Search button - show if model has search capability */}
                 {selectedModel.capabilities?.includes("search") && (
                   <button
                     type="button"
@@ -234,7 +233,7 @@ export function Chatbox({ onSend }: { onSend: (data: ChatMessage) => void }) {
                     className={cn(
                       "focus-visible:ring-ring hover:bg-muted/40 hover:text-foreground disabled:hover:text-foreground/50 border-secondary-foreground/10 text-muted-foreground -mb-1.5 inline-flex h-auto items-center justify-center gap-2 rounded-full border border-solid px-3 py-1.5 pr-2.5 pl-2 text-xs font-medium whitespace-nowrap transition-colors focus-visible:ring-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent max-sm:p-2",
                       searchEnabled &&
-                        "bg-primary/20 border-primary/30 text-primary",
+                        "bg-muted/40 border-secondary-foreground/10 text-foreground",
                     )}
                     aria-label={
                       searchEnabled ? "Disable web search" : "Enable web search"

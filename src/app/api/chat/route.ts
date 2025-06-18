@@ -127,9 +127,7 @@ export async function POST(request: Request) {
   }
   try {
     // Use the specified model or default
-    const selectedModel = requestBody.model ?? DEFAULT_MODEL.id;
-
-    // Create model-aware system prompt
+    const selectedModel = requestBody.model ?? DEFAULT_MODEL.id; // Create model-aware system prompt
     const getModelIdentity = (modelId: string) => {
       if (modelId.includes("deepseek")) {
         return "You are DeepSeek, an AI assistant created by DeepSeek. You are helpful, harmless, and honest.";
@@ -141,6 +139,8 @@ export async function POST(request: Request) {
         return "You are Mistral AI, a helpful AI assistant created by Mistral AI.";
       } else if (modelId.includes("qwen")) {
         return "You are Qwen, an AI assistant created by Alibaba Cloud. You are helpful, harmless, and honest.";
+      } else if (modelId.includes("microsoft") || modelId.includes("phi")) {
+        return "You are Phi, Microsoft's AI assistant. You are helpful, harmless, and honest. IMPORTANT: Do not show your internal reasoning, chain-of-thought, or thinking process in your response. Only provide the final answer directly without any internal monologue, analysis steps, or reasoning explanations.";
       } else {
         return "You are a helpful AI assistant.";
       }

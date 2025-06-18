@@ -241,6 +241,17 @@
   -moz-appearance: textfield;
 }
 
+/* Hide scrollbar utility */
+.scrollbar-hide {
+  /* Firefox */
+  scrollbar-width: none;
+  /* Safari and Chrome */
+  -ms-overflow-style: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 @layer base {
   html {
     background-color: var(--background);

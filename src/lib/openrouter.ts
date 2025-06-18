@@ -27,7 +27,7 @@ export const AVAILABLE_MODELS: OpenRouterModel[] = [
     name: "Gemini 2.0 Flash",
     contextLength: 1048576,
     provider: "Google",
-    capabilities: ["vision", "search", "pdf", "reasoning"],
+    capabilities: ["vision", "search", "pdf"],
   },
   {
     id: "google/gemini-2.5-flash-preview-05-20",
@@ -74,8 +74,61 @@ export const AVAILABLE_MODELS: OpenRouterModel[] = [
   {
     id: "deepseek/deepseek-r1:free",
     name: "DeepSeek R1",
-    contextLength: 65536,
+    contextLength: 163840,
     provider: "DeepSeek",
+    capabilities: ["reasoning"],
+  },
+];
+
+// Additional free models for the "Other" section
+export const OTHER_MODELS: OpenRouterModel[] = [
+  {
+    id: "deepseek/deepseek-chat-v3-0324:free",
+    name: "DeepSeek V3",
+    contextLength: 163840,
+    provider: "DeepSeek",
+    capabilities: [],
+  },
+  {
+    id: "qwen/qwq-32b:free",
+    name: "Qwen 32B",
+    contextLength: 40000,
+    provider: "Qwen",
+    capabilities: ["reasoning"],
+  },
+  {
+    id: "meta-llama/llama-4-maverick:free",
+    name: "Llama 4 Maverick",
+    contextLength: 128000,
+    provider: "Meta",
+    capabilities: ["vision"],
+  },
+  {
+    id: "meta-llama/llama-4-scout:free",
+    name: "Llama 4 Scout",
+    contextLength: 200000,
+    provider: "Meta",
+    capabilities: [],
+  },
+  {
+    id: "meta-llama/llama-3.3-70b-instruct:free",
+    name: "Llama 3.3 70B",
+    contextLength: 131072,
+    provider: "Meta",
+    capabilities: [],
+  },
+  {
+    id: "qwen/qwen3-32b:free",
+    name: "Qwen3 32B",
+    contextLength: 40960,
+    provider: "Qwen",
+    capabilities: [],
+  },
+  {
+    id: "microsoft/phi-4-reasoning:free",
+    name: "Phi 4 Reasoning",
+    contextLength: 32768,
+    provider: "Microsoft",
     capabilities: ["reasoning"],
   },
 ];

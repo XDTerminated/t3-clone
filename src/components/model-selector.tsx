@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import {
   ChevronDown,
   Search,
@@ -13,7 +14,12 @@ import {
   ImagePlus,
 } from "lucide-react";
 import { SiAnthropic } from "react-icons/si";
-import { AVAILABLE_MODELS, type OpenRouterModel } from "~/lib/openrouter";
+import { FaMeta } from "react-icons/fa6";
+import {
+  AVAILABLE_MODELS,
+  OTHER_MODELS,
+  type OpenRouterModel,
+} from "~/lib/openrouter";
 import {
   Tooltip,
   TooltipTrigger,
@@ -69,15 +75,28 @@ const getModelIconSmall = (modelId: string) => {
     );
   } else if (modelId.includes("anthropic") || modelId.includes("claude")) {
     return <SiAnthropic className="size-4 text-white" />;
-  } else if (modelId.includes("llama")) {
+  } else if (modelId.includes("llama") || modelId.includes("meta")) {
+    return <FaMeta className="size-4 text-white" />;
+  } else if (modelId.includes("qwen")) {
+    return (
+      <Image
+        src="/qwen.svg"
+        alt="Qwen"
+        width={16}
+        height={16}
+        className="text-white"
+      />
+    );
+  } else if (modelId.includes("microsoft") || modelId.includes("phi")) {
     return (
       <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="118 120 480 480"
-        fill="currentColor"
         className="size-4 text-white"
+        viewBox="0 0 24 24"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="currentColor"
       >
-        <path d="M304.246 295.411V249.828C304.246 245.989 305.687 243.109 309.044 241.191L400.692 188.412C413.167 181.215 428.042 177.858 443.394 177.858C500.971 177.858 537.44 222.482 537.44 269.982C537.44 273.34 537.44 277.179 536.959 281.018L441.954 225.358C436.197 222 430.437 222 424.68 225.358L304.246 295.411ZM518.245 472.945V364.024C518.245 357.304 515.364 352.507 509.608 349.149L389.174 279.096L428.519 256.543C431.877 254.626 434.757 254.626 438.115 256.543L529.762 309.323C556.154 324.679 573.905 357.304 573.905 388.971C573.905 425.436 552.315 459.024 518.245 472.941V472.945ZM275.937 376.982L236.592 353.952C233.235 352.034 231.794 349.154 231.794 345.315V239.756C231.794 188.416 271.139 149.548 324.4 149.548C344.555 149.548 363.264 156.268 379.102 168.262L284.578 222.964C278.822 226.321 275.942 231.119 275.942 237.838V376.986L275.937 376.982ZM360.626 425.922L304.246 394.255V327.083L360.626 295.416L417.002 327.083V394.255L360.626 425.922ZM396.852 571.789C376.698 571.789 357.989 565.07 342.151 553.075L436.674 498.374C442.431 495.017 445.311 490.219 445.311 483.499V344.352L485.138 367.382C488.495 369.299 489.936 372.179 489.936 376.018V481.577C489.936 532.917 450.109 571.785 396.852 571.785V571.789ZM283.134 464.79L191.486 412.01C165.094 396.654 147.343 364.029 147.343 332.362C147.343 295.416 169.415 262.309 203.48 248.393V357.791C203.48 364.51 206.361 369.308 212.117 372.665L332.074 442.237L292.729 464.79C289.372 466.707 286.491 466.707 283.134 464.79ZM277.859 543.48C223.639 543.48 183.813 502.695 183.813 452.314C183.813 448.475 184.294 444.636 184.771 440.797L279.295 495.498C285.051 498.856 290.812 498.856 296.568 495.498L417.002 425.927V471.509C417.002 475.349 415.562 478.229 412.204 480.146L320.557 532.926C308.081 540.122 293.206 543.48 277.854 543.48H277.859ZM396.852 600.576C454.911 600.576 503.37 559.313 514.41 504.612C568.149 490.696 602.696 440.315 602.696 388.976C602.696 355.387 588.303 322.762 562.392 299.25C564.791 289.173 566.231 279.096 566.231 269.024C566.231 200.411 510.571 149.067 446.274 149.067C433.322 149.067 420.846 150.984 408.37 155.305C386.775 134.192 357.026 120.758 324.4 120.758C266.342 120.758 217.883 162.02 206.843 216.721C153.104 230.637 118.557 281.018 118.557 332.357C118.557 365.946 132.95 398.571 158.861 422.083C156.462 432.16 155.022 442.237 155.022 452.309C155.022 520.922 210.682 572.266 274.978 572.266C287.931 572.266 300.407 570.349 312.883 566.028C334.473 587.141 364.222 600.576 396.852 600.576Z"></path>
+        <title>Microsoft</title>
+        <path d="M11.4 24H0V12.6h11.4V24zM24 24H12.6V12.6H24V24zM11.4 11.4H0V0h11.4v11.4zM24 11.4H12.6V0H24v11.4z"></path>
       </svg>
     );
   }
@@ -130,15 +149,29 @@ const getModelIcon = (modelId: string, size: "small" | "large" = "small") => {
     );
   } else if (modelId.includes("anthropic") || modelId.includes("claude")) {
     return <SiAnthropic className={`text-white ${sizeClass}`} />;
-  } else if (modelId.includes("llama")) {
+  } else if (modelId.includes("llama") || modelId.includes("meta")) {
+    return <FaMeta className={`text-white ${sizeClass}`} />;
+  } else if (modelId.includes("qwen")) {
+    const iconSize = size === "small" ? 24 : 32;
+    return (
+      <Image
+        src="/qwen.svg"
+        alt="Qwen"
+        width={iconSize}
+        height={iconSize}
+        className="text-white"
+      />
+    );
+  } else if (modelId.includes("microsoft") || modelId.includes("phi")) {
     return (
       <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="118 120 480 480"
-        fill="currentColor"
         className={`text-white ${sizeClass}`}
+        viewBox="0 0 24 24"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="currentColor"
       >
-        <path d="M304.246 295.411V249.828C304.246 245.989 305.687 243.109 309.044 241.191L400.692 188.412C413.167 181.215 428.042 177.858 443.394 177.858C500.971 177.858 537.44 222.482 537.44 269.982C537.44 273.34 537.44 277.179 536.959 281.018L441.954 225.358C436.197 222 430.437 222 424.68 225.358L304.246 295.411ZM518.245 472.945V364.024C518.245 357.304 515.364 352.507 509.608 349.149L389.174 279.096L428.519 256.543C431.877 254.626 434.757 254.626 438.115 256.543L529.762 309.323C556.154 324.679 573.905 357.304 573.905 388.971C573.905 425.436 552.315 459.024 518.245 472.941V472.945ZM275.937 376.982L236.592 353.952C233.235 352.034 231.794 349.154 231.794 345.315V239.756C231.794 188.416 271.139 149.548 324.4 149.548C344.555 149.548 363.264 156.268 379.102 168.262L284.578 222.964C278.822 226.321 275.942 231.119 275.942 237.838V376.986L275.937 376.982ZM360.626 425.922L304.246 394.255V327.083L360.626 295.416L417.002 327.083V394.255L360.626 425.922ZM396.852 571.789C376.698 571.789 357.989 565.07 342.151 553.075L436.674 498.374C442.431 495.017 445.311 490.219 445.311 483.499V344.352L485.138 367.382C488.495 369.299 489.936 372.179 489.936 376.018V481.577C489.936 532.917 450.109 571.785 396.852 571.785V571.789ZM283.134 464.79L191.486 412.01C165.094 396.654 147.343 364.029 147.343 332.362C147.343 295.416 169.415 262.309 203.48 248.393V357.791C203.48 364.51 206.361 369.308 212.117 372.665L332.074 442.237L292.729 464.79C289.372 466.707 286.491 466.707 283.134 464.79ZM277.859 543.48C223.639 543.48 183.813 502.695 183.813 452.314C183.813 448.475 184.294 444.636 184.771 440.797L279.295 495.498C285.051 498.856 290.812 498.856 296.568 495.498L417.002 425.927V471.509C417.002 475.349 415.562 478.229 412.204 480.146L320.557 532.926C308.081 540.122 293.206 543.48 277.854 543.48H277.859ZM396.852 600.576C454.911 600.576 503.37 559.313 514.41 504.612C568.149 490.696 602.696 440.315 602.696 388.976C602.696 355.387 588.303 322.762 562.392 299.25C564.791 289.173 566.231 279.096 566.231 269.024C566.231 200.411 510.571 149.067 446.274 149.067C433.322 149.067 420.846 150.984 408.37 155.305C386.775 134.192 357.026 120.758 324.4 120.758C266.342 120.758 217.883 162.02 206.843 216.721C153.104 230.637 118.557 281.018 118.557 332.357C118.557 365.946 132.95 398.571 158.861 422.083C156.462 432.16 155.022 442.237 155.022 452.309C155.022 520.922 210.682 572.266 274.978 572.266C287.931 572.266 300.407 570.349 312.883 566.028C334.473 587.141 364.222 600.576 396.852 600.576Z"></path>
+        <title>Microsoft</title>
+        <path d="M11.4 24H0V12.6h11.4V24zM24 24H12.6V12.6H24V24zM11.4 11.4H0V0h11.4v11.4zM24 11.4H12.6V0H24v11.4z"></path>
       </svg>
     );
   }
@@ -253,7 +286,6 @@ export function ModelSelector({
       document.removeEventListener("keydown", handleEscapeKey);
     };
   }, [isOpen]);
-
   const filteredModels =
     viewMode === "favorites"
       ? AVAILABLE_MODELS.filter(
@@ -266,6 +298,12 @@ export function ModelSelector({
             model.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             model.provider.toLowerCase().includes(searchQuery.toLowerCase()),
         );
+
+  const filteredOtherModels = OTHER_MODELS.filter(
+    (model) =>
+      model.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      model.provider.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
   return (
     <div className="relative" ref={dropdownRef}>
       {" "}
@@ -361,10 +399,9 @@ export function ModelSelector({
                   );
                 })
               ) : (
-                // Show All View - Card Grid Layout
-                <div className="relative">
-                  {" "}
-                  <div className="flex flex-col items-center px-4 py-4">
+                // Show All View - Card Grid Layout with Scrollable Content
+                <div className="relative h-full overflow-hidden">
+                  <div className="scrollbar-hide h-full overflow-y-auto px-4 py-4">
                     {/* Favorites Section Header */}
                     <div className="mb-4 flex w-full items-center gap-2 text-sm font-medium text-[#f5d0fe]">
                       <svg
@@ -383,10 +420,9 @@ export function ModelSelector({
                         <path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"></path>
                       </svg>
                       Favorites
-                    </div>{" "}
-                    {/* Model Cards Grid - First Row (5 models) */}{" "}
+                    </div>
+                    {/* Favorites Model Cards Grid - First Row (5 models) */}
                     <div className="mb-4 grid grid-cols-5 gap-4">
-                      {" "}
                       {filteredModels.slice(0, 5).map((model) => (
                         <div key={model.id} className="group relative">
                           <button
@@ -399,15 +435,13 @@ export function ModelSelector({
                             {/* Top Section - Icon */}
                             <div className="flex h-6 w-6 items-center justify-center text-[#E7D0DD]">
                               {getModelIcon(model.id, "small")}
-                            </div>
-
+                            </div>{" "}
                             {/* Middle Section - Model Name */}
                             <div className="flex flex-1 items-center justify-center px-1 text-center">
                               <div className="text-sm leading-tight font-medium text-[#E7D0DD]">
-                                {model.name.replace(model.provider, "").trim()}
+                                {model.name}
                               </div>
                             </div>
-
                             {/* Bottom Section - Capability Icons */}
                             <div className="flex items-center justify-center gap-1">
                               {model.capabilities &&
@@ -419,7 +453,6 @@ export function ModelSelector({
                                         : "flex flex-wrap justify-center"
                                     }`}
                                   >
-                                    {" "}
                                     {model.capabilities.map((cap) => {
                                       const Icon = capabilityIconMap[cap];
                                       const colors = capabilityColorMap[cap];
@@ -451,14 +484,12 @@ export function ModelSelector({
                           </button>
                         </div>
                       ))}
-                    </div>
-                    {/* Second Row (remaining 2 models) */}{" "}
+                    </div>{" "}
+                    {/* Favorites Second Row (remaining models) */}
                     {filteredModels.length > 5 && (
-                      <div className="grid grid-cols-5 gap-4">
-                        {" "}
+                      <div className="mb-6 grid grid-cols-5 gap-4">
                         {filteredModels.slice(5).map((model) => (
                           <div key={model.id} className="group relative">
-                            {" "}
                             <button
                               className="group relative flex h-[9.25rem] w-[6.75rem] cursor-pointer flex-col items-center justify-between overflow-hidden rounded-xl border border-[#322028] bg-black px-3 py-3 text-[#E7D0DD] transition-colors hover:bg-[#1a1a1a]"
                               onClick={() => {
@@ -466,7 +497,6 @@ export function ModelSelector({
                                 closeDropdown();
                               }}
                             >
-                              {" "}
                               {/* Top Section - Icon */}
                               <div className="flex h-6 w-6 items-center justify-center text-[#E7D0DD]">
                                 {getModelIcon(model.id, "small")}
@@ -474,9 +504,7 @@ export function ModelSelector({
                               {/* Middle Section - Model Name */}
                               <div className="flex flex-1 items-center justify-center px-1 text-center">
                                 <div className="text-sm leading-tight font-medium text-[#E7D0DD]">
-                                  {model.name
-                                    .replace(model.provider, "")
-                                    .trim()}
+                                  {model.name}
                                 </div>
                               </div>
                               {/* Bottom Section - Capability Icons */}
@@ -523,6 +551,84 @@ export function ModelSelector({
                           </div>
                         ))}
                       </div>
+                    )}
+                    {/* Other Models Section */}
+                    {filteredOtherModels.length > 0 && (
+                      <>
+                        {/* Other Section Header */}
+                        <div className="mb-4 flex w-full items-center gap-2 text-sm font-medium text-[#f5d0fe]">
+                          <Brain className="size-4" />
+                          Other
+                        </div>{" "}
+                        {/* Other Model Cards Grid */}
+                        <div className="grid grid-cols-5 gap-4">
+                          {filteredOtherModels.map((model) => (
+                            <div key={model.id} className="group relative">
+                              <button
+                                className="group relative flex h-[9.25rem] w-[6.75rem] cursor-pointer flex-col items-center justify-between overflow-hidden rounded-xl border border-[#322028] bg-black px-3 py-3 text-[#E7D0DD] transition-colors hover:bg-[#1a1a1a]"
+                                onClick={() => {
+                                  onModelChange(model);
+                                  closeDropdown();
+                                }}
+                              >
+                                {/* Top Section - Icon */}
+                                <div className="flex h-6 w-6 items-center justify-center text-[#E7D0DD]">
+                                  {getModelIcon(model.id, "small")}
+                                </div>
+
+                                {/* Middle Section - Model Name */}
+                                <div className="flex flex-1 items-center justify-center px-1 text-center">
+                                  <div className="text-sm leading-tight font-medium text-[#E7D0DD]">
+                                    {model.name}
+                                  </div>
+                                </div>
+
+                                {/* Bottom Section - Capability Icons */}
+                                <div className="flex items-center justify-center gap-1">
+                                  {model.capabilities &&
+                                    model.capabilities.length > 0 && (
+                                      <div
+                                        className={`flex items-center justify-center gap-1 ${
+                                          model.capabilities.length === 4
+                                            ? "grid grid-cols-2 gap-1"
+                                            : "flex flex-wrap justify-center"
+                                        }`}
+                                      >
+                                        {model.capabilities.map((cap) => {
+                                          const Icon = capabilityIconMap[cap];
+                                          const colors =
+                                            capabilityColorMap[cap];
+                                          const tooltip =
+                                            capabilityTooltipMap[cap];
+                                          if (!Icon || !colors) return null;
+                                          return (
+                                            <Tooltip key={cap}>
+                                              <TooltipTrigger asChild>
+                                                <div
+                                                  className="flex h-5 w-5 cursor-pointer items-center justify-center rounded-sm"
+                                                  style={{
+                                                    backgroundColor:
+                                                      colors.colorLight,
+                                                    color: colors.colorDark,
+                                                  }}
+                                                >
+                                                  <Icon className="h-3.5 w-3.5" />
+                                                </div>
+                                              </TooltipTrigger>
+                                              <TooltipContent sideOffset={4}>
+                                                {tooltip}
+                                              </TooltipContent>
+                                            </Tooltip>
+                                          );
+                                        })}
+                                      </div>
+                                    )}
+                                </div>
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </>
                     )}
                   </div>
                 </div>
