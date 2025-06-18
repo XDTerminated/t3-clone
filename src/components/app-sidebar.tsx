@@ -225,10 +225,12 @@ export function AppSidebar() {
     title: string | null;
   } | null>(null);
   const [isDeleting, setIsDeleting] = React.useState(false);
-  
   // Logout dialog state
   const [logoutDialogOpen, setLogoutDialogOpen] = React.useState(false);
   const [isLoggingOut, setIsLoggingOut] = React.useState(false);
+
+  // Search state
+  const [searchQuery, setSearchQuery] = React.useState("");
 
   // Handler functions
   const handleNewChat = () => {
@@ -272,7 +274,7 @@ export function AppSidebar() {
     try {
       await signOut();
     } catch (error) {
-      console.error('Error signing out:', error);
+      console.error("Error signing out:", error);
     } finally {
       setIsLoggingOut(false);
     }
@@ -280,6 +282,27 @@ export function AppSidebar() {
 
   const confirmLogout = async () => {
     await handleSignOut();
+  };
+
+  // Filter chats based on search query
+  const filterChats = (
+    chats: Array<{
+      id: string;
+      title: string | null;
+      createdAt: Date;
+      updatedAt: Date;
+      pinned?: boolean;
+    }>,
+  ) => {
+    if (!searchQuery.trim()) {
+      return chats;
+    }
+
+    const query = searchQuery.toLowerCase().trim();
+    return chats.filter((chat) => {
+      const title = (chat.title ?? "New Chat").toLowerCase();
+      return title.includes(query);
+    });
   };
 
   const [sidebarFullyClosed, setSidebarFullyClosed] = React.useState(!open); // Initialize based on initial 'open' state
@@ -359,7 +382,7 @@ export function AppSidebar() {
             >
               <span className="w-full text-center select-none">New Chat</span>
             </button>
-          </div>
+          </div>{" "}
           <div className="border-sidebar-border/30 border-b px-3 pb-2">
             <div className="flex items-center">
               <Search className="text-muted-foreground mr-3 -ml-[3px] size-4" />
@@ -367,6 +390,8 @@ export function AppSidebar() {
                 role="searchbox"
                 aria-label="Search threads"
                 placeholder="Search your threads..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="text-foreground placeholder-muted-foreground/50 w-full bg-transparent py-2 text-sm placeholder:select-none focus:outline-none"
               />
             </div>
@@ -382,8 +407,19 @@ export function AppSidebar() {
             </div>
           ) : isSignedIn && chats.length > 0 ? (
             (() => {
+              const filteredChats = filterChats(chats);
               const { pinned, today, yesterday, last30Days, older } =
-                groupChatsByDate(chats);
+                groupChatsByDate(filteredChats);
+
+              // If search query is active and no results found
+              if (searchQuery.trim() && filteredChats.length === 0) {
+                return (
+                  <div className="text-sidebar-foreground/50 px-4 py-8 text-center text-sm">
+                    No chats found matching &ldquo;{searchQuery}&rdquo;
+                  </div>
+                );
+              }
+
               return (
                 <div className="w-full">
                   {/* Pinned chats */}
@@ -519,7 +555,8 @@ export function AppSidebar() {
               No chats yet. Start a new conversation!
             </div>
           ) : null}
-        </SidebarContent>{" "}        <div className="m-0 flex flex-col gap-2 p-2 pt-0">
+        </SidebarContent>{" "}
+        <div className="m-0 flex flex-col gap-2 p-2 pt-0">
           {isLoaded && isSignedIn ? (
             // User is signed in - show user info with profile picture that opens logout dialog
             <button
@@ -560,7 +597,8 @@ export function AppSidebar() {
             </button>
           )}{" "}
         </div>
-      </Sidebar>      {/* Delete confirmation dialog */}
+      </Sidebar>{" "}
+      {/* Delete confirmation dialog */}
       <DeleteChatDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
@@ -568,7 +606,6 @@ export function AppSidebar() {
         onConfirm={confirmDelete}
         isDeleting={isDeleting}
       />
-
       {/* Logout confirmation dialog */}
       <LogoutDialog
         open={logoutDialogOpen}

@@ -1,25 +1,4 @@
 import * as React from "react";
-import { LexicalComposer } from "@lexical/react/LexicalComposer";
-import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
-import { ContentEditable } from "@lexical/react/LexicalContentEditable";
-import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
-import {
-  $convertFromMarkdownString,
-  TRANSFORMERS,
-  type TextMatchTransformer,
-} from "@lexical/markdown";
-import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
-import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { ListItemNode, ListNode } from "@lexical/list";
-import {
-  $createEquationNode,
-  $isEquationNode,
-  EquationNode,
-} from "./lexical/EquationNode";
-import { CodeHighlightNode, CodeNode } from "@lexical/code";
-import { LinkNode } from "@lexical/link";
-import { HeadingNode, QuoteNode } from "@lexical/rich-text";
-import type { LexicalNode, TextNode } from "lexical";
 import { useChat } from "~/contexts/ChatContext";
 import { useModel } from "~/contexts/ModelContext";
 import {
@@ -33,24 +12,7 @@ import {
 import NextImage from "next/image";
 import { useState } from "react";
 import type { UploadFileResponse } from "~/lib/types";
-
-// Function to clean and normalize AI response text
-function normalizeAIResponse(text: string): string {
-  if (!text) return text;
-
-  // Remove any leading whitespace or invisible characters
-  let cleaned = text.replace(/^[\s\u200B-\u200D\uFEFF]+/, "");
-
-  // Ensure first character is capitalized if it's a letter
-  if (cleaned.length > 0) {
-    const firstChar = cleaned.charAt(0);
-    if (/[a-z]/.test(firstChar)) {
-      cleaned = firstChar.toUpperCase() + cleaned.slice(1);
-    }
-  }
-
-  return cleaned;
-}
+import { MessageWithSyntaxHighlighting } from "./message-with-syntax-highlighting";
 
 export type Message = {
   sender: string;
@@ -62,51 +24,6 @@ export type Message = {
 interface MessageListProps {
   messages: Message[];
 }
-
-const editorConfig = {
-  namespace: "LexicalViewer",
-  nodes: [
-    ListNode,
-    ListItemNode,
-    EquationNode,
-    CodeNode,
-    CodeHighlightNode,
-    LinkNode,
-    HeadingNode,
-    QuoteNode,
-  ],
-  onError(error: Error) {
-    console.error(error);
-  },
-  theme: {
-    ltr: "text-left",
-    rtl: "text-right",
-    paragraph: "mb-4 leading-loose",
-    text: {
-      bold: "font-bold",
-      italic: "italic",
-      underline: "underline",
-      strikethrough: "line-through",
-      code: "font-mono bg-gray-200 dark:bg-gray-700 px-1 rounded",
-    },
-    list: {
-      ul: "list-disc pl-6",
-      ol: "list-decimal pl-6",
-      listitem: "mb-3 py-1",
-    },
-    link: "text-blue-500 hover:underline",
-    equation: "katex-display p-2 m-2 border rounded",
-    inlineEquation: "katex-inline",
-    code: "bg-gray-100 dark:bg-gray-800 p-4 rounded-md block whitespace-pre-wrap font-mono text-sm",
-    quote: "border-l-4 border-gray-300 pl-4 italic",
-    heading: {
-      h1: "text-3xl font-bold my-4",
-      h2: "text-2xl font-bold my-3",
-      h3: "text-xl font-bold my-2",
-    },
-  },
-  editable: false,
-};
 
 // Component to display reasoning section
 function ReasoningSection({ reasoning }: { reasoning: string }) {
@@ -143,7 +60,7 @@ function ReasoningSection({ reasoning }: { reasoning: string }) {
       >
         <div className="message-container mt-2 pl-4">
           <div className="markdown markdown-main-panel stronger prose dark:prose-invert max-w-none text-sm leading-relaxed text-gray-600 dark:text-gray-400">
-            <LexicalMessage text={reasoning} />
+            <MessageWithSyntaxHighlighting text={reasoning} />
           </div>
         </div>
       </div>
@@ -177,13 +94,14 @@ function FileAttachments({ files }: { files: UploadFileResponse[] }) {
     const fileType = (file.serverData as { type: string })?.type ?? "";
     return (
       fileType.startsWith("image/") &&
-      (file.url.startsWith("data:image/") || file.name.toLowerCase().includes("generated"))
+      (file.url.startsWith("data:image/") ||
+        file.name.toLowerCase().includes("generated"))
     );
   };
 
   // Separate generated images from other files
   const generatedImages = files.filter(isGeneratedImage);
-  const otherFiles = files.filter(file => !isGeneratedImage(file));
+  const otherFiles = files.filter((file) => !isGeneratedImage(file));
 
   return (
     <>
@@ -197,22 +115,22 @@ function FileAttachments({ files }: { files: UploadFileResponse[] }) {
                 alt={file.name}
                 width={512}
                 height={512}
-                className="h-auto max-w-full rounded-lg border object-contain cursor-pointer hover:opacity-90 transition-opacity"
+                className="h-auto max-w-full cursor-pointer rounded-lg border object-contain transition-opacity hover:opacity-90"
                 loading="lazy"
                 onClick={() => setSelectedFile(file)}
               />
               {/* Overlay buttons on hover */}
-              <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="absolute top-2 right-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                 <button
                   onClick={() => viewFile(file)}
-                  className="bg-black/50 hover:bg-black/70 text-white rounded p-2 transition-colors"
+                  className="rounded bg-black/50 p-2 text-white transition-colors hover:bg-black/70"
                   title="View full size"
                 >
                   <Eye className="h-4 w-4" />
                 </button>
                 <button
                   onClick={() => downloadFile(file)}
-                  className="bg-black/50 hover:bg-black/70 text-white rounded p-2 transition-colors"
+                  className="rounded bg-black/50 p-2 text-white transition-colors hover:bg-black/70"
                   title="Download image"
                 >
                   <Download className="h-4 w-4" />
@@ -314,137 +232,13 @@ function FileAttachments({ files }: { files: UploadFileResponse[] }) {
                 >
                   <Download className="h-4 w-4" />
                   Download
-                </button>
+                </button>{" "}
               </div>
             </div>
           </div>
         )}
     </>
   );
-}
-
-// Custom component to render Lexical editor for each message
-function LexicalMessage({ text }: { text: string }) {
-  const normalizedText = normalizeAIResponse(text);
-  const initialConfig = { ...editorConfig };
-  return (
-    <LexicalComposer initialConfig={initialConfig}>
-      <RichTextPlugin
-        contentEditable={<ContentEditable className="outline-none" />}
-        placeholder={null}
-        ErrorBoundary={LexicalErrorBoundary}
-      />
-      <HistoryPlugin />
-      <InitializeMarkdownPlugin markdownText={normalizedText} />
-    </LexicalComposer>
-  );
-}
-
-// Plugin to initialize editor content from a markdown string
-function InitializeMarkdownPlugin({ markdownText }: { markdownText: string }) {
-  const [editor] = useLexicalComposerContext();
-  React.useEffect(() => {
-    editor.update(() => {
-      const dollarEquationTransformer: TextMatchTransformer = {
-        dependencies: [EquationNode],
-        export: (node: LexicalNode) => {
-          if (!$isEquationNode(node)) return null;
-          const equation = node.getEquation();
-          return node.getInline() ? `$${equation}$` : `$$${equation}$$`;
-        },
-        importRegExp: /\$\$(.+?)\$\$|\$(.+?)\$/,
-        regExp: /\$\$(.+?)\$\$|\$(.+?)\$/,
-        replace: (textNode: TextNode, match: RegExpMatchArray) => {
-          const equationContent = match[1] ?? match[2];
-          if (equationContent) {
-            const inline = !match[1];
-            const equationNode = $createEquationNode(equationContent, inline);
-            textNode.replace(equationNode);
-          }
-        },
-        trigger: "$",
-        type: "text-match",
-      };
-
-      // Improved regex: matches numbers, words, or parenthesized expressions before and after ^
-      // Examples: 10^43, x^2, foo^bar, (a+b)^n
-      const caretSuperscriptEquationTransformer: TextMatchTransformer = {
-        dependencies: [EquationNode],
-        export: (node: LexicalNode) => {
-          if (!$isEquationNode(node)) return null;
-          const equation = node.getEquation();
-          return node.getInline() ? `$${equation}$` : `$$${equation}$$`;
-        },
-        // Match: 10^43, x^2, foo^bar, (a+b)^n
-        regExp: /((?:\\w+|\\d+|\\([^\\)]+\\)))\\^(\\w+|\\d+|\\([^\\)]+\\))/g,
-        replace: (textNode: TextNode, match: RegExpMatchArray) => {
-          const base = match[1];
-          const exponent = match[2];
-          const equation = `${base}^{${exponent}}`;
-          const equationNode = $createEquationNode(equation, true);
-          textNode.replace(equationNode);
-        },
-        trigger: "^",
-        type: "text-match",
-      };
-
-      // --- Fix: Replace all <sup>...</sup> patterns in the text node, one at a time, left to right ---
-      // This ensures that each 10<sup>43</sup>, 10<sup>50</sup>, etc. is replaced with a proper EquationNode
-      const htmlSuperscriptEquationTransformer: TextMatchTransformer = {
-        dependencies: [EquationNode],
-        export: (node: LexicalNode) => {
-          if (!$isEquationNode(node)) return null;
-          const equation = node.getEquation();
-          return node.getInline() ? `$${equation}$` : `$$${equation}$$`;
-        },
-        regExp: /(\w+|\d+|\([^\)]+\))<sup>([^<]+)<\/sup>/,
-        replace: (textNode: TextNode, match: RegExpMatchArray) => {
-          // Only replace the first match in the text node, so Lexical can re-run transformers on the rest
-          const base = match[1];
-          const exponent = match[2];
-          const equation = `${base}^{${exponent}}`;
-          const equationNode = $createEquationNode(equation, true);
-          textNode.replace(equationNode);
-        },
-        trigger: "<",
-        type: "text-match",
-      };
-      // --- End fix ---
-
-      // --- Fix: Replace all N^M patterns in the text node, one at a time, left to right ---
-      // This ensures that each 10^43, 10^50, etc. is replaced with a proper EquationNode
-      const caretSuperscriptStandaloneTransformer: TextMatchTransformer = {
-        dependencies: [EquationNode],
-        export: (node: LexicalNode) => {
-          if (!$isEquationNode(node)) return null;
-          const equation = node.getEquation();
-          return node.getInline() ? `$${equation}$` : `$$${equation}$$`;
-        },
-        regExp: /(\d+)\^(\d+)/,
-        replace: (textNode: TextNode, match: RegExpMatchArray) => {
-          // Only replace the first match in the text node, so Lexical can re-run transformers on the rest
-          const base = match[1];
-          const exponent = match[2];
-          const equation = `${base}^{${exponent}}`;
-          const equationNode = $createEquationNode(equation, true);
-          textNode.replace(equationNode);
-        },
-        trigger: "^",
-        type: "text-match",
-      };
-      // --- End fix ---
-
-      const extendedTransformers = [
-        htmlSuperscriptEquationTransformer,
-        caretSuperscriptStandaloneTransformer,
-        caretSuperscriptEquationTransformer,
-        dollarEquationTransformer,
-        ...TRANSFORMERS,
-      ];
-      $convertFromMarkdownString(markdownText, extendedTransformers);
-    });
-  }, [editor, markdownText]);
-  return null;
 }
 
 export default function MessageList({ messages }: MessageListProps) {
@@ -544,8 +338,9 @@ export default function MessageList({ messages }: MessageListProps) {
             >
               <span className="sr-only">Your message: </span>{" "}
               <div className="flex flex-col">
+                {" "}
                 <div className="prose dark:prose-invert max-w-none leading-relaxed [&_ol:last-child]:mb-0 [&_p:last-child]:mb-0 [&_ul:last-child]:mb-0">
-                  <LexicalMessage text={msg.text} />
+                  <MessageWithSyntaxHighlighting text={msg.text} />
                 </div>
                 {msg.files && msg.files.length > 0 && (
                   <FileAttachments files={msg.files} />
@@ -632,8 +427,9 @@ export default function MessageList({ messages }: MessageListProps) {
                     aria-label="Assistant message"
                     className="prose dark:prose-invert animate-fadeIn max-w-none leading-relaxed opacity-0"
                   >
+                    {" "}
                     <span className="sr-only">Assistant Reply: </span>
-                    <LexicalMessage text={msg.text} />
+                    <MessageWithSyntaxHighlighting text={msg.text} />
                   </div>
                   {/* Show generated images or other files from AI */}
                   {msg.files && msg.files.length > 0 && (
