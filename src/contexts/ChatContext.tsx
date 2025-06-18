@@ -36,6 +36,8 @@ interface ChatContextType {
   isLoadingChat: boolean;
   isPendingNewChat: boolean;
   isLoadingChats: boolean; // Loading state for sidebar chats
+  isGeneratingResponse: boolean; // New: Track if AI is generating
+  queuedMessages: ChatMessage[]; // New: Message queue
   createNewChat: () => Promise<Chat | null>; // Changed return type
   startNewChat: () => void;
   selectChat: (chatId: string) => Promise<void>;
@@ -103,7 +105,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const { selectedModel } = useModel();
   const { hasApiKey, setApiKey, apiKey } = useApiKey();
   const [chats, setChats] = useState<Chat[]>([]);
-  const [currentChatId, setCurrentChatId] = useState<string | null>(null);  const [messages, setMessages] = useState<
+  const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<
     Array<{
       sender: string;
       text: string;
@@ -139,6 +142,14 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [currentMessageAlternatives, setCurrentMessageAlternatives] = useState<
     Map<number, number>
   >(new Map()); // messageIndex -> selectedAlternativeIndex
+  // Message queue system
+  const [isGeneratingResponse, setIsGeneratingResponse] = useState(false);
+  const [queuedMessages, setQueuedMessages] = useState<ChatMessage[]>([]);
+
+  // Ref to avoid circular dependency in processQueue
+
+  // Set sendMessage ref to avoid circular dependency
+
   const { isSignedIn, isLoaded } = useAuth();
   const fetchChats = useCallback(async () => {
     if (!isSignedIn) return;
@@ -195,7 +206,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       setIsLoadingChat(false);
     }, 150);
   };
-  const createNewChat = async (): Promise<Chat | null> => {
+  const createNewChat = useCallback(async (): Promise<Chat | null> => {
     // Changed return type
     if (!isSignedIn) return null;
 
@@ -213,7 +224,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       console.error("Failed to create new chat:", error);
     }
     return null;
-  };
+  }, [isSignedIn]);
   const selectChat = async (chatId: string) => {
     // Don't do anything if we're already on this chat
     if (currentChatId === chatId) {
@@ -244,7 +255,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               const msgRes = await fetch(
                 `/api/messages?chatId=${chatId}&branchId=${branch.id}`,
               );
-              if (msgRes.ok) {                const msgData = (await msgRes.json()) as {
+              if (msgRes.ok) {
+                const msgData = (await msgRes.json()) as {
                   messages: Array<{
                     role: string;
                     content: string;
@@ -273,7 +285,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                   } catch (error) {
                     console.error("Failed to parse files for message:", error);
                     parsedFiles = undefined;
-                  }                  return {
+                  }
+                  return {
                     sender: msg.role === "user" ? "User" : "AI",
                     text: msg.content,
                     files: parsedFiles,
@@ -317,7 +330,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       console.error("Failed to fetch branches:", err); // Fallback to loading messages without branches
       try {
         const response = await fetch(`/api/messages?chatId=${chatId}`);
-        if (response.ok) {          const msgData = (await response.json()) as {
+        if (response.ok) {
+          const msgData = (await response.json()) as {
             messages: Array<{
               role: string;
               content: string;
@@ -345,7 +359,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             } catch (error) {
               console.error("Failed to parse files for message:", error);
               parsedFiles = undefined;
-            }            return {
+            }
+            return {
               sender: msg.role === "user" ? "User" : "AI",
               text: msg.content,
               files: parsedFiles,
@@ -362,440 +377,486 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
     setIsLoadingChat(false);
   };
-  const ensureBranchExists = async (chatId: string): Promise<string> => {
-    // Verify that the current branch actually belongs to this chat
-    if (currentBranchId) {
-      try {
-        const verifyRes = await fetch(`/api/branches?chatId=${chatId}`);
-        if (verifyRes.ok) {
-          const data = (await verifyRes.json()) as {
-            branches: Array<{ id: string; name: string }>;
-          };
-          const branchExists = data.branches.find(
-            (b) => b.id === currentBranchId,
+  const ensureBranchExists = useCallback(
+    async (chatId: string): Promise<string> => {
+      // Verify that the current branch actually belongs to this chat
+      if (currentBranchId) {
+        try {
+          const verifyRes = await fetch(`/api/branches?chatId=${chatId}`);
+          if (verifyRes.ok) {
+            const data = (await verifyRes.json()) as {
+              branches: Array<{ id: string; name: string }>;
+            };
+            const branchExists = data.branches.find(
+              (b) => b.id === currentBranchId,
+            );
+            if (branchExists) {
+              console.log("Current branch verified for chat:", currentBranchId);
+              return currentBranchId;
+            } else {
+              console.log(
+                "Current branch doesn't belong to this chat, clearing it",
+              );
+              setCurrentBranchId(null);
+              setBranches([]);
+            }
+          }
+        } catch (error) {
+          console.error("Failed to verify current branch:", error);
+          setCurrentBranchId(null);
+          setBranches([]);
+        }
+      }
+
+      // Try to find any existing branch in our local state that belongs to this chat
+      if (branches.length > 0) {
+        // Verify that these branches actually belong to this chat
+        try {
+          const verifyRes = await fetch(`/api/branches?chatId=${chatId}`);
+          if (verifyRes.ok) {
+            const data = (await verifyRes.json()) as {
+              branches: Array<{ id: string; name: string }>;
+            };
+            const localBranchExists = data.branches.find(
+              (b) => b.id === branches[0]!.id,
+            );
+            if (localBranchExists) {
+              const branchId = branches[0]!.id;
+              setCurrentBranchId(branchId);
+              return branchId;
+            } else {
+              console.log(
+                "Local branches don't belong to this chat, clearing them",
+              );
+              setBranches([]);
+            }
+          }
+        } catch (error) {
+          console.error("Failed to verify local branches:", error);
+          setBranches([]);
+        }
+      }
+
+      // Fetch branches from server with retries
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          console.log(
+            `Fetching branches for chat ${chatId}, attempt ${attempt + 1}`,
           );
-          if (branchExists) {
-            console.log("Current branch verified for chat:", currentBranchId);
-            return currentBranchId;
-          } else {
-            console.log(
-              "Current branch doesn't belong to this chat, clearing it",
-            );
-            setCurrentBranchId(null);
-            setBranches([]);
+          const branchRes = await fetch(`/api/branches?chatId=${chatId}`);
+          if (branchRes.ok) {
+            const data = (await branchRes.json()) as {
+              branches: Array<{ id: string; name: string }>;
+            };
+            if (data.branches.length > 0) {
+              const branchId = data.branches[0]!.id;
+              console.log("Found existing branch:", branchId);
+              setCurrentBranchId(branchId);
+              // Update local branches state
+              setBranches(data.branches.map((b) => ({ ...b, messages: [] })));
+              // Small delay to ensure state updates have propagated
+              await new Promise((resolve) => setTimeout(resolve, 50));
+              return branchId;
+            }
           }
-        }
-      } catch (error) {
-        console.error("Failed to verify current branch:", error);
-        setCurrentBranchId(null);
-        setBranches([]);
-      }
-    }
-
-    // Try to find any existing branch in our local state that belongs to this chat
-    if (branches.length > 0) {
-      // Verify that these branches actually belong to this chat
-      try {
-        const verifyRes = await fetch(`/api/branches?chatId=${chatId}`);
-        if (verifyRes.ok) {
-          const data = (await verifyRes.json()) as {
-            branches: Array<{ id: string; name: string }>;
-          };
-          const localBranchExists = data.branches.find(
-            (b) => b.id === branches[0]!.id,
+        } catch (error) {
+          console.error(
+            `Failed to fetch branches on attempt ${attempt + 1}:`,
+            error,
           );
-          if (localBranchExists) {
-            const branchId = branches[0]!.id;
-            setCurrentBranchId(branchId);
-            return branchId;
-          } else {
-            console.log(
-              "Local branches don't belong to this chat, clearing them",
-            );
-            setBranches([]);
-          }
         }
-      } catch (error) {
-        console.error("Failed to verify local branches:", error);
-        setBranches([]);
-      }
-    }
 
-    // Fetch branches from server with retries
-    for (let attempt = 0; attempt < 3; attempt++) {
+        // Wait before retrying (exponential backoff)
+        if (attempt < 2) {
+          await new Promise((resolve) =>
+            setTimeout(resolve, Math.pow(2, attempt) * 100),
+          );
+        }
+      }
+
+      // If no branches exist, create a Main branch
+      console.log("No branches found, creating Main branch for chat:", chatId);
       try {
-        console.log(
-          `Fetching branches for chat ${chatId}, attempt ${attempt + 1}`,
-        );
-        const branchRes = await fetch(`/api/branches?chatId=${chatId}`);
-        if (branchRes.ok) {
-          const data = (await branchRes.json()) as {
-            branches: Array<{ id: string; name: string }>;
-          };
-          if (data.branches.length > 0) {
-            const branchId = data.branches[0]!.id;
-            console.log("Found existing branch:", branchId);
-            setCurrentBranchId(branchId);
-            // Update local branches state
-            setBranches(data.branches.map((b) => ({ ...b, messages: [] })));
-            // Small delay to ensure state updates have propagated
-            await new Promise((resolve) => setTimeout(resolve, 50));
-            return branchId;
-          }
-        }
-      } catch (error) {
-        console.error(
-          `Failed to fetch branches on attempt ${attempt + 1}:`,
-          error,
-        );
-      }
-
-      // Wait before retrying (exponential backoff)
-      if (attempt < 2) {
-        await new Promise((resolve) =>
-          setTimeout(resolve, Math.pow(2, attempt) * 100),
-        );
-      }
-    }
-
-    // If no branches exist, create a Main branch
-    console.log("No branches found, creating Main branch for chat:", chatId);
-    try {
-      const createBranchRes = await fetch("/api/branches", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chatId,
-          name: "Main",
-        }),
-      });
-
-      if (createBranchRes.ok) {
-        const data = (await createBranchRes.json()) as {
-          branch: { id: string; name: string };
-        };
-        console.log("Created new Main branch:", data.branch.id);
-        setCurrentBranchId(data.branch.id);
-        setBranches([{ ...data.branch, messages: [] }]);
-        // Small delay to ensure state updates have propagated
-        await new Promise((resolve) => setTimeout(resolve, 50));
-        return data.branch.id;
-      } else {
-        throw new Error(`Failed to create branch: ${createBranchRes.status}`);
-      }
-    } catch (error) {
-      console.error("Failed to create Main branch:", error);
-      throw new Error("Could not ensure branch exists");
-    }
-  };  const saveMessage = async (
-    chatId: string,
-    content: string,
-    role: "user" | "assistant",
-    branchId: string,
-    files?: UploadFileResponse[],
-    wasRegenerated = false,
-    reasoning?: string,
-  ) => {
-    try {
-      console.log("Saving message:", {
-        chatId,
-        content: content.substring(0, 50) + "...",
-        role,
-        currentBranchId: currentBranchId,
-        branchId: branchId, // Log the branch ID being used
-        hasReasoning: !!reasoning,
-      });
-
-      const response = await fetch("/api/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chatId,
-          content,
-          role,
-          branchId,
-          files: files ? JSON.stringify(files) : undefined,
-          wasRegenerated,
-          reasoning,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(
-          `Failed to save message: ${response.status} ${response.statusText} - ${errorText}`,
-        );
-        throw new Error("Failed to save message");
-      }
-
-      console.log("Message saved successfully");
-    } catch (error) {
-      console.error("Error saving message:", error);
-      throw error;
-    }
-  };
-
-  const generateQuickTitle = (message: string): string => {
-    // Generate a quick title from the first message for immediate UI feedback
-    const words = message.trim().split(/\s+/).slice(0, 6);
-    return words.join(" ") + (words.length >= 6 ? "..." : "");
-  };
-
-  const sendMessage = (data: ChatMessage): Promise<void> => {
-    if (!isSignedIn) {
-      setLoginDialogAction("send");
-      setLoginDialogOpen(true);
-      return Promise.resolve();
-    }
-    if (!hasApiKey) {
-      setApiKeyDialogOpen(true);
-      return Promise.resolve();
-    }
-
-    const { message, searchEnabled, files } = data;
-    const userMessage = { sender: "User", text: message, files };
-    const aiPlaceholder = { sender: "AI", text: "", files: undefined };
-
-    // We need the history for the API call *before* we update the state
-    const historyForApi = [...messages, userMessage].map((msg) => ({
-      sender: msg.sender,
-      text: msg.text,
-    }));
-
-    // Optimistically update UI with user message and AI placeholder
-    setMessages((prev) => [...prev, userMessage, aiPlaceholder]);
-
-    // Fire-and-forget all backend operations, but return the promise to match the type
-    return (async () => {
-      let chatId = currentChatId;
-      let branchId = currentBranchId;
-      const isNewChat = !chatId;
-      let tempChatId: string | null = null;
-
-      try {
-        // Handle chat creation for new conversations
-        if (isNewChat) {
-          tempChatId = `temp-${Date.now()}`;
-          const quickTitle = generateQuickTitle(message);
-          const tempChat: Chat = {
-            id: tempChatId,
-            title: quickTitle,
-            userId: "temp", // Will be updated with real ID
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            pinned: false,
-          };
-          setChats((prev) => [tempChat, ...prev]);
-          setCurrentChatId(tempChatId);
-
-          const newChatFromDB = await createNewChat();
-          if (newChatFromDB) {
-            chatId = newChatFromDB.id;
-            // Update the temporary chat item with the real one from the DB
-            setChats((prev) =>
-              prev.map((c) =>
-                c.id === tempChatId
-                  ? { ...newChatFromDB, title: quickTitle }
-                  : c,
-              ),
-            );
-            setCurrentChatId(chatId);
-          } else {
-            throw new Error("Failed to create new chat in database.");
-          }
-        }
-
-        if (!chatId) {
-          throw new Error("Chat ID is not available.");
-        }
-
-        branchId = await ensureBranchExists(chatId);
-        if (!branchId) {
-          throw new Error("Branch is not available.");
-        }
-
-        // Save user message in the background
-        void saveMessage(chatId, message, "user", branchId, files);
-
-        // Get AI response
-        const response = await fetch("/api/chat", {
+        const createBranchRes = await fetch("/api/branches", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            history: historyForApi,
-            model: selectedModel.id,
-            apiKey,
-            searchEnabled,
-            files,
             chatId,
+            name: "Main",
           }),
         });
 
-        if (!response.ok || !response.body) {
+        if (createBranchRes.ok) {
+          const data = (await createBranchRes.json()) as {
+            branch: { id: string; name: string };
+          };
+          console.log("Created new Main branch:", data.branch.id);
+          setCurrentBranchId(data.branch.id);
+          setBranches([{ ...data.branch, messages: [] }]);
+          // Small delay to ensure state updates have propagated
+          await new Promise((resolve) => setTimeout(resolve, 50));
+          return data.branch.id;
+        } else {
+          throw new Error(`Failed to create branch: ${createBranchRes.status}`);
+        }
+      } catch (error) {
+        console.error("Failed to create Main branch:", error);
+        throw new Error("Could not ensure branch exists");
+      }
+    },
+    [currentBranchId, branches, setCurrentBranchId, setBranches],
+  );
+
+  const saveMessage = useCallback(
+    async (
+      chatId: string,
+      content: string,
+      role: "user" | "assistant",
+      branchId: string,
+      files?: UploadFileResponse[],
+      wasRegenerated = false,
+      reasoning?: string,
+    ) => {
+      try {
+        console.log("Saving message:", {
+          chatId,
+          content: content.substring(0, 50) + "...",
+          role,
+          currentBranchId: currentBranchId,
+          branchId: branchId, // Log the branch ID being used
+          hasReasoning: !!reasoning,
+        });
+
+        const response = await fetch("/api/messages", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chatId,
+            content,
+            role,
+            branchId,
+            files: files ? JSON.stringify(files) : undefined,
+            wasRegenerated,
+            reasoning,
+          }),
+        });
+
+        if (!response.ok) {
           const errorText = await response.text();
-          throw new Error(
-            `API request failed: ${response.status} ${response.statusText} - ${errorText}`,
+          console.error(
+            `Failed to save message: ${response.status} ${response.statusText} - ${errorText}`,
           );
-        }        // Stream the response
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-        let completeAiText = "";
-        let completeReasoning = "";
+          throw new Error("Failed to save message");
+        }
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
+        console.log("Message saved successfully");
+      } catch (error) {
+        console.error("Error saving message:", error);
+        throw error;
+      }
+    },
+    [currentBranchId],
+  );
+  const generateQuickTitle = useCallback((message: string): string => {
+    // Generate a quick title from the first message for immediate UI feedback
+    const words = message.trim().split(/\s+/).slice(0, 6);
+    return words.join(" ") + (words.length >= 6 ? "..." : "");
+  }, []);
+  const sendMessage = useCallback(
+    (data: ChatMessage): Promise<void> => {
+      if (!isSignedIn) {
+        setLoginDialogAction("send");
+        setLoginDialogOpen(true);
+        return Promise.resolve();
+      }
+      if (!hasApiKey) {
+        setApiKeyDialogOpen(true);
+        return Promise.resolve();
+      }
 
-          buffer += decoder.decode(value, { stream: true });
+      // If AI is currently generating, add to queue
+      if (isGeneratingResponse) {
+        setQueuedMessages((prev) => [...prev, data]);
+        return Promise.resolve();
+      }
 
-          // Split on complete SSE messages (data: ... followed by double newline)
-          const parts = buffer.split(/\n\n/);
+      // Set generating state
+      setIsGeneratingResponse(true);
 
-          // Keep the last part in buffer (might be incomplete)
-          buffer = parts.pop() ?? "";
+      const { message, searchEnabled, files } = data;
+      const userMessage = { sender: "User", text: message, files };
+      const aiPlaceholder = { sender: "AI", text: "", files: undefined };
 
-          for (const part of parts) {
-            const lines = part.trim().split(/\n/);
-            for (const line of lines) {
-              if (!line.startsWith("data: ")) continue;
+      // We need the history for the API call *before* we update the state
+      const historyForApi = [...messages, userMessage].map((msg) => ({
+        sender: msg.sender,
+        text: msg.text,
+      }));
 
-              const dataStr = line.slice(6).trim(); // Remove "data: " prefix
-              if (dataStr === "[DONE]") {
-                // End of stream
-                continue;
-              }
+      // Optimistically update UI with user message and AI placeholder
+      setMessages((prev) => [...prev, userMessage, aiPlaceholder]);
 
-              try {
-                const parsed = JSON.parse(dataStr) as { 
-                  token?: string;
-                  reasoning?: string;
-                  choices?: Array<{
-                    delta?: {
-                      content?: string;
-                      reasoning?: string;
-                    };
-                  }>;
-                };
-                
-                // Handle different response formats
-                let contentToken = "";
-                let reasoningToken = "";
-                
-                if (parsed.token) {
-                  contentToken = parsed.token;
-                } else if (parsed.choices?.[0]?.delta?.content) {
-                  contentToken = parsed.choices[0].delta.content;
+      // Fire-and-forget all backend operations, but return the promise to match the type
+      return (async () => {
+        let chatId = currentChatId;
+        let branchId = currentBranchId;
+        const isNewChat = !chatId;
+        let tempChatId: string | null = null;
+
+        try {
+          // Handle chat creation for new conversations
+          if (isNewChat) {
+            tempChatId = `temp-${Date.now()}`;
+            const quickTitle = generateQuickTitle(message);
+            const tempChat: Chat = {
+              id: tempChatId,
+              title: quickTitle,
+              userId: "temp", // Will be updated with real ID
+              createdAt: new Date(),
+              updatedAt: new Date(),
+              pinned: false,
+            };
+            setChats((prev) => [tempChat, ...prev]);
+            setCurrentChatId(tempChatId);
+
+            const newChatFromDB = await createNewChat();
+            if (newChatFromDB) {
+              chatId = newChatFromDB.id;
+              // Update the temporary chat item with the real one from the DB
+              setChats((prev) =>
+                prev.map((c) =>
+                  c.id === tempChatId
+                    ? { ...newChatFromDB, title: quickTitle }
+                    : c,
+                ),
+              );
+              setCurrentChatId(chatId);
+            } else {
+              throw new Error("Failed to create new chat in database.");
+            }
+          }
+
+          if (!chatId) {
+            throw new Error("Chat ID is not available.");
+          }
+
+          branchId = await ensureBranchExists(chatId);
+          if (!branchId) {
+            throw new Error("Branch is not available.");
+          }
+
+          // Save user message in the background
+          void saveMessage(chatId, message, "user", branchId, files);
+
+          // Get AI response
+          const response = await fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              history: historyForApi,
+              model: selectedModel.id,
+              apiKey,
+              searchEnabled,
+              files,
+              chatId,
+            }),
+          });
+
+          if (!response.ok || !response.body) {
+            const errorText = await response.text();
+            throw new Error(
+              `API request failed: ${response.status} ${response.statusText} - ${errorText}`,
+            );
+          }
+
+          // Stream the response
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = "";
+          let completeAiText = "";
+          let completeReasoning = "";
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+
+            // Split on complete SSE messages (data: ... followed by double newline)
+            const parts = buffer.split(/\n\n/);
+
+            // Keep the last part in buffer (might be incomplete)
+            buffer = parts.pop() ?? "";
+
+            for (const part of parts) {
+              const lines = part.trim().split(/\n/);
+              for (const line of lines) {
+                if (!line.startsWith("data: ")) continue;
+
+                const dataStr = line.slice(6).trim(); // Remove "data: " prefix
+                if (dataStr === "[DONE]") {
+                  // End of stream
+                  continue;
                 }
-                
-                if (parsed.reasoning) {
-                  reasoningToken = parsed.reasoning;
-                } else if (parsed.choices?.[0]?.delta?.reasoning) {
-                  reasoningToken = parsed.choices[0].delta.reasoning;
-                }
 
-                if (contentToken) {
-                  completeAiText += contentToken;
-                }
-                
-                if (reasoningToken) {
-                  completeReasoning += reasoningToken;
-                }
+                try {
+                  const parsed = JSON.parse(dataStr) as {
+                    token?: string;
+                    reasoning?: string;
+                    choices?: Array<{
+                      delta?: {
+                        content?: string;
+                        reasoning?: string;
+                      };
+                    }>;
+                  };
 
-                setMessages((prev) => {
-                  const newMessages = [...prev];
-                  const lastMessage = newMessages[newMessages.length - 1];
-                  if (lastMessage?.sender === "AI") {
-                    lastMessage.text = completeAiText;
-                    if (completeReasoning) {
-                      lastMessage.reasoning = completeReasoning;
-                    }
+                  // Handle different response formats
+                  let contentToken = "";
+                  let reasoningToken = "";
+
+                  if (parsed.token) {
+                    contentToken = parsed.token;
+                  } else if (parsed.choices?.[0]?.delta?.content) {
+                    contentToken = parsed.choices[0].delta.content;
                   }
-                  return newMessages;
-                });
-              } catch (e) {
-                console.warn("Failed to parse stream chunk:", dataStr, e);
+
+                  if (parsed.reasoning) {
+                    reasoningToken = parsed.reasoning;
+                  } else if (parsed.choices?.[0]?.delta?.reasoning) {
+                    reasoningToken = parsed.choices[0].delta.reasoning;
+                  }
+
+                  if (contentToken) {
+                    completeAiText += contentToken;
+                  }
+
+                  if (reasoningToken) {
+                    completeReasoning += reasoningToken;
+                  }
+
+                  setMessages((prev) => {
+                    const newMessages = [...prev];
+                    const lastMessage = newMessages[newMessages.length - 1];
+                    if (lastMessage?.sender === "AI") {
+                      lastMessage.text = completeAiText;
+                      if (completeReasoning) {
+                        lastMessage.reasoning = completeReasoning;
+                      }
+                    }
+                    return newMessages;
+                  });
+                } catch (e) {
+                  console.warn("Failed to parse stream chunk:", dataStr, e);
+                }
               }
             }
           }
-        }        // Save complete AI message in the background
-        if (completeAiText) {
-          // Clean up the final AI text before saving and displaying
-          const cleanedAiText = completeAiText
-            .replace(/^[\s\u200B-\u200D\uFEFF]+/, "") // Remove leading whitespace/invisible chars
-            .trim();
 
-          // Update the UI with the cleaned text
+          // Save complete AI message in the background
+          if (completeAiText) {
+            // Clean up the final AI text before saving and displaying
+            const cleanedAiText = completeAiText
+              .replace(/^[\s\u200B-\u200D\uFEFF]+/, "") // Remove leading whitespace/invisible chars
+              .trim();
+
+            // Update the UI with the cleaned text
+            setMessages((prev) => {
+              const newMessages = [...prev];
+              const lastMessage = newMessages[newMessages.length - 1];
+              if (lastMessage?.sender === "AI") {
+                lastMessage.text = cleanedAiText;
+                if (completeReasoning) {
+                  lastMessage.reasoning = completeReasoning.trim();
+                }
+              }
+              return newMessages;
+            });
+
+            void saveMessage(
+              chatId,
+              cleanedAiText,
+              "assistant",
+              branchId,
+              undefined,
+              false,
+              completeReasoning.trim() || undefined,
+            );
+          }
+
+          // Generate and update title for new chats in the background
+          if (isNewChat) {
+            void (async () => {
+              try {
+                const titleGenResponse = await fetch(
+                  "/api/chats/generate-title",
+                  {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ message }),
+                  },
+                );
+                if (titleGenResponse.ok) {
+                  const { title } =
+                    (await titleGenResponse.json()) as GenerateTitleResponse;
+                  // Update title in DB
+                  void fetch(`/api/chats/${chatId}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ title }),
+                  });
+                  // Update title in UI
+                  setChats((prev) =>
+                    prev.map((c) => (c.id === chatId ? { ...c, title } : c)),
+                  );
+                }
+              } catch (e) {
+                console.error("Title generation failed.", e);
+              }
+            })();
+          }
+        } catch (error) {
+          console.error("Error in sendMessage:", error);
+          // Update UI to show the error
           setMessages((prev) => {
             const newMessages = [...prev];
             const lastMessage = newMessages[newMessages.length - 1];
             if (lastMessage?.sender === "AI") {
-              lastMessage.text = cleanedAiText;
-              if (completeReasoning) {
-                lastMessage.reasoning = completeReasoning.trim();
-              }
+              lastMessage.text = `Sorry, an error occurred. ${
+                error instanceof Error ? error.message : ""
+              }`;
             }
             return newMessages;
           });
-
-          void saveMessage(chatId, cleanedAiText, "assistant", branchId, undefined, false, completeReasoning.trim() || undefined);
-        }
-
-        // Generate and update title for new chats in the background
-        if (isNewChat) {
-          void (async () => {
-            try {
-              const titleGenResponse = await fetch(
-                "/api/chats/generate-title",
-                {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ message }),
-                },
-              );
-              if (titleGenResponse.ok) {
-                const { title } =
-                  (await titleGenResponse.json()) as GenerateTitleResponse;
-                // Update title in DB
-                void fetch(`/api/chats/${chatId}`, {
-                  method: "PATCH",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ title }),
-                });
-                // Update title in UI
-                setChats((prev) =>
-                  prev.map((c) => (c.id === chatId ? { ...c, title } : c)),
-                );
-              }
-            } catch (e) {
-              console.error("Title generation failed.", e);
+          // If chat creation failed, remove the temporary chat from the UI
+          if (isNewChat && tempChatId) {
+            setChats((prev) => prev.filter((c) => c.id !== tempChatId));
+            if (currentChatId === tempChatId) {
+              setCurrentChatId(null);
+              setIsPendingNewChat(true);
             }
-          })();
-        }
-      } catch (error) {
-        console.error("Error in sendMessage:", error);
-        // Update UI to show the error
-        setMessages((prev) => {
-          const newMessages = [...prev];
-          const lastMessage = newMessages[newMessages.length - 1];
-          if (lastMessage?.sender === "AI") {
-            lastMessage.text = `Sorry, an error occurred. ${
-              error instanceof Error ? error.message : ""
-            }`;
           }
-          return newMessages;
-        });
-        // If chat creation failed, remove the temporary chat from the UI
-        if (isNewChat && tempChatId) {
-          setChats((prev) => prev.filter((c) => c.id !== tempChatId));
-          if (currentChatId === tempChatId) {
-            setCurrentChatId(null);
-            setIsPendingNewChat(true);
-          }
+        } finally {
+          // Always clear generating state
+          setIsGeneratingResponse(false);
         }
-      }
-    })();
-  };
+      })();
+    },
+    [
+      isSignedIn,
+      hasApiKey,
+      isGeneratingResponse,
+      messages,
+      currentChatId,
+      currentBranchId,
+      selectedModel.id,
+      apiKey,
+      createNewChat,
+      ensureBranchExists,
+      saveMessage,
+      generateQuickTitle,
+    ],
+  );
   const deleteChat = async (chatId: string) => {
     try {
       const response = await fetch(`/api/chats/${chatId}`, {
@@ -1114,7 +1175,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               if (contentType.includes("text/event-stream")) {
                 const reader = aiResponse.body!.getReader();
                 const decoder = new TextDecoder();
-                let buffer = "";                let completeAiText = "";
+                let buffer = "";
+                let completeAiText = "";
                 let completeReasoning = "";
 
                 while (true) {
@@ -1141,7 +1203,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                       }
 
                       try {
-                        const parsed = JSON.parse(dataStr) as { 
+                        const parsed = JSON.parse(dataStr) as {
                           token?: string;
                           reasoning?: string;
                           choices?: Array<{
@@ -1151,17 +1213,17 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                             };
                           }>;
                         };
-                        
+
                         // Handle different response formats
                         let contentToken = "";
                         let reasoningToken = "";
-                        
+
                         if (parsed.token) {
                           contentToken = parsed.token;
                         } else if (parsed.choices?.[0]?.delta?.content) {
                           contentToken = parsed.choices[0].delta.content;
                         }
-                        
+
                         if (parsed.reasoning) {
                           reasoningToken = parsed.reasoning;
                         } else if (parsed.choices?.[0]?.delta?.reasoning) {
@@ -1171,14 +1233,15 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                         if (contentToken) {
                           completeAiText += contentToken;
                         }
-                        
+
                         if (reasoningToken) {
                           completeReasoning += reasoningToken;
                         }
 
                         setMessages((prev) => {
                           const newMessages = [...prev];
-                          const lastMessage = newMessages[newMessages.length - 1];
+                          const lastMessage =
+                            newMessages[newMessages.length - 1];
                           if (lastMessage?.sender === "AI") {
                             lastMessage.text = completeAiText;
                             if (completeReasoning) {
@@ -1198,10 +1261,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                                     (msg, idx, arr) =>
                                       idx === arr.length - 1 &&
                                       msg.sender === "AI"
-                                        ? { 
-                                            ...msg, 
+                                        ? {
+                                            ...msg,
                                             text: completeAiText,
-                                            reasoning: completeReasoning
+                                            reasoning: completeReasoning,
                                           }
                                         : msg,
                                   ),
@@ -1213,9 +1276,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                         // Update the alternative text in real-time
                         setMessageAlternatives((prev) => {
                           const newMap = new Map(prev);
-                          const alternatives = newMap.get(
-                            userMessageIndex + 1,
-                          );
+                          const alternatives = newMap.get(userMessageIndex + 1);
                           if (alternatives && alternatives.length > 0) {
                             const updatedAlternatives = alternatives.map(
                               (alt) =>
@@ -1231,20 +1292,25 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                           return newMap;
                         });
                       } catch (e) {
-                        console.warn("Failed to parse stream chunk:", dataStr, e);
+                        console.warn(
+                          "Failed to parse stream chunk:",
+                          dataStr,
+                          e,
+                        );
                       }
                     }
                   }
-                }                // Save final AI response to database using robust saveMessage
+                } // Save final AI response to database using robust saveMessage
                 if (completeAiText) {
-                  try {                    await saveMessage(
+                  try {
+                    await saveMessage(
                       currentChatId,
                       completeAiText,
                       "assistant",
                       data.branch.id, // Force use of the new branch ID
                       undefined, // No files for AI response
                       false, // wasRegenerated
-                      completeReasoning || undefined // Include reasoning if present
+                      completeReasoning || undefined, // Include reasoning if present
                     );
                     console.log("AI response saved successfully");
                   } catch (error) {
@@ -1470,7 +1536,20 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       setApiKeyDialogOpen(false);
     },
     [setApiKey],
-  );
+  ); // Process queue when generation finishes
+  useEffect(() => {
+    if (!isGeneratingResponse && queuedMessages.length > 0) {
+      // Get the next message and remove it from queue
+      const nextMessage = queuedMessages[0];
+      if (nextMessage) {
+        setQueuedMessages((prev) => prev.slice(1));
+        // Process the message by calling sendMessage
+        setTimeout(() => {
+          void sendMessage(nextMessage);
+        }, 100);
+      }
+    }
+  }, [isGeneratingResponse, queuedMessages, sendMessage]);
 
   return (
     <ChatContext.Provider
@@ -1482,6 +1561,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         isLoadingChat,
         isPendingNewChat,
         isLoadingChats,
+        isGeneratingResponse,
+        queuedMessages,
         branches,
         currentBranchId,
         selectBranch,
