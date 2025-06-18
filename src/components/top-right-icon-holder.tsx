@@ -6,6 +6,14 @@ import { cn } from "~/lib/utils";
 import { useSidebar } from "~/components/ui/sidebar";
 import { useAuth } from "@clerk/nextjs";
 import { useChat } from "~/contexts/ChatContext";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "~/components/ui/dialog";
+import { Button } from "~/components/ui/button";
 
 /**
  * Top-right icon holder with decorative border that blends with the sidebar layout
@@ -16,27 +24,28 @@ export default function TopRightIconHolder({
   children?: React.ReactNode;
 }) {
   const [isDark, setIsDark] = React.useState(true);
+  const [showWrongAnswerDialog, setShowWrongAnswerDialog] =
+    React.useState(false);
   const { state } = useSidebar();
   const { isSignedIn } = useAuth();
   const { setLoginDialogOpen, setLoginDialogAction, setSettingsDialogOpen } =
     useChat();
   const isCollapsed = state === "collapsed";
-
   // Initialize theme state based on current HTML class
   React.useEffect(() => {
     const html = document.documentElement;
     setIsDark(html.classList.contains("dark"));
-  }, []);
-  const toggleTheme = () => {
-    const html = document.documentElement;
-    const newTheme = !isDark;
-    setIsDark(newTheme);
 
-    if (newTheme) {
+    // Force dark mode on by default
+    if (!html.classList.contains("dark")) {
       html.classList.add("dark");
-    } else {
-      html.classList.remove("dark");
+      setIsDark(true);
     }
+  }, []);
+
+  const handleThemeToggleAttempt = () => {
+    // Show popup instead of switching themes
+    setShowWrongAnswerDialog(true);
   };
   const handleSettingsClick = () => {
     if (!isSignedIn) {
@@ -118,9 +127,9 @@ export default function TopRightIconHolder({
             aria-label="Settings"
           >
             <Settings className="h-4 w-4" />
-          </button>
+          </button>{" "}
           <button
-            onClick={toggleTheme}
+            onClick={handleThemeToggleAttempt}
             className={cn(
               "ml-2 flex size-7 items-center justify-center rounded-lg transition-colors",
               "hover:bg-sidebar-accent/30 focus:ring-sidebar-ring focus:ring-1 focus:outline-none",
@@ -134,13 +143,38 @@ export default function TopRightIconHolder({
               <Moon className="h-4 w-4" />
             )}
           </button>
-        </div>
+        </div>{" "}
         {children && (
           <div className="pointer-events-auto absolute inset-0 flex items-center justify-center">
             {children}
           </div>
         )}
       </div>
+      {/* Wrong Answer Dialog */}
+      <Dialog
+        open={showWrongAnswerDialog}
+        onOpenChange={setShowWrongAnswerDialog}
+      >
+        <DialogContent className="bg-background border-border sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="text-foreground text-lg font-semibold">
+              Wrong Answer! 🌙
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground text-sm">
+              Nice try, but we&apos;re sticking to dark mode. Dark mode is
+              superior and there&apos;s no going back!
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end">
+            <Button
+              onClick={() => setShowWrongAnswerDialog(false)}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              Accept Dark Mode Supremacy
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
