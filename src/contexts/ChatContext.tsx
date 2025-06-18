@@ -731,7 +731,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                   prompt: string;
                 };
               };
-
               if (jsonResponse.generatedImage) {
                 // Handle image generation response
                 const imageUrl = jsonResponse.generatedImage.url;
@@ -762,6 +761,43 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                   branchId,
                   aiMessage.files,
                 );
+
+                // Generate and update title for new chats (specifically for image generation)
+                if (isNewChat) {
+                  void (async () => {
+                    try {
+                      const titleGenResponse = await fetch(
+                        "/api/chats/generate-title",
+                        {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ message }),
+                        },
+                      );
+                      if (titleGenResponse.ok) {
+                        const { title } =
+                          (await titleGenResponse.json()) as GenerateTitleResponse;
+                        // Update title in DB
+                        void fetch(`/api/chats/${chatId}`, {
+                          method: "PATCH",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ title }),
+                        });
+                        // Update title in UI
+                        setChats((prev) =>
+                          prev.map((c) =>
+                            c.id === chatId ? { ...c, title } : c,
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      console.error(
+                        "Title generation failed for image generation:",
+                        e,
+                      );
+                    }
+                  })();
+                }
 
                 setIsGeneratingResponse(false);
                 return; // Exit early for image generation
