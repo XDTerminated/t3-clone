@@ -49,42 +49,53 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.129 0.042 264.695);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.129 0.042 264.695);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.129 0.042 264.695);
-  --primary: oklch(0.263 0.108 351.5);
-  --primary-foreground: oklch(0.984 0.003 247.858);
-  --secondary: oklch(0.968 0.007 247.896);
-  --secondary-foreground: oklch(0.208 0.042 265.755);
-  --muted: oklch(0.968 0.007 247.896);
-  --muted-foreground: oklch(0.554 0.046 257.417);
-  --accent: oklch(0.968 0.007 247.896);
-  --accent-foreground: oklch(0.208 0.042 265.755);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.929 0.013 255.508);
-  --input: oklch(0.929 0.013 255.508);
-  --ring: oklch(0.704 0.04 256.788);
+  /* Clean purple/pink themed light mode */
+  --background: #f8f4f9; /* Light purple background like in the image */
+  --foreground: #4a044e; /* Dark purple text */
+  /* Clean card colors */
+  --card: #ffffff; /* Pure white cards */
+  --card-foreground: #4a044e;
+  /* Clean popover */
+  --popover: #ffffff;
+  --popover-foreground: #4a044e;
+  /* Keep primary button color for consistency */
+  --primary: #d56698; /* Pink button color */
+  --primary-foreground: #ffffff;
+  /* Clean secondary colors */
+  --secondary: #f3e8ff; /* Light purple secondary */
+  --secondary-foreground: #6b21a8;
+  /* Clean muted colors */
+  --muted: #f3e8ff; /* Light purple muted */
+  --muted-foreground: #9333ea; /* Purple muted text */
+  /* Clean accent */
+  --accent: #f3e8ff;
+  --accent-foreground: #6b21a8;
+  /* Clean destructive */
+  --destructive: #ef4444;
+  /* Clean borders */
+  --border: #e9d5ff; /* Purple border */
+  --input: #e9d5ff; /* Purple input border */
+  --ring: #a855f7; /* Purple focus ring */
+  /* Charts */
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.984 0.003 247.858);
-  --sidebar-foreground: #f5d0fe;
-  --sidebar-primary: oklch(0.208 0.042 265.755);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: #261922;
-  --sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --sidebar-border: var(--sidebar-border);
-  --sidebar-ring: var(--sidebar-ring);
+  /* Purple themed sidebar */
+  --sidebar: #f8f4f9; /* Same as main background */
+  --sidebar-foreground: #4a044e;
+  --sidebar-primary: #4a044e;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f3e8ff;
+  --sidebar-accent-foreground: #6b21a8;
+  --sidebar-border: #e9d5ff;
+  --sidebar-ring: #a855f7;
 
   /* Custom scrollbar variables for light mode */
-  --scrollbar-thumb-light: oklch(0.65 0.01 270);
-  --scrollbar-thumb-hover-light: oklch(0.55 0.01 270);
-  --scrollbar-track-light: oklch(1 0 0);
+  --scrollbar-thumb-light: #c084fc;
+  --scrollbar-thumb-hover-light: #a855f7;
+  --scrollbar-track-light: #f8f4f9;
 }
 
 .dark {
@@ -164,6 +175,9 @@
 /* Style custom scrollbar for Chatbox textarea */
 #chat-input {
   scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb-light) transparent;
+}
+.dark #chat-input {
   scrollbar-color: var(--scrollbar-thumb-dark) transparent;
 }
 #chat-input::-webkit-scrollbar {
@@ -173,10 +187,16 @@
   background: transparent;
 }
 #chat-input::-webkit-scrollbar-thumb {
-  background-color: var(--scrollbar-thumb-dark);
+  background-color: var(--scrollbar-thumb-light);
   border-radius: 3px;
 }
+.dark #chat-input::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb-dark);
+}
 #chat-input::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-thumb-hover-light);
+}
+.dark #chat-input::-webkit-scrollbar-thumb:hover {
   background-color: var(--scrollbar-thumb-hover-dark);
 }
 
@@ -268,11 +288,11 @@
   .dark ::-webkit-scrollbar-thumb:hover {
     background: var(--scrollbar-thumb-hover-dark); /* Dark mode thumb hover */
   }
-
   /* For Firefox */
   html {
     scrollbar-width: thin;
     scrollbar-color: var(--scrollbar-thumb-light) var(--scrollbar-track-light); /* thumb track for light mode */
+    background: var(--background); /* Ensure solid background for light mode */
   }
 
   html.dark {
@@ -668,9 +688,13 @@
 }
 
 .sidebar-chat-gradient {
-  background: linear-gradient(to left, var(--sidebar-accent), transparent);
+  background: transparent; /* No gradient in light mode */
   opacity: 0;
   transition: opacity 0.15s ease-in-out;
+}
+
+.dark .sidebar-chat-gradient {
+  background: linear-gradient(to left, var(--sidebar-accent), transparent);
 }
 
 .sidebar-chat-item:hover .sidebar-chat-gradient {

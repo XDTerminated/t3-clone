@@ -34,7 +34,7 @@ export default function ContentWrapper({
         <main
           ref={mainRef}
           className={cn(
-            "main-chat-container flex-grow overflow-y-scroll bg-[radial-gradient(ellipse_at_center,var(--background)_20%,oklch(0.235_0.017_290)_100%)]",
+            "main-chat-container bg-background flex-grow overflow-y-scroll dark:bg-[radial-gradient(ellipse_at_center,var(--background)_20%,oklch(0.235_0.017_290)_100%)]",
             "border-t border-l transition-colors duration-100 ease-linear",
             open
               ? "border-sidebar-border rounded-tl-2xl"

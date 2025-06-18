@@ -131,13 +131,13 @@ export function Chatbox({ onSend }: { onSend: (data: ChatMessage) => void }) {
     >
       {" "}
       {/* Outermost ring border wrapper */}
-      <div className="w-full max-w-4xl rounded-t-2xl border border-b-0 border-[#302435] bg-transparent p-[1px] shadow-none">
+      <div className="border-border w-full max-w-4xl rounded-t-2xl border border-b-0 bg-transparent p-[1px] shadow-none dark:border-[#302435]">
         {/* Outer thin border wrapper */}
-        <div className="w-full max-w-4xl rounded-t-2xl bg-[hsla(270,10%,20%,0.4)] p-2 pb-0 shadow-none backdrop-blur-lg">
+        <div className="bg-card w-full max-w-4xl rounded-t-2xl p-2 pb-0 shadow-none backdrop-blur-lg dark:bg-[hsla(270,10%,20%,0.4)]">
           {" "}
           {/* Form now directly contains the styling previously on an inner div */}
           <form
-            className="text-secondary-foreground relative flex w-full flex-col items-stretch gap-2 rounded-t-lg border border-b-0 border-white/70 bg-[hsla(270,10%,20%,0.4)] px-3 pt-3 pb-6 outline-8 outline-[hsla(289,23%,23%,0.5)] sm:pb-3 dark:border-[hsla(0,0%,83%,0.04)] dark:bg-[hsla(273.8,15.1%,20.8%,0.045)] dark:outline-[hsla(270,16.13%,12.16%,0.4)]"
+            className="text-secondary-foreground border-border bg-card outline-border relative flex w-full flex-col items-stretch gap-2 rounded-t-lg border border-b-0 px-3 pt-3 pb-6 outline-8 sm:pb-3 dark:border-[hsla(0,0%,83%,0.04)] dark:bg-[hsla(273.8,15.1%,20.8%,0.045)] dark:outline-[hsla(270,16.13%,12.16%,0.4)]"
             onSubmit={onSubmit}
           >
             {" "}
