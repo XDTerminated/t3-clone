@@ -4,7 +4,7 @@ A modern, theme-aware AI chat application built with the [T3 Stack](https://crea
 
 ## 🚀 Features
 
-### 🤖 AI Model Integrations
+### 🤖 AI Model Integrations (Keys Required)
 
 - **Google Gemini Models**: Direct Google SDK integration with latest models
 
@@ -14,13 +14,13 @@ A modern, theme-aware AI chat application built with the [T3 Stack](https://crea
   - Gemini 2.5 Flash (vision, search, PDF, files, thinking)
   - Gemini 2.5 Pro (vision, search, PDF, files, reasoning, thinking)
 
-- **Groq Models** (Free):
+- **Groq Models**:
 
   - DeepSeek R1 Distill Llama 70B (reasoning, thinking)
   - Llama 4 Maverick 17B
   - Qwen 3 32B (reasoning, thinking)
 
-- **OpenRouter Models** (API key required):
+- **OpenRouter Models**:
   - Claude 3.5 Sonnet & Claude 4 Sonnet (vision, files, reasoning)
   - DeepSeek Chat V3 & R1 (reasoning)
   - GPT-4o (vision, files, reasoning)
