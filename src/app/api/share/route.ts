@@ -1,13 +1,16 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { customAlphabet } from "nanoid";
 import { prisma } from "~/lib/prisma";
 
-// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
-const nanoid: () => string = customAlphabet(
-  "abcdefghijklmnopqrstuvwxyz0123456789",
-  8,
-);
+// Generate a random token without external dependencies
+function generateShareToken(length = 8): string {
+  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+  let result = "";
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
 
 export async function POST(req: Request) {
   const { userId } = await auth();
@@ -33,7 +36,7 @@ export async function POST(req: Request) {
     const sharedChat = await prisma.sharedChat.create({
       data: {
         chatId: chatId,
-        token: nanoid(),
+        token: generateShareToken(),
         userId: userId,
       },
     });
