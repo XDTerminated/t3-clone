@@ -11,7 +11,6 @@ export const env = createEnv({
     DATABASE_URL: z.string(),
     GEMINI_API_KEY: z.string(),
     CLERK_SECRET_KEY: z.string(),
-    UPLOADTHING_SECRETKEY: z.string(),
     UPLOADTHING_TOKEN: z.string(),
   },
   /**
@@ -31,7 +30,6 @@ export const env = createEnv({
     DATABASE_URL: process.env.DATABASE_URL,
     GEMINI_API_KEY: process.env.GEMINI_API_KEY,
     CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY,
-    UPLOADTHING_SECRETKEY: process.env.UPLOADTHING_SECRETKEY,
     UPLOADTHING_TOKEN: process.env.UPLOADTHING_TOKEN,
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:
       process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
