@@ -52,7 +52,7 @@ export function ContextMenu({ children, items }: ContextMenuProps) {
       {isOpen && (
         <div
           ref={menuRef}
-          className="bg-popover text-popover-foreground fixed z-50 min-w-[160px] rounded-md border p-1 shadow-lg"
+          className="context-menu-animate bg-popover text-popover-foreground fixed z-50 min-w-[160px] rounded-md border p-1 shadow-lg"
           style={{
             left: position.x,
             top: position.y,

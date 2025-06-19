@@ -9,44 +9,96 @@ import {
 } from "react";
 
 interface ApiKeyContextType {
-  apiKey: string | null;
-  setApiKey: (key: string) => void;
-  hasApiKey: boolean;
-  clearApiKey: () => void;
+  openRouterApiKey: string | null;
+  geminiApiKey: string | null;
+  groqApiKey: string | null;
+  setOpenRouterApiKey: (key: string) => void;
+  setGeminiApiKey: (key: string) => void;
+  setGroqApiKey: (key: string) => void;
+  hasOpenRouterKey: boolean;
+  hasGeminiKey: boolean;
+  hasGroqKey: boolean;
+  hasAnyKey: boolean;
+  clearApiKeys: () => void;
   isLoaded: boolean;
 }
 
 const ApiKeyContext = createContext<ApiKeyContextType | undefined>(undefined);
 
-const API_KEY_STORAGE_KEY = "openrouter_api_key";
+const OPENROUTER_API_KEY_STORAGE_KEY = "openrouter_api_key";
+const GEMINI_API_KEY_STORAGE_KEY = "gemini_api_key";
+const GROQ_API_KEY_STORAGE_KEY = "groq_api_key";
 
 export function ApiKeyProvider({ children }: { children: ReactNode }) {
-  const [apiKey, setApiKeyState] = useState<string | null>(null);
+  const [openRouterApiKey, setOpenRouterApiKeyState] = useState<string | null>(
+    null,
+  );
+  const [geminiApiKey, setGeminiApiKeyState] = useState<string | null>(null);
+  const [groqApiKey, setGroqApiKeyState] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
-
-  // Load API key from localStorage on mount
+  // Load API keys from localStorage on mount
   useEffect(() => {
-    const stored = localStorage.getItem(API_KEY_STORAGE_KEY);
-    if (stored) {
-      setApiKeyState(stored);
+    const storedOpenRouter = localStorage.getItem(
+      OPENROUTER_API_KEY_STORAGE_KEY,
+    );
+    const storedGemini = localStorage.getItem(GEMINI_API_KEY_STORAGE_KEY);
+    const storedGroq = localStorage.getItem(GROQ_API_KEY_STORAGE_KEY);
+
+    if (storedOpenRouter) {
+      setOpenRouterApiKeyState(storedOpenRouter);
+    }
+    if (storedGemini) {
+      setGeminiApiKeyState(storedGemini);
+    }
+    if (storedGroq) {
+      setGroqApiKeyState(storedGroq);
     }
     setIsLoaded(true);
   }, []);
-
-  const setApiKey = (key: string) => {
-    setApiKeyState(key);
-    localStorage.setItem(API_KEY_STORAGE_KEY, key);
+  const setOpenRouterApiKey = (key: string) => {
+    setOpenRouterApiKeyState(key);
+    localStorage.setItem(OPENROUTER_API_KEY_STORAGE_KEY, key);
   };
 
-  const clearApiKey = () => {
-    setApiKeyState(null);
-    localStorage.removeItem(API_KEY_STORAGE_KEY);
+  const setGeminiApiKey = (key: string) => {
+    setGeminiApiKeyState(key);
+    localStorage.setItem(GEMINI_API_KEY_STORAGE_KEY, key);
   };
-  const hasApiKey = Boolean(apiKey);
+
+  const setGroqApiKey = (key: string) => {
+    setGroqApiKeyState(key);
+    localStorage.setItem(GROQ_API_KEY_STORAGE_KEY, key);
+  };
+  const clearApiKeys = () => {
+    setOpenRouterApiKeyState(null);
+    setGeminiApiKeyState(null);
+    setGroqApiKeyState(null);
+    localStorage.removeItem(OPENROUTER_API_KEY_STORAGE_KEY);
+    localStorage.removeItem(GEMINI_API_KEY_STORAGE_KEY);
+    localStorage.removeItem(GROQ_API_KEY_STORAGE_KEY);
+  };
+
+  const hasOpenRouterKey = Boolean(openRouterApiKey);
+  const hasGeminiKey = Boolean(geminiApiKey);
+  const hasGroqKey = Boolean(groqApiKey);
+  const hasAnyKey = hasOpenRouterKey || hasGeminiKey || hasGroqKey;
 
   return (
     <ApiKeyContext.Provider
-      value={{ apiKey, setApiKey, hasApiKey, clearApiKey, isLoaded }}
+      value={{
+        openRouterApiKey,
+        geminiApiKey,
+        groqApiKey,
+        setOpenRouterApiKey,
+        setGeminiApiKey,
+        setGroqApiKey,
+        hasOpenRouterKey,
+        hasGeminiKey,
+        hasGroqKey,
+        hasAnyKey,
+        clearApiKeys,
+        isLoaded,
+      }}
     >
       {isLoaded && children}
     </ApiKeyContext.Provider>

@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { prisma } from "~/lib/prisma";
+import { prisma, withRetry } from "~/lib/prisma";
 import {
   OpenRouterAPI,
+  GeminiAPI,
   GoogleGeminiAPI,
+  GroqAPI,
   DEFAULT_MODEL,
+  isGeminiModel,
+  isImageGenerationModel,
+  isGroqModel,
 } from "~/lib/openrouter";
 
 // HACK: Manual type definition to avoid client-side import issues
@@ -21,10 +26,26 @@ type ChatRequest = {
   chatId?: string;
   history?: Array<{ sender: string; text: string }>;
   model?: string;
-  apiKey?: string; // User's OpenRouter API key
+  openRouterApiKey?: string; // User's OpenRouter API key
+  geminiApiKey?: string; // User's Gemini API key
+  groqApiKey?: string; // User's Groq API key
   searchEnabled?: boolean;
   files?: UploadFileResponse[];
+  thinkingEnabled?: boolean;
+  thinkingBudget?: number;
 };
+
+// Helper function to check if a model supports thinking
+function modelSupportsThinking(modelId: string): boolean {
+  const thinkingModels = [
+    "gemini-2.0-flash-thinking-exp",
+    "gemini-2.5-flash-preview-05-20",
+    "gemini-2.5-pro-preview-06-05",
+    "deepseek-r1-distill-llama-70b",
+    "qwen/qwen3-32b",
+  ];
+  return thinkingModels.includes(modelId);
+}
 
 export async function POST(request: Request) {
   let promptContents: string[];
@@ -37,14 +58,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    requestBody = (await request.json()) as ChatRequest;
-
-    // If chatId is provided, load the conversation history from database
+    requestBody = (await request.json()) as ChatRequest; // If chatId is provided, load the conversation history from database
     if (requestBody.chatId && typeof requestBody.chatId === "string") {
       try {
         // Verify the chat belongs to the user
-        const chat = await prisma.chat.findFirst({
-          where: { id: requestBody.chatId, userId },
+        const chat = await withRetry(async () => {
+          return await prisma.chat.findFirst({
+            where: { id: requestBody.chatId, userId },
+          });
         });
 
         if (!chat) {
@@ -55,9 +76,11 @@ export async function POST(request: Request) {
         }
 
         // Get messages for the chat
-        const messages = await prisma.message.findMany({
-          where: { chatId: requestBody.chatId },
-          orderBy: { createdAt: "asc" },
+        const messages = await withRetry(async () => {
+          return await prisma.message.findMany({
+            where: { chatId: requestBody.chatId },
+            orderBy: { createdAt: "asc" },
+          });
         });
 
         // Convert database messages to conversation format
@@ -122,31 +145,50 @@ export async function POST(request: Request) {
     }
   } catch {
     return NextResponse.json({ error: "Malformed JSON" }, { status: 400 });
-  }
-  if (!requestBody.apiKey) {
+  } // Use the specified model or default
+  const selectedModel = requestBody.model ?? DEFAULT_MODEL.id;
+  // Determine which API to use based on the model
+  const useGeminiAPI = isGeminiModel(selectedModel);
+  const useGroqAPI = isGroqModel(selectedModel);
+  const isImageGen = isImageGenerationModel(selectedModel);
+
+  // Validate that we have the appropriate API key
+  if (useGeminiAPI && !requestBody.geminiApiKey) {
     return NextResponse.json(
-      { error: "OpenRouter API key is required" },
+      { error: "Gemini API key is required for Gemini models" },
+      { status: 400 },
+    );
+  }
+
+  if (useGroqAPI && !requestBody.groqApiKey) {
+    return NextResponse.json(
+      { error: "Groq API key is required for Groq models" },
+      { status: 400 },
+    );
+  }
+
+  if (!useGeminiAPI && !useGroqAPI && !requestBody.openRouterApiKey) {
+    return NextResponse.json(
+      {
+        error: "OpenRouter API key is required for non-Gemini/non-Groq models",
+      },
       { status: 400 },
     );
   }
   try {
-    // Use the specified model or default
-    const selectedModel = requestBody.model ?? DEFAULT_MODEL.id; // Check if this is an image generation request
-    const isImageGeneration =
-      selectedModel === "gemini-2.0-flash-preview-image-generation";
-    if (isImageGeneration) {
+    // Check if this is an image generation request
+    if (isImageGen) {
       // Handle image generation with Google Gemini
-      const geminiApiKey = process.env.GEMINI_API_KEY;
-      if (!geminiApiKey?.trim()) {
+      if (!requestBody.geminiApiKey?.trim()) {
         return NextResponse.json(
           {
-            error: "Google API key not configured. Please contact support.",
+            error: "Google API key is required for image generation.",
           },
-          { status: 500 },
+          { status: 400 },
         );
       }
 
-      const geminiApi = new GoogleGeminiAPI(geminiApiKey);
+      const geminiApi = new GoogleGeminiAPI(requestBody.geminiApiKey);
 
       // Get the latest user message as the image prompt
       const userPrompt =
@@ -214,182 +256,408 @@ export async function POST(request: Request) {
         return "You are a helpful AI assistant.";
       }
     };
-    const openRouter = new OpenRouterAPI(requestBody.apiKey);
 
-    // Convert conversation history to OpenRouter format
-    const messages: Array<{
-      role: "system" | "user" | "assistant";
-      content: string;
-    }> = [
-      {
-        role: "system",
-        content: `${getModelIdentity(selectedModel)} Use the conversation history to provide clear, accurate, and detailed answers. Respond naturally without adding any role prefixes or labels, and only output the answer text. Follow the tone of the user.`,
-      },
-    ];
+    // Route to appropriate API based on model
+    if (useGeminiAPI) {
+      // Use Gemini API for Gemini models
+      const geminiApi = new GeminiAPI(requestBody.geminiApiKey!);
 
-    // Add conversation history
-    for (const content of promptContents) {
-      if (content.startsWith("User: ")) {
-        messages.push({
-          role: "user",
-          content: content.substring(6), // Remove "User: " prefix
-        });
-      } else if (content.startsWith("AI: ")) {
-        messages.push({
-          role: "assistant",
-          content: content.substring(4), // Remove "AI: " prefix
-        });
+      // Convert conversation history to Gemini format
+      const messages: Array<{
+        role: "system" | "user" | "assistant";
+        content: string;
+      }> = [
+        {
+          role: "system",
+          content: `${getModelIdentity(selectedModel)} Use the conversation history to provide clear, accurate, and detailed answers. Respond naturally without adding any role prefixes or labels, and only output the answer text. Follow the tone of the user.`,
+        },
+      ];
+
+      // Add conversation history
+      for (const content of promptContents) {
+        if (content.startsWith("User: ")) {
+          messages.push({
+            role: "user",
+            content: content.substring(6), // Remove "User: " prefix
+          });
+        } else if (content.startsWith("AI: ")) {
+          messages.push({
+            role: "assistant",
+            content: content.substring(4), // Remove "AI: " prefix
+          });
+        }
+      } // For thinking-capable models, always enable thinking
+      const supportsThinking = modelSupportsThinking(selectedModel);
+      const response = await geminiApi.generateChatStream(
+        messages,
+        selectedModel,
+        {
+          searchEnabled: requestBody.searchEnabled,
+          files: requestBody.files,
+          thinkingEnabled: supportsThinking
+            ? true
+            : requestBody.thinkingEnabled,
+          thinkingBudget: requestBody.thinkingBudget,
+        },
+      );
+      return response;
+    } else if (useGroqAPI) {
+      // Use Groq API for Groq models
+      const groqApi = new GroqAPI(requestBody.groqApiKey!);
+
+      // Convert conversation history to Groq format
+      const messages: Array<{
+        role: "system" | "user" | "assistant";
+        content: string;
+      }> = [
+        {
+          role: "system",
+          content: `${getModelIdentity(selectedModel)} Use the conversation history to provide clear, accurate, and detailed answers. Respond naturally without adding any role prefixes or labels, and only output the answer text. Follow the tone of the user.`,
+        },
+      ];
+
+      // Add conversation history
+      for (const content of promptContents) {
+        if (content.startsWith("User: ")) {
+          messages.push({
+            role: "user",
+            content: content.substring(6), // Remove "User: " prefix
+          });
+        } else if (content.startsWith("AI: ")) {
+          messages.push({
+            role: "assistant",
+            content: content.substring(4), // Remove "AI: " prefix
+          });
+        }
       }
-    }
-    const response = await openRouter.generateChatStream(
-      messages,
-      selectedModel,
-      {
-        searchEnabled: requestBody.searchEnabled,
-        files: requestBody.files,
-      },
-    );
 
-    const encoder = new TextEncoder();
-    const responseStream = new ReadableStream({
-      async start(controller) {
-        const reader = response.body!.getReader();
-        const decoder = new TextDecoder();
-        try {
-          let buffer = "";
+      // For thinking-capable models, always enable thinking
+      const supportsThinking = modelSupportsThinking(selectedModel);
+      const response = await groqApi.generateChatStream(
+        messages,
+        selectedModel,
+        {
+          searchEnabled: requestBody.searchEnabled,
+          files: requestBody.files,
+          thinkingEnabled: supportsThinking
+            ? true
+            : requestBody.thinkingEnabled,
+          thinkingBudget: requestBody.thinkingBudget,
+        },
+      );
+      const encoder = new TextEncoder();
+      const responseStream = new ReadableStream({
+        async start(controller) {
+          const reader = response.body!.getReader();
+          const decoder = new TextDecoder();
+          try {
+            let buffer = "";
+            let insideThinkTag = false;
+            let currentThinking = "";
 
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
 
-            const chunk = decoder.decode(value, { stream: true });
-            buffer += chunk;
+              buffer += decoder.decode(value, { stream: true });
+              const lines = buffer.split("\n");
+              buffer = lines.pop() ?? "";
 
-            // Split on double newlines to separate complete SSE events
-            const events = buffer.split(/\r?\n\r?\n/);
-            buffer = events.pop() ?? ""; // Keep the incomplete event in buffer
+              for (const line of lines) {
+                if (line.trim() === "") continue;
+                if (line.startsWith("data: ")) {
+                  const data = line.slice(6);
+                  if (data === "[DONE]") {
+                    controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+                    continue;
+                  }
 
-            for (const event of events) {
-              const lines = event.split(/\r?\n/);
+                  try {
+                    const parsed = JSON.parse(data) as {
+                      choices?: Array<{
+                        delta?: {
+                          content?: string;
+                        };
+                      }>;
+                    };
+                    const content = parsed.choices?.[0]?.delta?.content;
+                    if (content && typeof content === "string") {
+                      // Check for thinking tags
+                      if (content.includes("<think>")) {
+                        insideThinkTag = true;
+                        const thinkStart = content.indexOf("<think>");
+                        if (thinkStart >= 0) {
+                          // Send any content before <think> as regular token
+                          const beforeThink = content.substring(0, thinkStart);
+                          if (beforeThink) {
+                            const payload = JSON.stringify({
+                              token: beforeThink,
+                              reasoning: "",
+                            });
+                            controller.enqueue(
+                              encoder.encode(`data: ${payload}\n\n`),
+                            );
+                          }
+                          // Start collecting thinking content
+                          currentThinking += content.substring(thinkStart + 7); // Skip "<think>"
+                        }
+                      } else if (content.includes("</think>")) {
+                        insideThinkTag = false;
+                        const thinkEnd = content.indexOf("</think>");
+                        if (thinkEnd >= 0) {
+                          // Add content before </think> to thinking
+                          currentThinking += content.substring(0, thinkEnd);
+                          // Send the complete thinking
+                          if (currentThinking.trim()) {
+                            const payload = JSON.stringify({
+                              token: "",
+                              reasoning: currentThinking.trim(),
+                            });
+                            controller.enqueue(
+                              encoder.encode(`data: ${payload}\n\n`),
+                            );
+                          }
+                          // Send any content after </think> as regular token
+                          const afterThink = content.substring(thinkEnd + 8); // Skip "</think>"
+                          if (afterThink) {
+                            const payload = JSON.stringify({
+                              token: afterThink,
+                              reasoning: "",
+                            });
+                            controller.enqueue(
+                              encoder.encode(`data: ${payload}\n\n`),
+                            );
+                          }
+                          currentThinking = "";
+                        }
+                      } else if (insideThinkTag) {
+                        // We're inside thinking tags, accumulate content
+                        currentThinking += content;
+                        // Send thinking content in real-time
+                        const payload = JSON.stringify({
+                          token: "",
+                          reasoning: content,
+                        });
+                        controller.enqueue(
+                          encoder.encode(`data: ${payload}\n\n`),
+                        );
+                      } else {
+                        // Regular content outside thinking tags
+                        const payload = JSON.stringify({
+                          token: content,
+                          reasoning: "",
+                        });
+                        controller.enqueue(
+                          encoder.encode(`data: ${payload}\n\n`),
+                        );
+                      }
+                    }
+                  } catch {
+                    // Skip malformed JSON
+                  }
+                }
+              }
+            }
 
+            controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+            controller.close();
+          } catch (error) {
+            console.error("Error processing Groq stream:", error);
+            controller.error(error);
+          }
+        },
+      });
+
+      return new Response(responseStream, {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache, no-transform",
+          Connection: "keep-alive",
+        },
+      });
+    } else {
+      // Use OpenRouter for other models
+      const openRouter = new OpenRouterAPI(requestBody.openRouterApiKey!);
+
+      // Convert conversation history to OpenRouter format
+      const messages: Array<{
+        role: "system" | "user" | "assistant";
+        content: string;
+      }> = [
+        {
+          role: "system",
+          content: `${getModelIdentity(selectedModel)} Use the conversation history to provide clear, accurate, and detailed answers. Respond naturally without adding any role prefixes or labels, and only output the answer text. Follow the tone of the user.`,
+        },
+      ];
+
+      // Add conversation history
+      for (const content of promptContents) {
+        if (content.startsWith("User: ")) {
+          messages.push({
+            role: "user",
+            content: content.substring(6), // Remove "User: " prefix
+          });
+        } else if (content.startsWith("AI: ")) {
+          messages.push({
+            role: "assistant",
+            content: content.substring(4), // Remove "AI: " prefix
+          });
+        }
+      } // For thinking-capable models, always enable thinking
+      const supportsThinking = modelSupportsThinking(selectedModel);
+      const response = await openRouter.generateChatStream(
+        messages,
+        selectedModel,
+        {
+          searchEnabled: requestBody.searchEnabled,
+          files: requestBody.files,
+          thinkingEnabled: supportsThinking
+            ? true
+            : requestBody.thinkingEnabled,
+          thinkingBudget: requestBody.thinkingBudget,
+        },
+      );
+
+      const encoder = new TextEncoder();
+      const responseStream = new ReadableStream({
+        async start(controller) {
+          const reader = response.body!.getReader();
+          const decoder = new TextDecoder();
+          try {
+            let buffer = "";
+
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+
+              const chunk = decoder.decode(value, { stream: true });
+              buffer += chunk;
+
+              // Split on double newlines to separate complete SSE events
+              const events = buffer.split(/\r?\n\r?\n/);
+              buffer = events.pop() ?? ""; // Keep the incomplete event in buffer
+
+              for (const event of events) {
+                const lines = event.split(/\r?\n/);
+
+                for (const line of lines) {
+                  if (line.startsWith("data: ")) {
+                    const data = line.slice(6).trim();
+                    if (data === "[DONE]") {
+                      console.log("Stream completed with [DONE]");
+                      controller.close();
+                      return;
+                    }
+
+                    if (!data) continue; // Skip empty data lines
+
+                    try {
+                      const parsed = JSON.parse(data) as {
+                        choices?: Array<{
+                          delta?: {
+                            content?: string;
+                            reasoning?: string;
+                          };
+                          finish_reason?: string;
+                        }>;
+                      };
+
+                      const choice = parsed.choices?.[0];
+                      if (!choice) continue;
+
+                      const token = choice.delta?.content ?? "";
+                      const reasoning = choice.delta?.reasoning ?? "";
+
+                      // Log for debugging web search
+                      if (requestBody.searchEnabled && (token || reasoning)) {
+                        console.log("Web search streaming:", {
+                          tokenLength: token.length,
+                          reasoningLength: reasoning.length,
+                          finishReason: choice.finish_reason,
+                        });
+                      }
+
+                      if (token || reasoning) {
+                        const payload = JSON.stringify({
+                          token: token || "",
+                          reasoning: reasoning || "",
+                        });
+                        controller.enqueue(
+                          encoder.encode(`data: ${payload}\n\n`),
+                        );
+                      }
+                    } catch (parseError) {
+                      console.log(
+                        "JSON parse error:",
+                        parseError,
+                        "Data:",
+                        data.substring(0, 100),
+                      );
+                      // Skip invalid JSON lines
+                      continue;
+                    }
+                  }
+                }
+              }
+            }
+
+            // Process any remaining buffer content at the end
+            if (buffer.trim()) {
+              console.log(
+                "Processing remaining buffer:",
+                buffer.substring(0, 100),
+              );
+              const lines = buffer.split(/\r?\n/);
               for (const line of lines) {
                 if (line.startsWith("data: ")) {
                   const data = line.slice(6).trim();
-                  if (data === "[DONE]") {
-                    console.log("Stream completed with [DONE]");
-                    controller.close();
-                    return;
-                  }
-
-                  if (!data) continue; // Skip empty data lines
-
-                  try {
-                    const parsed = JSON.parse(data) as {
-                      choices?: Array<{
-                        delta?: {
-                          content?: string;
-                          reasoning?: string;
-                        };
-                        finish_reason?: string;
-                      }>;
-                    };
-
-                    const choice = parsed.choices?.[0];
-                    if (!choice) continue;
-
-                    const token = choice.delta?.content ?? "";
-                    const reasoning = choice.delta?.reasoning ?? "";
-
-                    // Log for debugging web search
-                    if (requestBody.searchEnabled && (token || reasoning)) {
-                      console.log("Web search streaming:", {
-                        tokenLength: token.length,
-                        reasoningLength: reasoning.length,
-                        finishReason: choice.finish_reason,
-                      });
+                  if (data && data !== "[DONE]") {
+                    try {
+                      const parsed = JSON.parse(data) as {
+                        choices?: Array<{
+                          delta?: {
+                            content?: string;
+                            reasoning?: string;
+                          };
+                        }>;
+                      };
+                      const token = parsed.choices?.[0]?.delta?.content ?? "";
+                      const reasoning =
+                        parsed.choices?.[0]?.delta?.reasoning ?? "";
+                      if (token || reasoning) {
+                        const payload = JSON.stringify({
+                          token: token || "",
+                          reasoning: reasoning || "",
+                        });
+                        controller.enqueue(
+                          encoder.encode(`data: ${payload}\n\n`),
+                        );
+                      }
+                    } catch (finalError) {
+                      console.log("Final buffer parse error:", finalError);
                     }
-
-                    if (token || reasoning) {
-                      const payload = JSON.stringify({
-                        token: token || "",
-                        reasoning: reasoning || "",
-                      });
-                      controller.enqueue(
-                        encoder.encode(`data: ${payload}\n\n`),
-                      );
-                    }
-                  } catch (parseError) {
-                    console.log(
-                      "JSON parse error:",
-                      parseError,
-                      "Data:",
-                      data.substring(0, 100),
-                    );
-                    // Skip invalid JSON lines
-                    continue;
                   }
                 }
               }
             }
+          } catch (error) {
+            console.error("Stream reading error:", error);
+            controller.error(error);
+          } finally {
+            reader.releaseLock();
           }
-
-          // Process any remaining buffer content at the end
-          if (buffer.trim()) {
-            console.log(
-              "Processing remaining buffer:",
-              buffer.substring(0, 100),
-            );
-            const lines = buffer.split(/\r?\n/);
-            for (const line of lines) {
-              if (line.startsWith("data: ")) {
-                const data = line.slice(6).trim();
-                if (data && data !== "[DONE]") {
-                  try {
-                    const parsed = JSON.parse(data) as {
-                      choices?: Array<{
-                        delta?: {
-                          content?: string;
-                          reasoning?: string;
-                        };
-                      }>;
-                    };
-                    const token = parsed.choices?.[0]?.delta?.content ?? "";
-                    const reasoning =
-                      parsed.choices?.[0]?.delta?.reasoning ?? "";
-                    if (token || reasoning) {
-                      const payload = JSON.stringify({
-                        token: token || "",
-                        reasoning: reasoning || "",
-                      });
-                      controller.enqueue(
-                        encoder.encode(`data: ${payload}\n\n`),
-                      );
-                    }
-                  } catch (finalError) {
-                    console.log("Final buffer parse error:", finalError);
-                  }
-                }
-              }
-            }
-          }
-        } catch (error) {
-          console.error("Stream reading error:", error);
-          controller.error(error);
-        } finally {
-          reader.releaseLock();
-        }
-      },
-    });
-
-    return new Response(responseStream, {
-      headers: {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache, no-transform",
-        Connection: "keep-alive",
-      },
-    });
+        },
+      });
+      return new Response(responseStream, {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache, no-transform",
+          Connection: "keep-alive",
+        },
+      });
+    } // Close else block
   } catch (err) {
-    console.error("OpenRouter API error:", err);
+    console.error("API error:", err);
 
     // Check if it's an OpenRouter API error with specific status codes
     if (err instanceof Error && err.message.includes("OpenRouter API error:")) {

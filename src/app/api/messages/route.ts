@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { prisma } from "~/lib/prisma";
+import { prisma, withRetry } from "~/lib/prisma";
 
 export async function GET(request: Request) {
   try {
@@ -19,28 +19,30 @@ export async function GET(request: Request) {
         { error: "Missing chatId parameter" },
         { status: 400 },
       );
-    }
-
-    // Verify the chat belongs to the user
-    const chat = await prisma.chat.findFirst({
-      where: { id: chatId, userId },
+    } // Verify the chat belongs to the user
+    const chat = await withRetry(async () => {
+      return await prisma.chat.findFirst({
+        where: { id: chatId, userId },
+      });
     });
 
     if (!chat) {
       return NextResponse.json({ error: "Chat not found" }, { status: 404 });
     } // Get messages for the chat
-    const messages = await prisma.message.findMany({
-      where: branchId ? { chatId, branchId } : { chatId },
-      select: {
-        id: true,
-        content: true,
-        role: true,
-        files: true,
-        reasoning: true, // Include reasoning field
-        createdAt: true,
-        branchId: true,
-      },
-      orderBy: { createdAt: "asc" },
+    const messages = await withRetry(async () => {
+      return await prisma.message.findMany({
+        where: branchId ? { chatId, branchId } : { chatId },
+        select: {
+          id: true,
+          content: true,
+          role: true,
+          files: true,
+          reasoning: true, // Include reasoning field
+          createdAt: true,
+          branchId: true,
+        },
+        orderBy: { createdAt: "asc" },
+      });
     });
 
     return NextResponse.json({ messages });
@@ -79,11 +81,11 @@ export async function POST(request: Request) {
 
     if (role !== "user" && role !== "assistant") {
       return NextResponse.json({ error: "Invalid role" }, { status: 400 });
-    }
-
-    // Verify the chat belongs to the user
-    const chat = await prisma.chat.findFirst({
-      where: { id: chatId, userId },
+    } // Verify the chat belongs to the user
+    const chat = await withRetry(async () => {
+      return await prisma.chat.findFirst({
+        where: { id: chatId, userId },
+      });
     });
 
     if (!chat) {
@@ -92,8 +94,10 @@ export async function POST(request: Request) {
     let branch;
     if (branchId) {
       // Use the provided branchId
-      branch = await prisma.branch.findFirst({
-        where: { id: branchId, chatId },
+      branch = await withRetry(async () => {
+        return await prisma.branch.findFirst({
+          where: { id: branchId, chatId },
+        });
       });
       if (!branch) {
         return NextResponse.json(
@@ -103,26 +107,34 @@ export async function POST(request: Request) {
       }
     } else {
       // Get or create the 'Main' branch for this chat (fallback for old behavior)
-      branch = await prisma.branch.findFirst({
-        where: { chatId, name: "Main" },
+      branch = await withRetry(async () => {
+        return await prisma.branch.findFirst({
+          where: { chatId, name: "Main" },
+        });
       });
-      branch ??= await prisma.branch.create({ data: { chatId, name: "Main" } });
+      branch ??= await withRetry(async () => {
+        return await prisma.branch.create({ data: { chatId, name: "Main" } });
+      });
     } // Create the message, associating it with the branch
-    const message = await prisma.message.create({
-      data: {
-        chatId,
-        content,
-        role,
-        branchId: branch.id,
-        files: files ?? undefined,
-        reasoning: reasoning ?? undefined,
-      },
+    const message = await withRetry(async () => {
+      return await prisma.message.create({
+        data: {
+          chatId,
+          content,
+          role,
+          branchId: branch.id,
+          files: files ?? undefined,
+          reasoning: reasoning ?? undefined,
+        },
+      });
     });
 
     // Update the chat's updatedAt timestamp
-    await prisma.chat.update({
-      where: { id: chatId },
-      data: { updatedAt: new Date() },
+    await withRetry(async () => {
+      return await prisma.chat.update({
+        where: { id: chatId },
+        data: { updatedAt: new Date() },
+      });
     });
 
     return NextResponse.json({ message });

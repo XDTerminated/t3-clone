@@ -2,6 +2,24 @@
 
 This is a [T3 Stack](https://create.t3.gg/) project bootstrapped with `create-t3-app`.
 
+## Database Connection Improvements
+
+This app includes improved database connection handling to address intermittent connection issues with hosted databases like Neon:
+
+- **Automatic retry mechanism**: Database operations automatically retry up to 3 times with exponential backoff
+- **Connection pooling optimization**: Configured for better connection management
+- **Health check endpoint**: Visit `/api/health` to check database connectivity
+- **Enhanced error handling**: Better error messages and recovery for connection issues
+
+### Environment Variables
+
+For better database connection reliability with Neon, add these parameters to your `DATABASE_URL`:
+
+```
+DATABASE_URL="postgresql://username:password@host:5432/database?pgbouncer=true&connection_limit=1&pool_timeout=20&connect_timeout=60"
+DIRECT_DATABASE_URL="postgresql://username:password@host:5432/database"
+```
+
 ## What's next? How do I make an app with this?
 
 We try to keep this project as simple as possible, so you can start with just the scaffolding we set up for you, and add additional things later when they become necessary.

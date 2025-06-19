@@ -13,6 +13,16 @@ import { useAuth } from "@clerk/nextjs";
 import { useApiKey } from "./ApiKeyContext";
 import type { UploadFileResponse, ChatMessage } from "~/lib/types";
 
+// Helper function to check if a model supports thinking
+function modelSupportsThinking(modelId: string): boolean {
+  const thinkingModels = [
+    "gemini-2.0-flash-thinking-exp",
+    "gemini-2.5-flash-preview-05-20",
+    "gemini-2.5-pro-preview-06-05",
+  ];
+  return thinkingModels.includes(modelId);
+}
+
 // Types
 interface Chat {
   id: string;
@@ -61,7 +71,11 @@ interface ChatContextType {
   // API Key dialog state
   apiKeyDialogOpen: boolean;
   setApiKeyDialogOpen: (open: boolean) => void;
-  handleApiKeySubmit: (apiKey: string) => void;
+  handleApiKeySubmit: (keys: {
+    openRouterKey?: string;
+    geminiKey?: string;
+    groqKey?: string;
+  }) => void;
   // Settings dialog state
   settingsDialogOpen: boolean;
   setSettingsDialogOpen: (open: boolean) => void;
@@ -114,7 +128,16 @@ const ChatContext = createContext<ChatContextType | null>(null);
 
 export function ChatProvider({ children }: { children: React.ReactNode }) {
   const { selectedModel } = useModel();
-  const { hasApiKey, setApiKey, apiKey, isLoaded: apiKeyLoaded } = useApiKey();
+  const {
+    hasAnyKey,
+    setOpenRouterApiKey,
+    setGeminiApiKey,
+    setGroqApiKey,
+    openRouterApiKey,
+    geminiApiKey,
+    groqApiKey,
+    isLoaded: apiKeyLoaded,
+  } = useApiKey();
   const [chats, setChats] = useState<Chat[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const [messages, setMessages] = useState<
@@ -194,10 +217,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       setLoginDialogAction("chat");
       setLoginDialogOpen(true);
       return;
-    }
-
-    // Check if user has API key
-    if (!hasApiKey) {
+    } // Check if user has API key
+    if (!hasAnyKey) {
       setApiKeyDialogOpen(true);
       return;
     }
@@ -601,7 +622,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         setLoginDialogOpen(true);
         return Promise.resolve();
       }
-      if (!hasApiKey) {
+      if (!hasAnyKey) {
         setApiKeyDialogOpen(true);
         return Promise.resolve();
       }
@@ -615,7 +636,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       // Set generating state
       setIsGeneratingResponse(true);
 
-      const { message, searchEnabled, files } = data;
+      const { message, searchEnabled, files, thinkingEnabled, thinkingBudget } =
+        data;
+
+      // For thinking-capable models, always enable thinking
+      const supportsThinking = modelSupportsThinking(selectedModel.id);
+      const finalThinkingEnabled = supportsThinking ? true : thinkingEnabled;
       const userMessage = { sender: "User", text: message, files };
       const aiPlaceholder = { sender: "AI", text: "", files: undefined };
 
@@ -678,19 +704,21 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           }
 
           // Save user message in the background
-          void saveMessage(chatId, message, "user", branchId, files);
-
-          // Get AI response
+          void saveMessage(chatId, message, "user", branchId, files); // Get AI response
           const response = await fetch("/api/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               history: historyForApi,
               model: selectedModel.id,
-              apiKey,
+              openRouterApiKey,
+              geminiApiKey,
+              groqApiKey,
               searchEnabled,
               files,
               chatId,
+              thinkingEnabled: finalThinkingEnabled,
+              thinkingBudget,
             }),
           });
           if (!response.ok || !response.body) {
@@ -1030,13 +1058,15 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     },
     [
       isSignedIn,
-      hasApiKey,
+      hasAnyKey,
       isGeneratingResponse,
       messages,
       currentChatId,
       currentBranchId,
       selectedModel.id,
-      apiKey,
+      openRouterApiKey,
+      geminiApiKey,
+      groqApiKey,
       createNewChat,
       ensureBranchExists,
       saveMessage,
@@ -1337,11 +1367,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           const conversationHistory = initialMessages.map((msg) => ({
             sender: msg.sender,
             text: msg.text,
-          }));
-
-          // Extract files from the last user message for regeneration
+          })); // Extract files from the last user message for regeneration
           const lastUserMsg = initialMessages[userMessageIndex];
           const userFiles = lastUserMsg?.files;
+
+          // For thinking-capable models, always enable thinking
+          const supportsThinking = modelSupportsThinking(selectedModel.id);
 
           // Start AI response generation
           try {
@@ -1352,8 +1383,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                 chatId: currentChatId,
                 history: conversationHistory,
                 model: selectedModel.id,
-                apiKey: apiKey, // Send user's API key
+                openRouterApiKey: openRouterApiKey, // Send user's OpenRouter API key
+                geminiApiKey: geminiApiKey, // Send user's Gemini API key
+                groqApiKey: groqApiKey, // Send user's Groq API key
                 files: userFiles, // Include the files from the original user message
+                thinkingEnabled: supportsThinking, // Always enable for thinking-capable models
               }),
             });
 
@@ -1710,19 +1744,33 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   }, [branches, currentBranchId, isLoadingChat, messageAlternatives]);
   // Auto-show API key dialog when user is signed in but has no API key
   useEffect(() => {
-    if (apiKeyLoaded && isLoaded && isSignedIn && !hasApiKey) {
+    if (apiKeyLoaded && isLoaded && isSignedIn && !hasAnyKey) {
       setApiKeyDialogOpen(true);
     }
-  }, [apiKeyLoaded, isLoaded, isSignedIn, hasApiKey]);
+  }, [apiKeyLoaded, isLoaded, isSignedIn, hasAnyKey]);
 
   // Handle API key submission
   const handleApiKeySubmit = useCallback(
-    (apiKey: string) => {
-      setApiKey(apiKey);
+    (keys: {
+      openRouterKey?: string;
+      geminiKey?: string;
+      groqKey?: string;
+    }) => {
+      if (keys.openRouterKey) {
+        setOpenRouterApiKey(keys.openRouterKey);
+      }
+      if (keys.geminiKey) {
+        setGeminiApiKey(keys.geminiKey);
+      }
+      if (keys.groqKey) {
+        setGroqApiKey(keys.groqKey);
+      }
       setApiKeyDialogOpen(false);
     },
-    [setApiKey],
-  ); // Process queue when generation finishes
+    [setOpenRouterApiKey, setGeminiApiKey, setGroqApiKey],
+  );
+
+  // Process queue when generation finishes
   useEffect(() => {
     if (!isGeneratingResponse && queuedMessages.length > 0) {
       // Get the next message and remove it from queue

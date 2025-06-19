@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { prisma } from "~/lib/prisma";
+import { prisma, withRetry } from "~/lib/prisma";
 
 export async function GET() {
   try {
@@ -9,18 +9,21 @@ export async function GET() {
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const chats = await prisma.chat.findMany({
-      where: { userId },
-      orderBy: { updatedAt: "desc" },
-      // Remove messages include for faster initial load
-      select: {
-        id: true,
-        title: true,
-        userId: true,
-        createdAt: true,
-        updatedAt: true,
-        pinned: true,
-      },
+
+    const chats = await withRetry(async () => {
+      return await prisma.chat.findMany({
+        where: { userId },
+        orderBy: { updatedAt: "desc" },
+        // Remove messages include for faster initial load
+        select: {
+          id: true,
+          title: true,
+          userId: true,
+          createdAt: true,
+          updatedAt: true,
+          pinned: true,
+        },
+      });
     });
 
     return NextResponse.json({ chats });
@@ -40,19 +43,22 @@ export async function POST() {
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const chat = await prisma.chat.create({
-      data: {
-        userId,
-        title: null, // Will be generated later
-      },
+    const chat = await withRetry(async () => {
+      return await prisma.chat.create({
+        data: {
+          userId,
+          title: null, // Will be generated later
+        },
+      });
     }); // Ensure default branch exists, but don't block chat creation
     try {
-      await prisma.branch.create({
-        data: {
-          chatId: chat.id,
-          name: "Main",
-        },
+      await withRetry(async () => {
+        return await prisma.branch.create({
+          data: {
+            chatId: chat.id,
+            name: "Main",
+          },
+        });
       });
     } catch (branchError: unknown) {
       console.error("Error creating default branch:", branchError);

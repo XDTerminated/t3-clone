@@ -48,128 +48,105 @@
 }
 
 :root {
-  --radius: 0.625rem;
-  /* Clean purple/pink themed light mode */
-  --background: #f8f4f9; /* Light purple background like in the image */
-  --foreground: #4a044e; /* Dark purple text */
+  --radius: 0.625rem; /* Beautiful rose/pink themed light mode - matching dropdown */
+  --background: #fdf2f8; /* Light rose background */
+  --foreground: #881337; /* Dark rose text */
   /* Clean card colors */
-  --card: #ffffff; /* Pure white cards */
-  --card-foreground: #4a044e;
+  --card: #ffffff; /* Pure white for better contrast */
+  --card-foreground: #881337;
   /* Clean popover */
-  --popover: #ffffff;
-  --popover-foreground: #4a044e;
-  /* Keep primary button color for consistency */
-  --primary: #d56698; /* Pink button color */
+  --popover: #ffffff; /* Pure white matching dropdown */
+  --popover-foreground: #881337;
+  /* Rose primary colors - matching dropdown theme */
+  --primary: #e11d48; /* Rose-600 for primary actions */
   --primary-foreground: #ffffff;
-  /* Clean secondary colors */
-  --secondary: #f3e8ff; /* Light purple secondary */
-  --secondary-foreground: #6b21a8;
-  /* Clean muted colors */
-  --muted: #f3e8ff; /* Light purple muted */
-  --muted-foreground: #9333ea; /* Purple muted text */
-  /* Clean accent */
-  --accent: #f3e8ff;
-  --accent-foreground: #6b21a8;
+  /* Rose secondary colors */
+  --secondary: #fce7f3; /* Rose-100 secondary */
+  --secondary-foreground: #be185d;
+  /* Rose muted colors - improved contrast */
+  --muted: #f9a8d4; /* Rose-300 for better visibility */
+  --muted-foreground: #831843; /* Darker rose for better contrast */
+  /* Rose accent */
+  --accent: #fbcfe8; /* Rose-200 accent */
+  --accent-foreground: #be185d;
   /* Clean destructive */
-  --destructive: #ef4444;
-  /* Clean borders */
-  --border: #e9d5ff; /* Purple border */
-  --input: #e9d5ff; /* Purple input border */
-  --ring: #a855f7; /* Purple focus ring */
-  /* Charts */
+  --destructive: #dc2626;
+  /* Rose borders - matching dropdown exactly */
+  --border: rgba(251, 207, 232, 0.5); /* Rose-200/50 matching dropdown */
+  --input: rgba(251, 207, 232, 0.5); /* Rose-200/50 input border */
+  --ring: #e11d48; /* Rose-600 focus ring */
+  /* Charts with rose tones */
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  /* Purple themed sidebar */
-  --sidebar: #f8f4f9; /* Same as main background */
-  --sidebar-foreground: #4a044e;
-  --sidebar-primary: #4a044e;
+  /* Rose themed sidebar */
+  --sidebar: #fdf2f8; /* Same as main background */
+  --sidebar-foreground: #881337;
+  --sidebar-primary: #881337;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f3e8ff;
-  --sidebar-accent-foreground: #6b21a8;
-  --sidebar-border: #e9d5ff;
-  --sidebar-ring: #a855f7;
+  --sidebar-accent: #fce7f3;
+  --sidebar-accent-foreground: #be185d;
+  --sidebar-border: #fbcfe8;
+  --sidebar-ring: #e11d48;
 
-  /* Custom scrollbar variables for light mode */
-  --scrollbar-thumb-light: #c084fc;
-  --scrollbar-thumb-hover-light: #a855f7;
-  --scrollbar-track-light: #f8f4f9;
+  /* Custom scrollbar variables for light mode - rose themed */
+  --scrollbar-thumb-light: #f9a8d4;
+  --scrollbar-thumb-hover-light: #e11d48;
+  --scrollbar-track-light: #fdf2f8;
 }
 
 .dark {
-  --background: oklch(0.255 0.017 290); /* #1E1A24 - new darker base */
-  --foreground: oklch(0.876 0 0); /* Main text color from image (light gray) */
+  /* Dark rose/pink themed mode - matching dropdown exactly */
+  --background: #1a0b14; /* Very dark rose background */
+  --foreground: #fce7f3; /* Light rose text matching dropdown */
 
-  --card: oklch(
-    0.255 0.017 290
-  ); /* Card background, to match new darker background */
-  --card-foreground: oklch(0.876 0 0); /* Text on card */
+  --card: oklch(0.18 0.015 25); /* Matching dropdown bg exactly */
+  --card-foreground: #fce7f3; /* Text on card */
 
-  --popover: oklch(
-    0.25 0.02 283
-  ); /* Popover background - kept previous, adjust if needed */
-  --popover-foreground: oklch(0.876 0 0); /* Text on popover */
-  --primary: oklch(
-    0.263 0.108 351.5
-  ); /* Red color for "New Chat" button from hex #43132A */
-  --primary-foreground: oklch(1 0 0); /* Text on "New Chat" button (white) */
+  --popover: oklch(0.18 0.015 25); /* Match dropdown bg for popovers */
+  --popover-foreground: #fce7f3; /* Text on popover */
 
-  --secondary: oklch(
-    0.35 0.05 285
-  ); /* A muted purple for secondary elements/buttons - kept previous */
-  --secondary-foreground: oklch(
-    0.95 0 0
-  ); /* Light text for secondary elements - kept previous */
+  /* Rose primary colors for dark mode */
+  --primary: #fb7185; /* Rose-400 for dark mode primary */
+  --primary-foreground: #881337; /* Dark rose text on primary */
 
-  --muted: oklch(
-    0.255 0.017 290
-  ); /* Background for muted elements, can be same as main */
-  --muted-foreground: oklch(
-    0.629 0 0
-  ); /* Muted text color (e.g., "Older", "Last 30 days") */
+  --secondary: oklch(0.18 0.015 25); /* Dark rose secondary background */
+  --secondary-foreground: #f9a8d4; /* Light rose secondary text */
 
-  --accent: oklch(0.452 0.131 287.3); /* Accent color, can be same as primary */
-  --accent-foreground: oklch(1 0 0); /* Text on accent elements */
+  --muted: #2d1b2e; /* Slightly lighter for muted backgrounds */
+  --muted-foreground: rgba(
+    249,
+    168,
+    212,
+    0.7
+  ); /* Rose-300/70 matching dropdown */
 
-  --destructive: oklch(
-    0.55 0.22 25
-  ); /* Destructive action color - kept previous */
+  --accent: oklch(0.18 0.015 25); /* Dark rose accent */
+  --accent-foreground: #f9a8d4; /* Light rose accent text */
 
-  --border: oklch(0.3 0.015 283); /* Darker gray for general borders */
-  --input: oklch(
-    0.346 0.026 283.3
-  ); /* Input field background - lighter and more purple */
-  --ring: oklch(
-    0.48 0.11 287.3
-  ); /* Focus ring color, related to new primary chroma */
+  --destructive: #ef4444; /* Keep red for destructive actions */
 
-  /* Sidebar specific colors from image */
-  --sidebar: oklch(0.194 0.011 300.94); /* #130d11 */
-  --sidebar-foreground: #f5d0fe; /* Updated color */
+  --border: rgba(244, 63, 94, 0.2); /* Rose-500/20 matching dropdown exactly */
+  --input: rgba(244, 63, 94, 0.2); /* Input field border matching dropdown */
+  --ring: #fb7185; /* Rose-400 focus ring for dark mode */
 
-  --sidebar-primary: oklch(
-    0.452 0.131 287.3
-  ); /* Sidebar primary elements - matched to new primary */
-  --sidebar-primary-foreground: oklch(
-    1 0 0
-  ); /* Text on sidebar primary elements (white) */
+  /* Dark rose themed sidebar */
+  --sidebar: #0f0508; /* Even darker rose for sidebar */
+  --sidebar-foreground: #fce7f3;
 
-  --sidebar-accent: #261922; /* Updated hover color */
-  --sidebar-accent-foreground: oklch(
-    1 0 0
-  ); /* Text on sidebar accent elements */
+  --sidebar-primary: #fb7185; /* Rose-400 for sidebar primary */
+  --sidebar-primary-foreground: #881337;
+  --sidebar-accent: oklch(0.18 0.015 25); /* Dark rose accent */
+  --sidebar-accent-foreground: #f9a8d4; /* Light rose text on accent */
+  --sidebar-border: rgba(244, 63, 94, 0.2); /* Matching dropdown border */
+  --sidebar-ring: #fb7185; /* Rose-400 focus ring */
 
-  --sidebar-border: oklch(0.3 0.015 283); /* Darker gray for sidebar borders */
-  --sidebar-ring: oklch(
-    0.48 0.11 287.3
-  ); /* Sidebar focus ring - matched to general focus ring */
-
-  /* Custom scrollbar variables for dark mode */
-  --scrollbar-thumb-dark: oklch(0.5 0.02 270);
-  --scrollbar-thumb-hover-dark: oklch(0.6 0.025 270);
-  --scrollbar-track-dark: oklch(0.235 0.017 290);
+  /* Custom scrollbar variables for dark mode - rose themed */
+  --scrollbar-thumb-dark: #be185d;
+  --scrollbar-thumb-hover-dark: #fb7185;
+  --scrollbar-track-dark: #1a0b14;
 }
 
 /* Style custom scrollbar for Chatbox textarea */
@@ -334,16 +311,80 @@
   opacity: 0;
 }
 
-/* Custom animation for dropdown expansion */
-@keyframes scaleExpand {
+/* Custom animation for dropdown expansion - Bottom-left to top-right */
+@keyframes dropdownSlideIn {
   from {
-    transform: scale(0.9) translateY(10px);
-    opacity: 0.8;
+    transform: scale(0.85) translate(-8px, 12px);
+    opacity: 0;
+    transform-origin: bottom left;
+  }
+  50% {
+    transform: scale(0.95) translate(-4px, 6px);
+    opacity: 0.7;
+    transform-origin: bottom left;
   }
   to {
-    transform: scale(1) translateY(0);
+    transform: scale(1) translate(0, 0);
     opacity: 1;
+    transform-origin: bottom left;
   }
+}
+
+/* Hide scrollbar for dropdown content */
+.dropdown-hide-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
+
+.dropdown-hide-scrollbar::-webkit-scrollbar {
+  display: none; /* WebKit */
+}
+
+/* Improved closing animation */
+@keyframes dropdownSlideOut {
+  from {
+    transform: scale(1) translate(0, 0);
+    opacity: 1;
+    transform-origin: bottom left;
+  }
+  50% {
+    transform: scale(0.95) translate(-2px, 4px);
+    opacity: 0.6;
+    transform-origin: bottom left;
+  }
+  to {
+    transform: scale(0.8) translate(-12px, 16px);
+    opacity: 0;
+    transform-origin: bottom left;
+  }
+}
+
+.dropdown-animate-out {
+  animation: dropdownSlideOut 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  animation-fill-mode: forwards;
+  pointer-events: none; /* Prevent interaction during exit */
+}
+
+/* Apply the animation to dropdown containers */
+.dropdown-animate-in {
+  animation: dropdownSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  animation-fill-mode: forwards;
+  /* Enhanced shadow during animation */
+  box-shadow:
+    0 10px 38px -10px rgba(244, 63, 94, 0.35),
+    0 10px 20px -15px rgba(244, 63, 94, 0.2),
+    0 0 0 1px rgba(244, 63, 94, 0.05);
+}
+
+/* Add subtle backdrop blur effect */
+.dropdown-backdrop {
+  backdrop-filter: blur(1px);
+  transition: backdrop-filter 0.25s ease;
+}
+
+/* Smooth scroll animation for dropdown content */
+.dropdown-content {
+  scroll-behavior: smooth;
 }
 
 /* Windows-specific scrollbar styles for main chat container */
@@ -765,51 +806,116 @@
   background-color: rgb(var(--muted) / 0.4);
 }
 
-/* Custom New Chat button colors - restored original pink/magenta scheme */
+/* Custom New Chat button colors - Matching dropdown rose theme */
 .new-chat-button {
-  background-color: #d56698 !important; /* Base color corrected */
+  background: linear-gradient(135deg, #e11d48 0%, #be185d 100%) !important;
   color: white !important;
-  border-color: rgba(213, 102, 152, 0.3) !important;
+  border-color: rgba(225, 29, 72, 0.3) !important;
+  box-shadow: 0 4px 15px rgba(225, 29, 72, 0.2) !important;
 }
 
 .new-chat-button:hover {
-  background-color: rgb(162, 59, 103) !important; /* Hover color corrected */
+  background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%) !important;
+  box-shadow: 0 6px 20px rgba(225, 29, 72, 0.3) !important;
+  transform: translateY(-1px) !important;
+  transition: all 0.2s ease !important;
 }
 
 .new-chat-button:active {
-  background-color: rgb(
-    162,
-    59,
-    103
-  ) !important; /* Active state same as base */
+  background: linear-gradient(135deg, #be185d 0%, #9f1239 100%) !important;
+  transform: translateY(0) !important;
+  box-shadow: 0 2px 10px rgba(225, 29, 72, 0.2) !important;
 }
 
-/* Dark mode styles for new chat button */
+/* Dark mode styles for new chat button - matching dropdown theme */
 .dark .new-chat-button {
-  background-color: rgba(
-    162,
-    59,
-    103,
-    0.2
-  ) !important; /* dark:bg-primary/20 equivalent */
+  background: linear-gradient(
+    135deg,
+    rgba(251, 113, 133, 0.3) 0%,
+    rgba(225, 29, 72, 0.3) 100%
+  ) !important;
+  border-color: rgba(244, 63, 94, 0.4) !important;
+  box-shadow: 0 4px 15px rgba(251, 113, 133, 0.1) !important;
 }
 
 .dark .new-chat-button:hover {
-  background-color: rgba(
-    190,
-    24,
-    93,
-    0.7
-  ) !important; /* dark:hover:bg-pink-800/70 equivalent */
+  background: linear-gradient(
+    135deg,
+    rgba(251, 113, 133, 0.5) 0%,
+    rgba(225, 29, 72, 0.5) 100%
+  ) !important;
+  box-shadow: 0 6px 20px rgba(251, 113, 133, 0.2) !important;
+  transform: translateY(-1px) !important;
 }
 
 .dark .new-chat-button:active {
-  background-color: rgba(
-    190,
-    24,
-    93,
-    0.4
-  ) !important; /* dark:active:bg-pink-800/40 equivalent */
+  background: linear-gradient(
+    135deg,
+    rgba(251, 113, 133, 0.4) 0%,
+    rgba(225, 29, 72, 0.4) 100%
+  ) !important;
+  transform: translateY(0) !important;
+  box-shadow: 0 2px 10px rgba(251, 113, 133, 0.1) !important;
+}
+
+/* Welcome screen category buttons - matching dropdown rose theme */
+.new-chat-button[data-selected="true"] {
+  background: linear-gradient(135deg, #e11d48 0%, #be185d 100%) !important;
+  opacity: 1 !important;
+  box-shadow: 0 4px 15px rgba(225, 29, 72, 0.3) !important;
+}
+
+.new-chat-button[data-selected="false"] {
+  background: linear-gradient(
+    135deg,
+    rgba(225, 29, 72, 0.1) 0%,
+    rgba(190, 24, 93, 0.1) 100%
+  ) !important;
+  border: 1px solid rgba(225, 29, 72, 0.2) !important;
+  color: #e11d48 !important;
+  opacity: 0.7 !important;
+}
+
+.new-chat-button[data-selected="false"]:hover {
+  background: linear-gradient(
+    135deg,
+    rgba(225, 29, 72, 0.2) 0%,
+    rgba(190, 24, 93, 0.2) 100%
+  ) !important;
+  opacity: 0.9 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(225, 29, 72, 0.2) !important;
+}
+
+/* Dark mode styles for welcome screen category buttons */
+.dark .new-chat-button[data-selected="true"] {
+  background: linear-gradient(
+    135deg,
+    rgba(251, 113, 133, 0.4) 0%,
+    rgba(225, 29, 72, 0.4) 100%
+  ) !important;
+  color: white !important;
+  box-shadow: 0 4px 15px rgba(251, 113, 133, 0.2) !important;
+}
+
+.dark .new-chat-button[data-selected="false"] {
+  background: linear-gradient(
+    135deg,
+    rgba(251, 113, 133, 0.1) 0%,
+    rgba(225, 29, 72, 0.1) 100%
+  ) !important;
+  border: 1px solid rgba(251, 113, 133, 0.3) !important;
+  color: #f9a8d4 !important;
+}
+
+.dark .new-chat-button[data-selected="false"]:hover {
+  background: linear-gradient(
+    135deg,
+    rgba(251, 113, 133, 0.2) 0%,
+    rgba(225, 29, 72, 0.2) 100%
+  ) !important;
+  color: #fce7f3 !important;
+  box-shadow: 0 4px 12px rgba(251, 113, 133, 0.15) !important;
 }
 
 /* Reasoning section styles */
@@ -931,4 +1037,87 @@ button {
 
 .typing-dot:nth-child(3) {
   animation-delay: 0s;
+}
+
+/* Specialized animation for context menus (cursor-based positioning) */
+@keyframes contextMenuSlideIn {
+  from {
+    transform: scale(0.9) translate(-4px, -4px);
+    opacity: 0;
+    transform-origin: top left;
+  }
+  to {
+    transform: scale(1) translate(0, 0);
+    opacity: 1;
+    transform-origin: top left;
+  }
+}
+
+/* Context menu specific animation class */
+.context-menu-animate {
+  animation: contextMenuSlideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  animation-fill-mode: forwards;
+}
+
+/* Beautiful dropdown animations */
+@keyframes dropdown-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes dropdown-slide-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+
+.dropdown-animate-in {
+  animation: dropdown-slide-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dropdown-animate-out {
+  animation: dropdown-slide-out 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Hide scrollbar in dropdowns for a cleaner look */
+.dropdown-hide-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
+
+.dropdown-hide-scrollbar::-webkit-scrollbar {
+  display: none; /* WebKit browsers (Chrome, Safari, Edge) */
+}
+
+/* Scroll indicator gradient for dropdown */
+.dropdown-scroll-indicator {
+  position: relative;
+}
+
+.dropdown-scroll-indicator::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 20px;
+  background: linear-gradient(to top, rgba(244, 63, 94, 0.1), transparent);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.dropdown-scroll-indicator.has-scroll::after {
+  opacity: 1;
 }

@@ -11,17 +11,20 @@ import {
 import { Button } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
 import { useSidebar } from "~/components/ui/sidebar";
-import { useRef, useState, useLayoutEffect } from "react";
+import { useRef, useState, useLayoutEffect, useEffect } from "react";
 import { ModelSelector } from "./model-selector";
 import { useModel } from "~/contexts/ModelContext";
+import { useApiKey } from "~/contexts/ApiKeyContext";
 import { useUploadThing } from "~/lib/uploadthing";
 import type { UploadFileResponse, ChatMessage } from "~/lib/types";
+import { isGeminiModel, isGroqModel } from "~/lib/openrouter";
 
 const INITIAL_TEXTAREA_HEIGHT = 48; // slightly reduced initial textarea height
 
 export function Chatbox({ onSend }: { onSend: (data: ChatMessage) => void }) {
   const sidebar = useSidebar();
   const { selectedModel, setSelectedModel } = useModel();
+  const { hasOpenRouterKey, hasGeminiKey, hasGroqKey } = useApiKey();
   const isSidebarOpenDesktop = sidebar
     ? sidebar.open && !sidebar.isMobile
     : false;
@@ -34,6 +37,29 @@ export function Chatbox({ onSend }: { onSend: (data: ChatMessage) => void }) {
   const [searchEnabled, setSearchEnabled] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<UploadFileResponse[]>([]);
   const [filesToUpload, setFilesToUpload] = useState<File[]>([]);
+
+  // Check if the current model is available with current API keys
+  const isCurrentModelAvailable = () => {
+    if (isGeminiModel(selectedModel.id)) {
+      return hasGeminiKey;
+    }
+    if (isGroqModel(selectedModel.id)) {
+      return hasGroqKey;
+    }
+    // All other models require OpenRouter key
+    return hasOpenRouterKey;
+  };
+
+  // Get the required API key name for current model
+  const getRequiredApiKeyForCurrentModel = () => {
+    if (isGeminiModel(selectedModel.id)) {
+      return "Gemini";
+    }
+    if (isGroqModel(selectedModel.id)) {
+      return "Groq";
+    }
+    return "OpenRouter";
+  };
 
   const { startUpload, isUploading } = useUploadThing("chatFiles", {
     onClientUploadComplete: (res?: UploadFileResponse<{ type: string }>[]) => {
@@ -53,7 +79,6 @@ export function Chatbox({ onSend }: { onSend: (data: ChatMessage) => void }) {
       setFilesToUpload([]);
     },
   });
-
   // Only adjust height (no component re-render)
   const resizeTextarea = () => {
     const ta = textareaRef.current!;
@@ -61,6 +86,31 @@ export function Chatbox({ onSend }: { onSend: (data: ChatMessage) => void }) {
     const newHeight = Math.max(ta.scrollHeight, INITIAL_TEXTAREA_HEIGHT);
     ta.style.height = `${newHeight}px`;
   };
+  // Monitor API key changes and update send button state
+  useEffect(() => {
+    // Check if current model is available inline to avoid dependency issues
+    let modelAvailable = false;
+    if (isGeminiModel(selectedModel.id)) {
+      modelAvailable = hasGeminiKey;
+    } else if (isGroqModel(selectedModel.id)) {
+      modelAvailable = hasGroqKey;
+    } else {
+      modelAvailable = hasOpenRouterKey;
+    }
+
+    const isEmpty = messageRef.current.trim().length === 0;
+    const shouldDisable = isEmpty || !modelAvailable;
+
+    if (shouldDisable !== sendDisabled) {
+      setSendDisabled(shouldDisable);
+    }
+  }, [
+    hasOpenRouterKey,
+    hasGeminiKey,
+    hasGroqKey,
+    selectedModel.id,
+    sendDisabled,
+  ]);
 
   // handle every keystroke without full re-render
   const onInput = (e: React.FormEvent<HTMLTextAreaElement>) => {
@@ -69,22 +119,25 @@ export function Chatbox({ onSend }: { onSend: (data: ChatMessage) => void }) {
     resizeTextarea();
 
     const isEmpty = text.trim().length === 0;
+    const hasNoApiKey = !isCurrentModelAvailable();
+    // Disable if empty OR if no API key available for current model
+    const shouldDisable = isEmpty || hasNoApiKey;
+
     // only trigger state change (and thus re-render) if disabled status actually flips
-    if (isEmpty !== sendDisabled) {
-      setSendDisabled(isEmpty);
+    if (shouldDisable !== sendDisabled) {
+      setSendDisabled(shouldDisable);
     }
   };
   // New function to handle the core message sending logic
   const handleSendMessage = () => {
     const message = messageRef.current.trim();
-    if (!message) return;
-
-    // forward message with additional data to parent
+    if (!message) return; // forward message with additional data to parent
     onSend({
       message,
       searchEnabled:
         searchEnabled && selectedModel.capabilities?.includes("search"),
       files: uploadedFiles.length > 0 ? uploadedFiles : undefined,
+      thinkingEnabled: selectedModel.capabilities?.includes("thinking"),
     });
 
     // clear
@@ -232,14 +285,12 @@ export function Chatbox({ onSend }: { onSend: (data: ChatMessage) => void }) {
       }}
     >
       {" "}
-      {/* Outermost ring border wrapper */}
-      <div className="border-border w-full max-w-4xl rounded-t-2xl border border-b-0 bg-transparent p-[1px] shadow-none dark:border-[#302435]">
-        {/* Outer thin border wrapper */}
-        <div className="bg-card w-full max-w-4xl rounded-t-2xl p-2 pb-0 shadow-none backdrop-blur-lg dark:bg-[hsla(270,10%,20%,0.4)]">
-          {" "}
-          {/* Form now directly contains the styling previously on an inner div */}{" "}
+      {/* Outer ring border wrapper */}
+      <div className="border-border w-full max-w-4xl rounded-t-[23px] border-3 border-b-0 bg-transparent shadow-none dark:border-[#302435]">
+        {/* Single container matching the working HTML structure */}
+        <div className="border-reflect bg-card w-full max-w-4xl rounded-t-[20px] p-2 pb-0 shadow-none backdrop-blur-lg dark:bg-[hsla(270,10%,20%,0.4)]">
           <form
-            className="text-secondary-foreground border-border bg-card outline-border relative flex w-full flex-col items-stretch gap-2 rounded-t-lg border border-b-0 px-3 pt-3 pb-6 outline-8 sm:pb-3 dark:border-[hsla(0,0%,83%,0.04)] dark:bg-[hsla(273.8,15.1%,20.8%,0.045)] dark:outline-[hsla(270,16.13%,12.16%,0.4)]"
+            className="text-secondary-foreground border-border bg-card outline-border relative flex w-full flex-col items-stretch gap-2 rounded-t-xl border border-b-0 px-3 pt-3 pb-6 outline-8 sm:pb-3 dark:border-[hsla(0,0%,83%,0.04)] dark:bg-[hsla(273.8,15.1%,20.8%,0.045)] dark:outline-[hsla(270,16.13%,12.16%,0.4)]"
             onSubmit={onSubmit}
             onDragOver={handleDragOver}
             onDrop={handleDrop}
@@ -400,10 +451,19 @@ export function Chatbox({ onSend }: { onSend: (data: ChatMessage) => void }) {
                       : "new-chat-button",
                   )}
                 >
-                  <ArrowUp className="h-4 w-4" />
+                  <ArrowUp className="h-4 w-4" />{" "}
                 </Button>
               </div>
             </div>
+            {/* API Key Warning Message */}
+            {!isCurrentModelAvailable() && (
+              <div className="px-1 pb-2">
+                <div className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-600 dark:border-amber-800/30 dark:bg-amber-900/20 dark:text-amber-400">
+                  ⚠️ {getRequiredApiKeyForCurrentModel()} API key required to
+                  use {selectedModel.name}
+                </div>
+              </div>
+            )}
           </form>
         </div>
       </div>

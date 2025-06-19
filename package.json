@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@clerk/nextjs": "^6.21.0",
+    "@google/genai": "^1.5.1",
     "@google/generative-ai": "^0.24.1",
     "@lexical/code": "^0.31.1",
     "@lexical/link": "^0.31.1",

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { prisma } from "~/lib/prisma";
+import { prisma, withRetry } from "~/lib/prisma";
 
 interface UpdateChatBody {
   title?: string;
@@ -18,14 +18,14 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { chatId } = await params;
-
-    // First check if the chat exists and belongs to the user
-    const existingChat = await prisma.chat.findFirst({
-      where: {
-        id: chatId,
-        userId: userId,
-      },
+    const { chatId } = await params; // First check if the chat exists and belongs to the user
+    const existingChat = await withRetry(async () => {
+      return await prisma.chat.findFirst({
+        where: {
+          id: chatId,
+          userId: userId,
+        },
+      });
     });
 
     if (!existingChat) {
@@ -33,10 +33,12 @@ export async function DELETE(
     }
 
     // Delete the chat (this will cascade delete messages and branches)
-    await prisma.chat.delete({
-      where: {
-        id: chatId,
-      },
+    await withRetry(async () => {
+      return await prisma.chat.delete({
+        where: {
+          id: chatId,
+        },
+      });
     });
 
     return NextResponse.json({ success: true });
@@ -67,14 +69,14 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const { chatId } = await params;
-    const body = (await request.json()) as UpdateChatBody;
-
-    // Verify the chat belongs to the user
-    const existingChat = await prisma.chat.findFirst({
-      where: {
-        id: chatId,
-        userId: userId,
-      },
+    const body = (await request.json()) as UpdateChatBody; // Verify the chat belongs to the user
+    const existingChat = await withRetry(async () => {
+      return await prisma.chat.findFirst({
+        where: {
+          id: chatId,
+          userId: userId,
+        },
+      });
     });
 
     if (!existingChat) {
@@ -82,12 +84,14 @@ export async function PATCH(
     }
 
     // Update the chat with provided fields
-    const updatedChat = await prisma.chat.update({
-      where: { id: chatId },
-      data: {
-        ...(body.title !== undefined && { title: body.title }),
-        ...(body.pinned !== undefined && { pinned: body.pinned }),
-      },
+    const updatedChat = await withRetry(async () => {
+      return await prisma.chat.update({
+        where: { id: chatId },
+        data: {
+          ...(body.title !== undefined && { title: body.title }),
+          ...(body.pinned !== undefined && { pinned: body.pinned }),
+        },
+      });
     });
 
     return NextResponse.json({ chat: updatedChat });

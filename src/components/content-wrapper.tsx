@@ -30,7 +30,10 @@ export default function ContentWrapper({
     setErrorDialogOpen,
   }: {
     apiKeyDialogOpen: boolean;
-    handleApiKeySubmit: (apiKey: string) => void;
+    handleApiKeySubmit: (keys: {
+      openRouterKey?: string;
+      geminiKey?: string;
+    }) => void;
     settingsDialogOpen: boolean;
     setSettingsDialogOpen: (open: boolean) => void;
     errorDialogOpen: boolean;
@@ -69,7 +72,7 @@ export default function ContentWrapper({
       {/* API Key Dialog */}
       <ApiKeyDialog
         open={apiKeyDialogOpen}
-        onApiKeySubmit={handleApiKeySubmit}
+        onApiKeysSubmit={handleApiKeySubmit}
       />
       {/* Error Dialog */}
       <ErrorDialog
