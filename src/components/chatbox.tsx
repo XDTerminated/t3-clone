@@ -24,6 +24,8 @@ import { useRef, useState, useLayoutEffect, useEffect } from "react";
 import { ModelSelector } from "./model-selector";
 import { useModel } from "~/contexts/ModelContext";
 import { useApiKey } from "~/contexts/ApiKeyContext";
+import { useAuth } from "@clerk/nextjs";
+import { useChat } from "~/contexts/ChatContext";
 import { useUploadThing } from "~/lib/uploadthing";
 import type { UploadFileResponse, ChatMessage } from "~/lib/types";
 import { isGeminiModel, isGroqModel } from "~/lib/openrouter";
@@ -34,6 +36,8 @@ export function Chatbox({ onSend }: { onSend: (data: ChatMessage) => void }) {
   const sidebar = useSidebar();
   const { selectedModel, setSelectedModel } = useModel();
   const { hasOpenRouterKey, hasGeminiKey, hasGroqKey } = useApiKey();
+  const { isSignedIn } = useAuth();
+  const { setLoginDialogOpen, setLoginDialogAction } = useChat();
   const isSidebarOpenDesktop = sidebar
     ? sidebar.open && !sidebar.isMobile
     : false;
@@ -112,11 +116,21 @@ export function Chatbox({ onSend }: { onSend: (data: ChatMessage) => void }) {
     selectedModel.id,
     sendDisabled,
   ]);
-
   const onInput = (e: React.FormEvent<HTMLTextAreaElement>) => {
     const text = (e.currentTarget as HTMLTextAreaElement).value;
     messageRef.current = text;
     resizeTextarea();
+
+    // Check if user is not signed in and they're starting to type
+    if (!isSignedIn && text.trim().length > 0) {
+      setLoginDialogAction("send");
+      setLoginDialogOpen(true);
+      // Clear the textarea since they need to sign in first
+      e.currentTarget.value = "";
+      messageRef.current = "";
+      resizeTextarea();
+      return;
+    }
 
     const isEmpty = text.trim().length === 0;
     const hasNoApiKey = !isCurrentModelAvailable();

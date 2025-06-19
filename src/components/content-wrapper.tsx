@@ -8,6 +8,7 @@ import { useChat } from "~/contexts/ChatContext";
 import { ApiKeyDialog } from "~/components/api-key-dialog";
 import { ErrorDialog } from "~/components/error-dialog";
 import { SettingsDialog } from "~/components/settings-dialog";
+import { LoginDialog } from "~/components/login-dialog";
 
 /**
  * Client-side wrapper that renders the sidebar and main content with a conditional border
@@ -28,6 +29,9 @@ export default function ContentWrapper({
     errorDialogMessage,
     errorDialogType,
     setErrorDialogOpen,
+    loginDialogOpen,
+    loginDialogAction,
+    setLoginDialogOpen,
   }: {
     apiKeyDialogOpen: boolean;
     handleApiKeySubmit: (keys: {
@@ -41,6 +45,9 @@ export default function ContentWrapper({
     errorDialogMessage: string;
     errorDialogType?: string;
     setErrorDialogOpen: (open: boolean) => void;
+    loginDialogOpen: boolean;
+    loginDialogAction: "send" | "chat" | null;
+    setLoginDialogOpen: (open: boolean) => void;
   } = useChat();
   const mainRef = React.useRef<HTMLElement>(null);
 
@@ -73,6 +80,12 @@ export default function ContentWrapper({
       <ApiKeyDialog
         open={apiKeyDialogOpen}
         onApiKeysSubmit={handleApiKeySubmit}
+      />
+      {/* Login Dialog */}
+      <LoginDialog
+        open={loginDialogOpen}
+        onOpenChange={setLoginDialogOpen}
+        action={loginDialogAction ?? "send"}
       />
       {/* Error Dialog */}
       <ErrorDialog
