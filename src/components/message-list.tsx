@@ -13,6 +13,7 @@ import NextImage from "next/image";
 import { useState } from "react";
 import type { UploadFileResponse } from "~/lib/types";
 import { MessageWithSyntaxHighlighting } from "./message-with-syntax-highlighting";
+import { Dialog, DialogContent, DialogTitle } from "~/components/ui/dialog";
 
 export type Message = {
   sender: string;
@@ -140,7 +141,6 @@ function FileAttachments({ files }: { files: UploadFileResponse[] }) {
           ))}
         </div>
       )}
-
       {/* Display other files as before */}
       {otherFiles.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-2">
@@ -196,47 +196,36 @@ function FileAttachments({ files }: { files: UploadFileResponse[] }) {
             );
           })}
         </div>
-      )}
-
-      {/* Image preview modal */}
-      {selectedFile &&
-        ((selectedFile.serverData as { type: string })?.type ?? "").startsWith(
-          "image/",
-        ) && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
-            onClick={() => setSelectedFile(null)}
-          >
-            <div className="bg-background max-h-[90vh] max-w-4xl overflow-auto rounded-lg p-4">
-              <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-lg font-semibold">{selectedFile.name}</h3>
-                <button
-                  onClick={() => setSelectedFile(null)}
-                  className="hover:bg-secondary/40 rounded p-2 transition-colors"
-                >
-                  ×
-                </button>
-              </div>
+      )}{" "}
+      {/* Image preview dialog */}
+      <Dialog
+        open={
+          selectedFile !== null &&
+          (
+            (selectedFile.serverData as { type: string })?.type ?? ""
+          ).startsWith("image/")
+        }
+        onOpenChange={(open) => {
+          if (!open) setSelectedFile(null);
+        }}
+      >
+        {" "}
+        <DialogContent className="max-h-[95vh] max-w-[95vw] border-0 bg-transparent p-0 shadow-none">
+          <DialogTitle className="sr-only">Image Preview</DialogTitle>
+          <div className="fixed inset-0 flex items-center justify-center">
+            {selectedFile && (
               <NextImage
                 src={selectedFile.url}
-                alt={selectedFile.name}
-                width={800}
-                height={600}
-                className="h-auto max-w-full rounded border object-contain"
+                alt=""
+                width={1200}
+                height={800}
+                className="max-h-[90vh] max-w-[90vw] object-contain"
                 loading="lazy"
               />
-              <div className="mt-4 flex gap-2">
-                <button
-                  onClick={() => downloadFile(selectedFile)}
-                  className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2 rounded px-3 py-2 transition-colors"
-                >
-                  <Download className="h-4 w-4" />
-                  Download
-                </button>{" "}
-              </div>
-            </div>
+            )}
           </div>
-        )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

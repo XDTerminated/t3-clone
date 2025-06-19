@@ -3,7 +3,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
   ChevronDown,
-  Lightbulb,
   Globe,
   Eye,
   ImageIcon,
@@ -151,18 +150,10 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
           </CapabilityTooltip>
         </span>,
       );
-    if (model.capabilities?.includes("reasoning"))
-      icons.push(
-        <span key="reasoning" className="px-1">
-          <CapabilityTooltip content="Has advanced reasoning capabilities">
-            <Lightbulb className="text-muted-foreground h-3.5 w-3.5" />
-          </CapabilityTooltip>
-        </span>,
-      );
     if (model.capabilities?.includes("thinking"))
       icons.push(
         <span key="thinking" className="px-1">
-          <CapabilityTooltip content="Advanced thinking capabilities">
+          <CapabilityTooltip content="Advanced reasoning and thinking capabilities">
             <Brain className="text-muted-foreground h-3.5 w-3.5" />
           </CapabilityTooltip>
         </span>,
@@ -256,10 +247,10 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
                                 : "opacity-0 group-hover:opacity-100"
                             } transition-opacity duration-150 ease-[cubic-bezier(0.25,1,0.5,1)]`}
                           >
-                            <div className="bg-primary/5 absolute inset-0"></div>
-                            <div className="bg-primary/20 absolute top-0 right-0 left-0 h-px"></div>
-                            <div className="bg-primary/20 absolute right-0 bottom-0 left-0 h-px"></div>
-                            <div className="bg-primary/3 absolute inset-x-0 top-1/2 h-4 -translate-y-1/2 blur-sm"></div>
+                            <div className="via-primary/8 absolute inset-0 bg-gradient-to-r from-transparent to-transparent"></div>
+                            <div className="via-primary/30 absolute top-0 right-0 left-0 h-px bg-gradient-to-r from-transparent to-transparent"></div>
+                            <div className="via-primary/30 absolute right-0 bottom-0 left-0 h-px bg-gradient-to-r from-transparent to-transparent"></div>
+                            <div className="via-primary/5 absolute inset-x-0 top-1/2 h-4 -translate-y-1/2 bg-gradient-to-r from-transparent to-transparent blur-sm"></div>
                           </div>
                           <div className="relative z-10 flex items-center justify-between">
                             <div className="flex min-w-0 flex-1 items-center gap-1.5">

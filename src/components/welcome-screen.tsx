@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Sparkles, Newspaper, Code, GraduationCap } from "lucide-react";
-import { cn } from "~/lib/utils";
 
 interface WelcomeScreenProps {
   onPromptSelect: (message: string) => void;
@@ -82,12 +81,8 @@ export default function WelcomeScreen({ onPromptSelect }: WelcomeScreenProps) {
               <button
                 key={category.id}
                 onClick={() => setSelectedCategory(category.id)}
-                className={cn(
-                  "new-chat-button focus-visible:ring-ring inline-flex h-9 items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-semibold whitespace-nowrap shadow transition-colors select-none focus-visible:ring-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
-                  "flex items-center gap-1 rounded-xl px-5 py-2 font-semibold backdrop-blur-xl max-sm:size-16 max-sm:flex-col sm:gap-2 sm:rounded-full",
-                  isSelected ? "opacity-100" : "opacity-70 hover:opacity-90",
-                )}
-                data-selected={isSelected}
+                className="new-chat-button focus-visible:ring-ring flex h-9 items-center justify-center gap-2 rounded-xl border px-5 py-2 text-sm font-semibold whitespace-nowrap shadow backdrop-blur-xl transition-colors select-none focus-visible:ring-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 max-sm:size-16 max-sm:flex-col sm:gap-2 sm:rounded-full"
+                data-selected={isSelected ? "true" : "false"}
               >
                 <Icon className="max-sm:block" />
                 <div>{category.name}</div>

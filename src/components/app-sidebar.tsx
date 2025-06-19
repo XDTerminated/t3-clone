@@ -131,10 +131,10 @@ const ChatItem = ({
             isActive ? "opacity-100" : "opacity-0 group-hover/link:opacity-100"
           } transition-opacity duration-150 ease-[cubic-bezier(0.25,1,0.5,1)]`}
         >
-          <div className="bg-sidebar-primary/8 absolute inset-0"></div>
-          <div className="bg-sidebar-primary/20 absolute top-0 right-0 left-0 h-px"></div>
-          <div className="bg-sidebar-primary/20 absolute right-0 bottom-0 left-0 h-px"></div>
-          <div className="bg-sidebar-primary/3 absolute inset-x-0 top-1/2 h-4 -translate-y-1/2 blur-sm"></div>
+          <div className="via-sidebar-primary/8 absolute inset-0 bg-gradient-to-r from-transparent to-transparent"></div>
+          <div className="via-sidebar-primary/30 absolute top-0 right-0 left-0 h-px bg-gradient-to-r from-transparent to-transparent"></div>
+          <div className="via-sidebar-primary/30 absolute right-0 bottom-0 left-0 h-px bg-gradient-to-r from-transparent to-transparent"></div>
+          <div className="via-sidebar-primary/5 absolute inset-x-0 top-1/2 h-4 -translate-y-1/2 bg-gradient-to-r from-transparent to-transparent blur-sm"></div>
         </div>{" "}
         <div className="relative z-10 flex w-full items-center">
           <button
@@ -167,57 +167,61 @@ const ChatItem = ({
               )}
             </div>
           </button>{" "}
-          {/* Hover actions */}
-          <div className="text-muted-foreground pointer-events-auto absolute top-0 -right-1 bottom-0 z-50 flex h-full translate-x-full items-center justify-end bg-transparent backdrop-blur-sm transition-transform group-hover/link:translate-x-0">
-            <button
-              className={cn(
-                "sidebar-action-btn sidebar-pin-btn rounded-md p-1.5",
-                chat.pinned
-                  ? "text-primary hover:bg-primary/20"
-                  : "hover:bg-muted/40",
-              )}
-              tabIndex={-1}
-              aria-label={chat.pinned ? "Unpin thread" : "Pin thread"}
-              onClick={(e) => {
-                e.stopPropagation();
-                onPin(chat.id);
-              }}
-            >
-              <Pin className={cn("size-4", chat.pinned && "fill-current")} />
-            </button>{" "}
-            <button
-              className="sidebar-action-btn hover:bg-muted/40 rounded-md p-1.5"
-              tabIndex={-1}
-              aria-label="Share thread"
-              onClick={(e) => {
-                e.stopPropagation();
-                onShare(chat.id);
-              }}
-            >
-              <Share2 className="size-4" />
-            </button>{" "}
-            <button
-              className="sidebar-action-btn hover:bg-muted/40 rounded-md p-1.5"
-              tabIndex={-1}
-              aria-label="Rename thread"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleStartEdit();
-              }}
-            >
-              <Edit2 className="size-4" />
-            </button>{" "}
-            <button
-              className="sidebar-action-btn sidebar-delete-btn hover:bg-destructive/50 hover:text-destructive-foreground rounded-md p-1.5"
-              tabIndex={-1}
-              aria-label="Delete thread"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(chat.id, chat.title);
-              }}
-            >
-              <X className="size-4" />
-            </button>
+          {/* Hover actions */}{" "}
+          <div className="pointer-events-auto absolute top-0 -right-1 bottom-0 z-50 flex h-full translate-x-full items-center justify-end opacity-0 transition-all duration-200 ease-out group-hover/link:translate-x-0 group-hover/link:opacity-100">
+            <div className="bg-sidebar/90 border-sidebar-border/30 flex items-center gap-0.5 rounded-md border p-0.5 shadow-sm backdrop-blur-sm">
+              <button
+                className={cn(
+                  "rounded p-1 transition-colors duration-150",
+                  chat.pinned
+                    ? "text-sidebar-primary hover:bg-sidebar-primary/20"
+                    : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40",
+                )}
+                tabIndex={-1}
+                aria-label={chat.pinned ? "Unpin thread" : "Pin thread"}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onPin(chat.id);
+                }}
+              >
+                <Pin
+                  className={cn("size-3.5", chat.pinned && "fill-current")}
+                />
+              </button>
+              <button
+                className="text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40 rounded p-1 transition-colors duration-150"
+                tabIndex={-1}
+                aria-label="Share thread"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onShare(chat.id);
+                }}
+              >
+                <Share2 className="size-3.5" />
+              </button>
+              <button
+                className="text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40 rounded p-1 transition-colors duration-150"
+                tabIndex={-1}
+                aria-label="Rename thread"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleStartEdit();
+                }}
+              >
+                <Edit2 className="size-3.5" />
+              </button>
+              <button
+                className="text-sidebar-foreground/60 hover:text-destructive hover:bg-destructive/20 rounded p-1 transition-colors duration-150"
+                tabIndex={-1}
+                aria-label="Delete thread"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(chat.id, chat.title);
+                }}
+              >
+                <X className="size-3.5" />
+              </button>
+            </div>
           </div>
         </div>
       </div>

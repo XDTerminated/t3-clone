@@ -73,15 +73,29 @@ export async function POST(request: Request) {
             { error: "Chat not found" },
             { status: 404 },
           );
-        }
-
-        // Get messages for the chat
+        } // Get messages for the chat
         const messages = await withRetry(async () => {
           return await prisma.message.findMany({
             where: { chatId: requestBody.chatId },
             orderBy: { createdAt: "asc" },
           });
         });
+
+        // Collect all files from conversation history
+        const allFiles: UploadFileResponse[] = [];
+        for (const msg of messages) {
+          if (msg.files && Array.isArray(msg.files)) {
+            allFiles.push(...(msg.files as UploadFileResponse[]));
+          }
+        }
+
+        // Also add files from the current request
+        if (requestBody.files && Array.isArray(requestBody.files)) {
+          allFiles.push(...requestBody.files);
+        }
+
+        // Update requestBody.files to include all conversation files
+        requestBody.files = allFiles;
 
         // Convert database messages to conversation format
         const dbHistory = messages.map((msg) => ({

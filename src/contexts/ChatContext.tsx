@@ -269,158 +269,165 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       console.error("Failed to create new chat:", error);
     }
     return null;
-  }, [isSignedIn]);  const selectChat = useCallback(async (chatId: string) => {
-    // Don't do anything if we're already on this chat
-    if (currentChatId === chatId) {
-      return;
-    }
-    setIsLoadingChat(true);
-    setCurrentChatId(chatId);
-    setMessages([]); // Clear messages immediately for smooth transition
-    setIsPendingNewChat(false); // Clear pending new chat state when selecting an existing chat
+  }, [isSignedIn]);
+  const selectChat = useCallback(
+    async (chatId: string) => {
+      // Don't do anything if we're already on this chat
+      if (currentChatId === chatId) {
+        return;
+      }
+      setIsLoadingChat(true);
+      setCurrentChatId(chatId);
+      setMessages([]); // Clear messages immediately for smooth transition
+      setIsPendingNewChat(false); // Clear pending new chat state when selecting an existing chat
 
-    // Clear branch state to prevent stale data
-    setBranches([]);
-    setCurrentBranchId(null);
+      // Clear branch state to prevent stale data
+      setBranches([]);
+      setCurrentBranchId(null);
 
-    // Add a small delay to ensure smooth transition
-    await new Promise((resolve) => setTimeout(resolve, 150)); // Load branches for the chat
-    let firstBranchId: string | null = null;
-    try {
-      const branchRes = await fetch(`/api/branches?chatId=${chatId}`);
-      if (branchRes.ok) {
-        const data = (await branchRes.json()) as {
-          branches: Array<{ id: string; name: string }>;
-        }; // Load messages for ALL branches to ensure persistence
-        const branchesWithMessages = await Promise.all(
-          data.branches.map(async (branch) => {
-            try {
-              console.log(`Loading messages for branch ${branch.id}`);
-              const msgRes = await fetch(
-                `/api/messages?chatId=${chatId}&branchId=${branch.id}`,
-              );
-              if (msgRes.ok) {
-                const msgData = (await msgRes.json()) as {
-                  messages: Array<{
-                    role: string;
-                    content: string;
-                    files?: string; // JSON string from database
-                    reasoning?: string; // Add reasoning field
-                    createdAt: string;
-                  }>;
-                };
-
-                // Simple sort by createdAt timestamp
-                const sortedMessages = [...msgData.messages];
-                sortedMessages.sort((a, b) => {
-                  const dateA = new Date(a.createdAt).getTime();
-                  const dateB = new Date(b.createdAt).getTime();
-                  return dateA - dateB;
-                });
-
-                const uiMessages = sortedMessages.map((msg) => {
-                  let parsedFiles: UploadFileResponse[] | undefined;
-                  try {
-                    parsedFiles = msg.files
-                      ? typeof msg.files === "string"
-                        ? (JSON.parse(msg.files) as UploadFileResponse[])
-                        : (msg.files as UploadFileResponse[])
-                      : undefined;
-                  } catch (error) {
-                    console.error("Failed to parse files for message:", error);
-                    parsedFiles = undefined;
-                  }
-                  return {
-                    sender: msg.role === "user" ? "User" : "AI",
-                    text: msg.content,
-                    files: parsedFiles,
-                    reasoning: msg.reasoning, // Include reasoning from database
-                  };
-                });
-                console.log(
-                  `Loaded ${uiMessages.length} messages for branch ${branch.id}`,
+      // Add a small delay to ensure smooth transition
+      await new Promise((resolve) => setTimeout(resolve, 150)); // Load branches for the chat
+      let firstBranchId: string | null = null;
+      try {
+        const branchRes = await fetch(`/api/branches?chatId=${chatId}`);
+        if (branchRes.ok) {
+          const data = (await branchRes.json()) as {
+            branches: Array<{ id: string; name: string }>;
+          }; // Load messages for ALL branches to ensure persistence
+          const branchesWithMessages = await Promise.all(
+            data.branches.map(async (branch) => {
+              try {
+                console.log(`Loading messages for branch ${branch.id}`);
+                const msgRes = await fetch(
+                  `/api/messages?chatId=${chatId}&branchId=${branch.id}`,
                 );
-                return { ...branch, messages: uiMessages };
-              } else {
+                if (msgRes.ok) {
+                  const msgData = (await msgRes.json()) as {
+                    messages: Array<{
+                      role: string;
+                      content: string;
+                      files?: string; // JSON string from database
+                      reasoning?: string; // Add reasoning field
+                      createdAt: string;
+                    }>;
+                  };
+
+                  // Simple sort by createdAt timestamp
+                  const sortedMessages = [...msgData.messages];
+                  sortedMessages.sort((a, b) => {
+                    const dateA = new Date(a.createdAt).getTime();
+                    const dateB = new Date(b.createdAt).getTime();
+                    return dateA - dateB;
+                  });
+
+                  const uiMessages = sortedMessages.map((msg) => {
+                    let parsedFiles: UploadFileResponse[] | undefined;
+                    try {
+                      parsedFiles = msg.files
+                        ? typeof msg.files === "string"
+                          ? (JSON.parse(msg.files) as UploadFileResponse[])
+                          : (msg.files as UploadFileResponse[])
+                        : undefined;
+                    } catch (error) {
+                      console.error(
+                        "Failed to parse files for message:",
+                        error,
+                      );
+                      parsedFiles = undefined;
+                    }
+                    return {
+                      sender: msg.role === "user" ? "User" : "AI",
+                      text: msg.content,
+                      files: parsedFiles,
+                      reasoning: msg.reasoning, // Include reasoning from database
+                    };
+                  });
+                  console.log(
+                    `Loaded ${uiMessages.length} messages for branch ${branch.id}`,
+                  );
+                  return { ...branch, messages: uiMessages };
+                } else {
+                  console.error(
+                    `Failed to load messages for branch ${branch.id}: ${msgRes.status} ${msgRes.statusText}`,
+                  );
+                }
+              } catch (err) {
                 console.error(
-                  `Failed to load messages for branch ${branch.id}: ${msgRes.status} ${msgRes.statusText}`,
+                  `Failed to load messages for branch ${branch.id}:`,
+                  err,
                 );
               }
-            } catch (err) {
-              console.error(
-                `Failed to load messages for branch ${branch.id}:`,
-                err,
-              );
-            }
-            console.log(`Returning empty messages for branch ${branch.id}`);
-            return { ...branch, messages: [] };
-          }),
-        );
-        setBranches(branchesWithMessages);
-
-        if (branchesWithMessages.length > 0) {
-          firstBranchId = branchesWithMessages[0]!.id;
-          setCurrentBranchId(firstBranchId);
-          // Set messages from the first branch
-          console.log(
-            "Setting messages from first branch on selectChat:",
-            branchesWithMessages[0]!.messages.length,
-            "messages",
+              console.log(`Returning empty messages for branch ${branch.id}`);
+              return { ...branch, messages: [] };
+            }),
           );
-          setMessages(branchesWithMessages[0]!.messages);
-        }
-      }
-    } catch (err) {
-      console.error("Failed to fetch branches:", err); // Fallback to loading messages without branches
-      try {
-        const response = await fetch(`/api/messages?chatId=${chatId}`);
-        if (response.ok) {
-          const msgData = (await response.json()) as {
-            messages: Array<{
-              role: string;
-              content: string;
-              files?: string; // JSON string from database
-              reasoning?: string; // Add reasoning field
-              createdAt: string;
-            }>;
-          };
+          setBranches(branchesWithMessages);
 
-          // Simple sort by createdAt timestamp
-          const sortedMessages = [...msgData.messages];
-          sortedMessages.sort((a, b) => {
-            const dateA = new Date(a.createdAt).getTime();
-            const dateB = new Date(b.createdAt).getTime();
-            return dateA - dateB;
-          });
-          const uiMessages = sortedMessages.map((msg) => {
-            let parsedFiles: UploadFileResponse[] | undefined;
-            try {
-              parsedFiles = msg.files
-                ? typeof msg.files === "string"
-                  ? (JSON.parse(msg.files) as UploadFileResponse[])
-                  : (msg.files as UploadFileResponse[])
-                : undefined;
-            } catch (error) {
-              console.error("Failed to parse files for message:", error);
-              parsedFiles = undefined;
-            }
-            return {
-              sender: msg.role === "user" ? "User" : "AI",
-              text: msg.content,
-              files: parsedFiles,
-              reasoning: msg.reasoning, // Include reasoning from database
+          if (branchesWithMessages.length > 0) {
+            firstBranchId = branchesWithMessages[0]!.id;
+            setCurrentBranchId(firstBranchId);
+            // Set messages from the first branch
+            console.log(
+              "Setting messages from first branch on selectChat:",
+              branchesWithMessages[0]!.messages.length,
+              "messages",
+            );
+            setMessages(branchesWithMessages[0]!.messages);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch branches:", err); // Fallback to loading messages without branches
+        try {
+          const response = await fetch(`/api/messages?chatId=${chatId}`);
+          if (response.ok) {
+            const msgData = (await response.json()) as {
+              messages: Array<{
+                role: string;
+                content: string;
+                files?: string; // JSON string from database
+                reasoning?: string; // Add reasoning field
+                createdAt: string;
+              }>;
             };
-          });
-          setMessages(uiMessages);
-        }
-      } catch (fallbackErr) {
-        console.error("Failed to load messages:", fallbackErr);
-        setMessages([]);
-      }
-    }
 
-    setIsLoadingChat(false);
-  }, [currentChatId]);
+            // Simple sort by createdAt timestamp
+            const sortedMessages = [...msgData.messages];
+            sortedMessages.sort((a, b) => {
+              const dateA = new Date(a.createdAt).getTime();
+              const dateB = new Date(b.createdAt).getTime();
+              return dateA - dateB;
+            });
+            const uiMessages = sortedMessages.map((msg) => {
+              let parsedFiles: UploadFileResponse[] | undefined;
+              try {
+                parsedFiles = msg.files
+                  ? typeof msg.files === "string"
+                    ? (JSON.parse(msg.files) as UploadFileResponse[])
+                    : (msg.files as UploadFileResponse[])
+                  : undefined;
+              } catch (error) {
+                console.error("Failed to parse files for message:", error);
+                parsedFiles = undefined;
+              }
+              return {
+                sender: msg.role === "user" ? "User" : "AI",
+                text: msg.content,
+                files: parsedFiles,
+                reasoning: msg.reasoning, // Include reasoning from database
+              };
+            });
+            setMessages(uiMessages);
+          }
+        } catch (fallbackErr) {
+          console.error("Failed to load messages:", fallbackErr);
+          setMessages([]);
+        }
+      }
+
+      setIsLoadingChat(false);
+    },
+    [currentChatId],
+  );
   const ensureBranchExists = useCallback(
     async (chatId: string): Promise<string> => {
       // Verify that the current branch actually belongs to this chat
@@ -612,56 +619,70 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
-  const shareChat = useCallback(async (chatId: string): Promise<string | null> => {
-    if (!isSignedIn) {
-      setLoginDialogAction(null);
-      setLoginDialogOpen(true);
-      return null;
-    }    try {
-      const response = await fetch('/api/share', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ chatId }),
-      });      if (response.ok) {
-        const responseText = await response.text();
-        if (responseText) {
-          const { token } = JSON.parse(responseText) as { token: string };
-          const shareUrl = `${window.location.origin}/share/${token}`;
-          
-          // Copy to clipboard
-          try {
-            await navigator.clipboard.writeText(shareUrl);
-            showToast('Share link copied to clipboard!', 'success');
-          } catch (clipboardError) {
-            console.error('Failed to copy to clipboard:', clipboardError);
-            showToast('Share link generated but failed to copy to clipboard', 'error');
-          }
-          
-          return shareUrl;
-        } else {
-          showErrorDialog('Failed to Share Chat', 'Empty response from server.');
-          return null;
-        }
-      } else {
-        const responseText = await response.text();
-        let errorMessage = 'An unknown error occurred.';
-        try {
-          const errorData = JSON.parse(responseText) as { error?: string };
-          errorMessage = errorData.error ?? errorMessage;
-        } catch {
-          errorMessage = responseText || errorMessage;
-        }
-        showErrorDialog('Failed to Share Chat', errorMessage);
+  const shareChat = useCallback(
+    async (chatId: string): Promise<string | null> => {
+      if (!isSignedIn) {
+        setLoginDialogAction(null);
+        setLoginDialogOpen(true);
         return null;
       }
-    } catch (error) {
-      console.error('Failed to share chat:', error);
-      showErrorDialog('Failed to Share Chat', 'An unexpected error occurred. Please try again.');
-      return null;
-    }
-  }, [isSignedIn, showErrorDialog, showToast]);
+      try {
+        const response = await fetch("/api/share", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ chatId }),
+        });
+        if (response.ok) {
+          const responseText = await response.text();
+          if (responseText) {
+            const { token } = JSON.parse(responseText) as { token: string };
+            const shareUrl = `${window.location.origin}/share/${token}`;
+
+            // Copy to clipboard
+            try {
+              await navigator.clipboard.writeText(shareUrl);
+              showToast("Share link copied to clipboard!", "success");
+            } catch (clipboardError) {
+              console.error("Failed to copy to clipboard:", clipboardError);
+              showToast(
+                "Share link generated but failed to copy to clipboard",
+                "error",
+              );
+            }
+
+            return shareUrl;
+          } else {
+            showErrorDialog(
+              "Failed to Share Chat",
+              "Empty response from server.",
+            );
+            return null;
+          }
+        } else {
+          const responseText = await response.text();
+          let errorMessage = "An unknown error occurred.";
+          try {
+            const errorData = JSON.parse(responseText) as { error?: string };
+            errorMessage = errorData.error ?? errorMessage;
+          } catch {
+            errorMessage = responseText || errorMessage;
+          }
+          showErrorDialog("Failed to Share Chat", errorMessage);
+          return null;
+        }
+      } catch (error) {
+        console.error("Failed to share chat:", error);
+        showErrorDialog(
+          "Failed to Share Chat",
+          "An unexpected error occurred. Please try again.",
+        );
+        return null;
+      }
+    },
+    [isSignedIn, showErrorDialog, showToast],
+  );
 
   const generateQuickTitle = useCallback((message: string): string => {
     // Generate a quick title from the first message for immediate UI feedback
@@ -697,13 +718,19 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       const supportsThinking = modelSupportsThinking(selectedModel.id);
       const finalThinkingEnabled = supportsThinking ? true : thinkingEnabled;
       const userMessage = { sender: "User", text: message, files };
-      const aiPlaceholder = { sender: "AI", text: "", files: undefined };
-
-      // We need the history for the API call *before* we update the state
+      const aiPlaceholder = { sender: "AI", text: "", files: undefined }; // We need the history for the API call *before* we update the state
       const historyForApi = [...messages, userMessage].map((msg) => ({
         sender: msg.sender,
         text: msg.text,
       }));
+
+      // Collect all files from conversation history
+      const allConversationFiles: UploadFileResponse[] = [];
+      for (const msg of [...messages, userMessage]) {
+        if (msg.files && Array.isArray(msg.files)) {
+          allConversationFiles.push(...msg.files);
+        }
+      }
 
       // Optimistically update UI with user message and AI placeholder
       setMessages((prev) => [...prev, userMessage, aiPlaceholder]);
@@ -769,7 +796,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               geminiApiKey,
               groqApiKey,
               searchEnabled,
-              files,
+              files: allConversationFiles, // Send all conversation files
               chatId,
               thinkingEnabled: finalThinkingEnabled,
               thinkingBudget,
@@ -1417,13 +1444,19 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                 ? { ...branch, messages: [...branch.messages, emptyAIMsg] }
                 : branch,
             ),
-          ); // Get conversation history for AI context and extract files from user message
+          ); // Get conversation history for AI context and collect all files
           const conversationHistory = initialMessages.map((msg) => ({
             sender: msg.sender,
             text: msg.text,
-          })); // Extract files from the last user message for regeneration
-          const lastUserMsg = initialMessages[userMessageIndex];
-          const userFiles = lastUserMsg?.files;
+          }));
+
+          // Collect all files from conversation history for regeneration
+          const allConversationFiles: UploadFileResponse[] = [];
+          for (const msg of initialMessages) {
+            if (msg.files && Array.isArray(msg.files)) {
+              allConversationFiles.push(...msg.files);
+            }
+          }
 
           // For thinking-capable models, always enable thinking
           const supportsThinking = modelSupportsThinking(selectedModel.id);
@@ -1440,7 +1473,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                 openRouterApiKey: openRouterApiKey, // Send user's OpenRouter API key
                 geminiApiKey: geminiApiKey, // Send user's Gemini API key
                 groqApiKey: groqApiKey, // Send user's Groq API key
-                files: userFiles, // Include the files from the original user message
+                files: allConversationFiles, // Include all files from conversation history
                 thinkingEnabled: supportsThinking, // Always enable for thinking-capable models
               }),
             });

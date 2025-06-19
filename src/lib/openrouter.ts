@@ -31,7 +31,7 @@ export const GEMINI_MODELS: OpenRouterModel[] = [
     name: "Gemini 2.0 Flash",
     contextLength: 1048576,
     provider: "Google",
-    capabilities: ["vision", "search", "pdf", "files"],
+    capabilities: ["search"],
   },
   {
     id: "gemini-2.0-flash-lite-exp",
@@ -45,7 +45,14 @@ export const GEMINI_MODELS: OpenRouterModel[] = [
     name: "Gemini 2.0 Flash Thinking",
     contextLength: 1048576,
     provider: "Google",
-    capabilities: ["vision", "reasoning", "thinking"],
+    capabilities: ["reasoning", "thinking"],
+  },
+  {
+    id: "gemini-2.0-flash-preview-image-generation",
+    name: "Gemini 2.0 Flash Image Generation",
+    contextLength: 1048576,
+    provider: "Google",
+    capabilities: ["image"],
   },
   {
     id: "gemini-2.5-flash-preview-05-20",
@@ -119,32 +126,11 @@ export const OPENROUTER_MODELS: OpenRouterModel[] = [
     capabilities: ["reasoning"],
   },
   {
-    id: "google/gemini-flash-1.5",
-    name: "Gemini Flash 1.5",
-    contextLength: 1048576,
-    provider: "Google",
-    capabilities: ["vision", "search", "pdf", "files", "reasoning"],
-  },
-  {
-    id: "meta-llama/llama-4-maverick",
-    name: "Llama 4 Maverick",
-    contextLength: 128000,
-    provider: "Meta",
-    capabilities: [],
-  },
-  {
     id: "openai/gpt-4o",
     name: "GPT-4o",
     contextLength: 128000,
     provider: "OpenAI",
     capabilities: ["vision", "files", "reasoning"],
-  },
-  {
-    id: "sarvam/sarvam-m",
-    name: "Sarvam M",
-    contextLength: 32768,
-    provider: "Sarvam",
-    capabilities: ["vision", "search"],
   },
 ];
 
@@ -244,13 +230,148 @@ export class GeminiAPI {
       thinkingBudget?: number;
     },
   ) {
+    // Process files and add them to the appropriate messages if provided
+    let processedMessages = [...messages];
+
+    if (options?.files && options.files.length > 0) {
+      processedMessages = await this.processFilesIntoMessages(
+        processedMessages,
+        options.files,
+      );
+    }
+
     if (options?.searchEnabled) {
       // Use new SDK with Google Search grounding
-      return this.generateWithSearch(messages, modelId, options);
+      return this.generateWithSearch(processedMessages, modelId, options);
     } else {
       // Use legacy SDK for regular requests
-      return this.generateWithoutSearch(messages, modelId, options);
+      return this.generateWithoutSearch(processedMessages, modelId, options);
     }
+  }
+
+  private async processFilesIntoMessages(
+    messages: Array<{
+      role: "system" | "user" | "assistant";
+      content: string | MessageContent[];
+    }>,
+    files: UploadFileResponse[],
+  ): Promise<
+    Array<{
+      role: "system" | "user" | "assistant";
+      content: string | MessageContent[];
+    }>
+  > {
+    const processedMessages = [...messages];
+
+    // Group files by type
+    const imageFiles = files.filter((file) => {
+      const fileType = (file.serverData as { type: string })?.type ?? "";
+      return fileType.startsWith("image/");
+    });
+
+    const documentFiles = files.filter((file) => {
+      const fileType = (file.serverData as { type: string })?.type ?? "";
+      return fileType === "application/pdf" || fileType.startsWith("text/");
+    });
+
+    // Add image files to the last user message
+    if (imageFiles.length > 0) {
+      const lastUserMessageIndex = processedMessages
+        .map((m) => m.role)
+        .lastIndexOf("user");
+      if (lastUserMessageIndex !== -1) {
+        const lastUserMessage = processedMessages[lastUserMessageIndex];
+        if (lastUserMessage) {
+          const messageContent: MessageContent[] = [];
+
+          // Add existing text content
+          if (typeof lastUserMessage.content === "string") {
+            messageContent.push({
+              type: "text",
+              text: lastUserMessage.content,
+            });
+          } else {
+            messageContent.push(...lastUserMessage.content);
+          }
+
+          // Add image files
+          for (const file of imageFiles) {
+            messageContent.push({
+              type: "image_url",
+              image_url: { url: file.url },
+            });
+          }
+
+          processedMessages[lastUserMessageIndex] = {
+            ...lastUserMessage,
+            content: messageContent,
+          };
+        }
+      }
+    } // Add document files to the last user message
+    if (documentFiles.length > 0) {
+      const lastUserMessageIndex = processedMessages
+        .map((m) => m.role)
+        .lastIndexOf("user");
+      if (lastUserMessageIndex !== -1) {
+        const lastUserMessage = processedMessages[lastUserMessageIndex];
+        if (lastUserMessage) {
+          const messageContent: MessageContent[] = [];
+
+          // Add existing text content
+          if (typeof lastUserMessage.content === "string") {
+            messageContent.push({
+              type: "text",
+              text: lastUserMessage.content,
+            });
+          } else {
+            messageContent.push(...lastUserMessage.content);
+          }
+
+          // Process document files and add as file content
+          for (const file of documentFiles) {
+            try {
+              const fileType =
+                (file.serverData as { type: string })?.type ?? "";
+
+              // Fetch the file content and convert to base64
+              const response = await fetch(file.url);
+              const buffer = await response.arrayBuffer();
+              const base64Data = Buffer.from(buffer).toString("base64");
+
+              messageContent.push({
+                type: "file",
+                file: {
+                  filename: file.name,
+                  file_data: `data:${fileType};base64,${base64Data}`,
+                },
+              });
+            } catch (error) {
+              console.error(`Failed to process file ${file.name}:`, error);
+              // Fallback to text indication
+              const existingTextIndex = messageContent.findIndex(
+                (c) => c.type === "text",
+              );
+              if (existingTextIndex !== -1) {
+                messageContent[existingTextIndex]!.text +=
+                  `\n\n[Document: ${file.name} - Could not be processed]`;
+              } else {
+                messageContent.push({
+                  type: "text",
+                  text: `[Document: ${file.name} - Could not be processed]`,
+                });
+              }
+            }
+          }
+          processedMessages[lastUserMessageIndex] = {
+            ...lastUserMessage,
+            content: messageContent,
+          };
+        }
+      }
+    }
+
+    return processedMessages;
   }
   private async generateWithSearch(
     messages: Array<{
@@ -267,7 +388,17 @@ export class GeminiAPI {
   ): Promise<Response> {
     try {
       // Convert messages to the format expected by new SDK
-      const contents = this.convertMessagesForNewSDK(messages); // Define the grounding tool exactly as in Google docs
+      const contents = await this.convertMessagesForNewSDK(messages, options);
+
+      // Extract system instruction from messages
+      const systemMessage = messages.find((m) => m.role === "system");
+      const systemInstruction = systemMessage
+        ? typeof systemMessage.content === "string"
+          ? systemMessage.content
+          : (systemMessage.content[0]?.text ?? "")
+        : "";
+
+      // Define the grounding tool exactly as in Google docs
       const groundingTool = {
         googleSearch: {},
       };
@@ -275,13 +406,21 @@ export class GeminiAPI {
       // Configure generation settings
       const config: {
         tools: Array<{ googleSearch: Record<string, never> }>;
+        systemInstruction?: string;
         thinkingConfig?: {
           thinkingBudget?: number;
           includeThoughts?: boolean;
         };
       } = {
         tools: [groundingTool],
-      }; // Add thinking configuration if model supports it (always enable for thinking-capable models)
+      };
+
+      // Add system instruction if present
+      if (systemInstruction) {
+        config.systemInstruction = systemInstruction;
+      }
+
+      // Add thinking configuration if model supports it (always enable for thinking-capable models)
       const supportsThinking = this.modelSupportsThinking(modelId);
       if (supportsThinking) {
         config.thinkingConfig = {
@@ -341,7 +480,6 @@ export class GeminiAPI {
       return this.generateWithLegacySDK(messages, modelId);
     }
   }
-
   private async generateWithThinking(
     messages: Array<{
       role: "system" | "user" | "assistant";
@@ -351,17 +489,34 @@ export class GeminiAPI {
     options?: {
       thinkingEnabled?: boolean;
       thinkingBudget?: number;
+      files?: UploadFileResponse[];
     },
   ): Promise<Response> {
     try {
       // Convert messages to the format expected by new SDK
-      const contents = this.convertMessagesForNewSDK(messages); // Configure thinking settings (always enabled for thinking-capable models)
+      const contents = await this.convertMessagesForNewSDK(messages, options);
+
+      // Extract system instruction from messages
+      const systemMessage = messages.find((m) => m.role === "system");
+      const systemInstruction = systemMessage
+        ? typeof systemMessage.content === "string"
+          ? systemMessage.content
+          : (systemMessage.content[0]?.text ?? "")
+        : "";
+
+      // Configure thinking settings (always enabled for thinking-capable models)
       const config: {
+        systemInstruction?: string;
         thinkingConfig?: {
           thinkingBudget?: number;
           includeThoughts?: boolean;
         };
       } = {};
+
+      // Add system instruction if present
+      if (systemInstruction) {
+        config.systemInstruction = systemInstruction;
+      }
 
       // Always enable thinking for thinking-capable models
       config.thinkingConfig = {
@@ -522,24 +677,112 @@ export class GeminiAPI {
       return { text: "" };
     });
   }
-  private convertMessagesForNewSDK(
+  private async convertMessagesForNewSDK(
     messages: Array<{
       role: "system" | "user" | "assistant";
       content: string | MessageContent[];
     }>,
-  ): string {
-    // According to Google docs, for Google Search grounding, we pass a user prompt as a simple string
-    // Get the latest user message for the search query
-    const lastUserMessage = messages.filter((m) => m.role === "user").pop();
+    _options?: {
+      files?: UploadFileResponse[];
+    },
+  ) {
+    // Convert messages to the format expected by new SDK with proper file handling
+    const contents = [];
 
-    if (lastUserMessage) {
-      return typeof lastUserMessage.content === "string"
-        ? lastUserMessage.content
-        : (lastUserMessage.content[0]?.text ?? "");
+    for (const message of messages) {
+      if (message.role === "system") {
+        // System messages are handled separately in the config
+        continue;
+      }
+
+      const parts: Array<{
+        text?: string;
+        inlineData?: { mimeType: string; data: string };
+      }> = [];
+
+      // Handle content
+      if (typeof message.content === "string") {
+        parts.push({ text: message.content });
+      } else {
+        // Handle structured content (files already processed in message)
+        for (const content of message.content) {
+          if (content.type === "text" && content.text) {
+            parts.push({ text: content.text });
+          } else if (content.type === "image_url" && content.image_url?.url) {
+            // Convert image URL to base64 inline data for Gemini
+            try {
+              let base64Data: string;
+              let mimeType: string;
+
+              if (content.image_url.url.startsWith("data:")) {
+                // Extract from data URL
+                const [mimeTypePart, data] = content.image_url.url.split(",");
+                mimeType = mimeTypePart!
+                  .replace("data:", "")
+                  .replace(";base64", "");
+                base64Data = data!;
+              } else {
+                // Fetch external image
+                const response = await fetch(content.image_url.url);
+                const buffer = await response.arrayBuffer();
+                base64Data = Buffer.from(buffer).toString("base64");
+
+                // Determine MIME type
+                mimeType = "image/png";
+                if (
+                  content.image_url.url.includes(".jpg") ||
+                  content.image_url.url.includes(".jpeg")
+                ) {
+                  mimeType = "image/jpeg";
+                } else if (content.image_url.url.includes(".gif")) {
+                  mimeType = "image/gif";
+                } else if (content.image_url.url.includes(".webp")) {
+                  mimeType = "image/webp";
+                }
+              }
+
+              parts.push({
+                inlineData: {
+                  mimeType,
+                  data: base64Data,
+                },
+              });
+            } catch (error) {
+              console.error("Failed to process image:", error);
+              parts.push({ text: `[Image could not be processed]` });
+            }
+          } else if (content.type === "file" && content.file) {
+            // Handle PDF and other file types
+            try {
+              if (content.file.file_data.startsWith("data:")) {
+                const [mimeTypePart, base64Data] =
+                  content.file.file_data.split(",");
+                const mimeType = mimeTypePart!
+                  .replace("data:", "")
+                  .replace(";base64", "");
+
+                parts.push({
+                  inlineData: {
+                    mimeType,
+                    data: base64Data!,
+                  },
+                });
+              }
+            } catch (error) {
+              console.error("Failed to process file:", error);
+              parts.push({ text: `[File: ${content.file.filename}]` });
+            }
+          }
+        }
+      }
+
+      contents.push({
+        role: message.role === "user" ? "user" : "model",
+        parts,
+      });
     }
 
-    // Fallback: return empty string
-    return "";
+    return contents;
   }
   private async createStreamFromNewSDKResponse(
     response: unknown,
@@ -1117,14 +1360,14 @@ export class GroqAPI {
       content: string | MessageContent[];
     }>,
     model: string,
-    _options?: {
+    options?: {
       searchEnabled?: boolean;
       files?: UploadFileResponse[];
       thinkingEnabled?: boolean;
       thinkingBudget?: number;
     },
   ): Promise<Response> {
-    // Convert messages to Groq format
+    // Convert messages to Groq format and include file information as text
     const groqMessages = messages.map((msg) => ({
       role: msg.role,
       content:
@@ -1132,6 +1375,24 @@ export class GroqAPI {
           ? msg.content
           : this.convertContentToText(msg.content),
     }));
+
+    // Add file information to the last user message if files are provided
+    if (options?.files && options.files.length > 0) {
+      const lastUserMessageIndex = groqMessages
+        .map((m) => m.role)
+        .lastIndexOf("user");
+      if (lastUserMessageIndex !== -1) {
+        const lastUserMessage = groqMessages[lastUserMessageIndex];
+        if (lastUserMessage) {
+          let fileInfo = "\n\nAttached files:";
+          for (const file of options.files) {
+            const fileType = (file.serverData as { type: string })?.type ?? "";
+            fileInfo += `\n- ${file.name} (${fileType})`;
+          }
+          lastUserMessage.content += fileInfo;
+        }
+      }
+    }
 
     const requestBody = {
       model: model,

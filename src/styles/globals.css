@@ -141,12 +141,12 @@
   --background: #f9fafb; /* Light gray background */
   --foreground: #1f2937; /* Dark gray text */
   /* Button theme variables */
-  --button-primary: #374151; /* Gray-700 - brighter than before */
-  --button-primary-hover: #4b5563; /* Gray-600 - lighter on hover */
-  --button-primary-active: #1f2937; /* Gray-800 - darker when pressed */
-  --button-border: rgba(55, 65, 81, 0.3);
-  --button-shadow: rgba(55, 65, 81, 0.2);
-  --button-shadow-hover: rgba(55, 65, 81, 0.3);
+  --button-primary: #5c1e28;
+  --button-primary-hover: #7c2935;
+  --button-primary-active: #380f15;
+  --button-border: rgba(92, 30, 40, 0.4);
+  --button-shadow: rgba(92, 30, 40, 0.3);
+  --button-shadow-hover: rgba(92, 30, 40, 0.4);
 
   /* Chatbox gradient variables */
   --chatbox-gradient-from: #1f2937;
@@ -189,12 +189,12 @@
   --background: #111827; /* Very dark gray background */
   --foreground: #f3f4f6; /* Light gray text */
   /* Button theme variables for dark mode */
-  --button-primary: #374151; /* Gray-700 - same as light mode for consistency */
-  --button-primary-hover: #4b5563; /* Gray-600 - same as light mode */
-  --button-primary-active: #1f2937; /* Gray-800 - same as light mode */
-  --button-border: rgba(55, 65, 81, 0.4);
-  --button-shadow: rgba(55, 65, 81, 0.1);
-  --button-shadow-hover: rgba(55, 65, 81, 0.2);
+  --button-primary: #5c1e28;
+  --button-primary-hover: #7c2935;
+  --button-primary-active: #380f15;
+  --button-border: rgba(92, 30, 40, 0.4);
+  --button-shadow: rgba(92, 30, 40, 0.1);
+  --button-shadow-hover: rgba(92, 30, 40, 0.2);
 }
 
 .dark {

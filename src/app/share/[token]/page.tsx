@@ -4,9 +4,9 @@ import { prisma } from "~/lib/prisma";
 import type { JsonValue } from "@prisma/client/runtime/library";
 
 type SharePageProps = {
-  params: {
+  params: Promise<{
     token: string;
-  };
+  }>;
 };
 
 type SharedChatWithDetails = {
@@ -43,7 +43,7 @@ type SharedChatWithDetails = {
 
 export default async function SharePage({ params }: SharePageProps) {
   const { userId } = await auth();
-  const { token } = params;
+  const { token } = await params;
 
   if (!userId) {
     return redirect("/sign-in");

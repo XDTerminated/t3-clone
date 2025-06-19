@@ -29,7 +29,7 @@ const colorThemes: Array<{
   {
     id: "black",
     name: "Midnight Black",
-    description: "Sleek and professional",
+    description: "Sleek and professional (under development)",
     primaryColor: "bg-gray-800",
     accentColor: "bg-gray-100 dark:bg-gray-900",
   },
