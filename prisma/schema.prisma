@@ -11,7 +11,7 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_DATABASE_URL")
+  // directUrl = env("DIRECT_DATABASE_URL")
 }
 
 model Chat {
@@ -23,6 +23,7 @@ model Chat {
   updatedAt DateTime @updatedAt
   messages Message[]
   branches Branch[]
+  sharedChats SharedChat[]
   @@map("chats")
 }
 
@@ -48,4 +49,16 @@ model Branch {
   createdAt DateTime  @default(now())
   messages  Message[]
   @@map("branches")
+}
+
+model SharedChat {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  chatId    String
+  userId    String // The user who created the share link
+  createdAt DateTime @default(now())
+  chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  @@index([chatId])
+  @@map("shared_chats")
 }

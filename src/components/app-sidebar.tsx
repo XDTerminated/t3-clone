@@ -2,7 +2,7 @@
 
 import * as React from "react"; // Import React for useEffect, useState
 import Image from "next/image";
-import { Plus, Search, LogIn, User, Pin, X, Edit2 } from "lucide-react";
+import { Plus, Search, LogIn, User, Pin, X, Edit2, Share2 } from "lucide-react";
 import { useAuth, useUser } from "@clerk/nextjs";
 import {
   Sidebar,
@@ -73,6 +73,7 @@ const ChatItem = ({
   onPin,
   onRename,
   onDelete,
+  onShare,
   isActive = false,
 }: {
   chat: { id: string; title: string | null; pinned?: boolean };
@@ -80,6 +81,7 @@ const ChatItem = ({
   onPin: (id: string) => void;
   onRename: (id: string, newTitle: string) => void;
   onDelete: (id: string, title: string | null) => void;
+  onShare: (id: string) => void;
   isActive?: boolean;
 }) => {
   const [isEditing, setIsEditing] = React.useState(false);
@@ -177,6 +179,17 @@ const ChatItem = ({
             <button
               className="sidebar-action-btn hover:bg-muted/40 rounded-md p-1.5"
               tabIndex={-1}
+              aria-label="Share thread"
+              onClick={(e) => {
+                e.stopPropagation();
+                onShare(chat.id);
+              }}
+            >
+              <Share2 className="size-4" />
+            </button>{" "}
+            <button
+              className="sidebar-action-btn hover:bg-muted/40 rounded-md p-1.5"
+              tabIndex={-1}
               aria-label="Rename thread"
               onClick={(e) => {
                 e.stopPropagation();
@@ -216,6 +229,7 @@ export function AppSidebar() {
     deleteChat,
     renameChat,
     pinChat,
+    shareChat,
     isLoadingChats,
   } = useChat();
   // Delete dialog state
@@ -249,6 +263,9 @@ export function AppSidebar() {
   const handleDeleteChat = (chatId: string, chatTitle: string | null) => {
     setChatToDelete({ id: chatId, title: chatTitle });
     setDeleteDialogOpen(true);
+  };
+  const handleShareChat = async (chatId: string) => {
+    await shareChat(chatId);
   };
 
   const confirmDelete = async () => {
@@ -440,6 +457,7 @@ export function AppSidebar() {
                               onPin={handlePinChat}
                               onRename={handleRenameChat}
                               onDelete={handleDeleteChat}
+                              onShare={handleShareChat}
                               isActive={currentChatId === chat.id}
                             />
                           ))}
@@ -465,6 +483,7 @@ export function AppSidebar() {
                               onPin={handlePinChat}
                               onRename={handleRenameChat}
                               onDelete={handleDeleteChat}
+                              onShare={handleShareChat}
                               isActive={currentChatId === chat.id}
                             />
                           ))}
@@ -490,6 +509,7 @@ export function AppSidebar() {
                               onPin={handlePinChat}
                               onRename={handleRenameChat}
                               onDelete={handleDeleteChat}
+                              onShare={handleShareChat}
                               isActive={currentChatId === chat.id}
                             />
                           ))}
@@ -515,6 +535,7 @@ export function AppSidebar() {
                               onPin={handlePinChat}
                               onRename={handleRenameChat}
                               onDelete={handleDeleteChat}
+                              onShare={handleShareChat}
                               isActive={currentChatId === chat.id}
                             />
                           ))}
@@ -540,6 +561,7 @@ export function AppSidebar() {
                               onPin={handlePinChat}
                               onRename={handleRenameChat}
                               onDelete={handleDeleteChat}
+                              onShare={handleShareChat}
                               isActive={currentChatId === chat.id}
                             />
                           ))}

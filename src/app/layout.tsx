@@ -10,6 +10,7 @@ import { DataProvider } from "~/contexts/DataContext";
 import { ChatProvider } from "~/contexts/ChatContext";
 import { ModelProvider } from "~/contexts/ModelContext";
 import { ApiKeyProvider } from "~/contexts/ApiKeyContext";
+import { ToastProvider } from "~/components/toast";
 
 export const metadata: Metadata = {
   title: "T3 Chat",
@@ -38,13 +39,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <body
           className={`${montserrat.variable} text-foreground bg-background min-h-screen dark:bg-[radial-gradient(ellipse_at_center,var(--background)_20%,oklch(0.18_0.015_25)_100%)]`}
         >
+          {" "}
           <SidebarProvider>
             <DataProvider>
               <ApiKeyProvider>
                 <ModelProvider>
-                  <ChatProvider>
-                    <ContentWrapper>{children}</ContentWrapper>
-                  </ChatProvider>
+                  <ToastProvider>
+                    <ChatProvider>
+                      <ContentWrapper>{children}</ContentWrapper>
+                    </ChatProvider>
+                  </ToastProvider>
                 </ModelProvider>
               </ApiKeyProvider>
             </DataProvider>

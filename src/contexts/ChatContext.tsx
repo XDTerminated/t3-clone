@@ -11,6 +11,7 @@ import {
 import { useModel } from "./ModelContext";
 import { useAuth } from "@clerk/nextjs";
 import { useApiKey } from "./ApiKeyContext";
+import { useToast } from "~/components/toast";
 import type { UploadFileResponse, ChatMessage } from "~/lib/types";
 
 // Helper function to check if a model supports thinking
@@ -109,6 +110,7 @@ interface ChatContextType {
   ) => { current: number; total: number } | null;
   // New: Check if a message allows navigation (no unregenerated messages after it)
   isMessageNavigable: (messageIndex: number) => boolean;
+  shareChat: (chatId: string) => Promise<string | null>;
 }
 
 // API Response Types
@@ -128,6 +130,7 @@ const ChatContext = createContext<ChatContextType | null>(null);
 
 export function ChatProvider({ children }: { children: React.ReactNode }) {
   const { selectedModel } = useModel();
+  const { showToast } = useToast();
   const {
     hasAnyKey,
     setOpenRouterApiKey,
@@ -266,8 +269,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       console.error("Failed to create new chat:", error);
     }
     return null;
-  }, [isSignedIn]);
-  const selectChat = async (chatId: string) => {
+  }, [isSignedIn]);  const selectChat = useCallback(async (chatId: string) => {
     // Don't do anything if we're already on this chat
     if (currentChatId === chatId) {
       return;
@@ -418,7 +420,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
 
     setIsLoadingChat(false);
-  };
+  }, [currentChatId]);
   const ensureBranchExists = useCallback(
     async (chatId: string): Promise<string> => {
       // Verify that the current branch actually belongs to this chat
@@ -599,11 +601,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     },
     [currentBranchId],
   );
-  const generateQuickTitle = useCallback((message: string): string => {
-    // Generate a quick title from the first message for immediate UI feedback
-    const words = message.trim().split(/\s+/).slice(0, 6);
-    return words.join(" ") + (words.length >= 6 ? "..." : "");
-  }, []);
 
   const showErrorDialog = useCallback(
     (title: string, message: string, errorType?: string) => {
@@ -614,6 +611,63 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     },
     [],
   );
+
+  const shareChat = useCallback(async (chatId: string): Promise<string | null> => {
+    if (!isSignedIn) {
+      setLoginDialogAction(null);
+      setLoginDialogOpen(true);
+      return null;
+    }    try {
+      const response = await fetch('/api/share', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ chatId }),
+      });      if (response.ok) {
+        const responseText = await response.text();
+        if (responseText) {
+          const { token } = JSON.parse(responseText) as { token: string };
+          const shareUrl = `${window.location.origin}/share/${token}`;
+          
+          // Copy to clipboard
+          try {
+            await navigator.clipboard.writeText(shareUrl);
+            showToast('Share link copied to clipboard!', 'success');
+          } catch (clipboardError) {
+            console.error('Failed to copy to clipboard:', clipboardError);
+            showToast('Share link generated but failed to copy to clipboard', 'error');
+          }
+          
+          return shareUrl;
+        } else {
+          showErrorDialog('Failed to Share Chat', 'Empty response from server.');
+          return null;
+        }
+      } else {
+        const responseText = await response.text();
+        let errorMessage = 'An unknown error occurred.';
+        try {
+          const errorData = JSON.parse(responseText) as { error?: string };
+          errorMessage = errorData.error ?? errorMessage;
+        } catch {
+          errorMessage = responseText || errorMessage;
+        }
+        showErrorDialog('Failed to Share Chat', errorMessage);
+        return null;
+      }
+    } catch (error) {
+      console.error('Failed to share chat:', error);
+      showErrorDialog('Failed to Share Chat', 'An unexpected error occurred. Please try again.');
+      return null;
+    }
+  }, [isSignedIn, showErrorDialog, showToast]);
+
+  const generateQuickTitle = useCallback((message: string): string => {
+    // Generate a quick title from the first message for immediate UI feedback
+    const words = message.trim().split(/\s+/).slice(0, 6);
+    return words.join(" ") + (words.length >= 6 ? "..." : "");
+  }, []);
 
   const sendMessage = useCallback(
     (data: ChatMessage): Promise<void> => {
@@ -1819,15 +1873,19 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         deleteChat,
         renameChat,
         pinChat,
+        shareChat,
+        // Login dialog state
         loginDialogOpen,
         loginDialogAction,
         setLoginDialogOpen,
         setLoginDialogAction,
+        // API Key dialog state
         apiKeyDialogOpen,
         setApiKeyDialogOpen,
         handleApiKeySubmit,
         settingsDialogOpen,
         setSettingsDialogOpen,
+        // Error dialog state
         errorDialogOpen,
         errorDialogTitle,
         errorDialogMessage,

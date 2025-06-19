@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { Chatbox } from "~/components/chatbox";
 import MessageList from "~/components/message-list";
 import WelcomeScreen from "~/components/welcome-screen";
@@ -7,7 +9,8 @@ import TopRightIconHolder from "~/components/top-right-icon-holder";
 import { LoginDialog } from "~/components/login-dialog";
 import { useChat } from "~/contexts/ChatContext";
 
-export default function Page() {
+function HomePage() {
+  const searchParams = useSearchParams();
   const {
     messages,
     sendMessage,
@@ -17,7 +20,25 @@ export default function Page() {
     loginDialogOpen,
     loginDialogAction,
     setLoginDialogOpen,
-  } = useChat();
+    selectChat,
+    fetchChats,
+  } = useChat(); // Handle chatId from URL (for shared chats)
+  useEffect(() => {
+    const chatId = searchParams.get("chatId");
+    console.log(
+      "Page useEffect - chatId from URL:",
+      chatId,
+      "currentChatId:",
+      currentChatId,
+    );
+    if (chatId && chatId !== currentChatId) {
+      console.log("Selecting chat:", chatId);
+      // First refresh the chat list to ensure the imported chat is available
+      void fetchChats().then(() => {
+        void selectChat(chatId);
+      });
+    }
+  }, [searchParams, currentChatId, selectChat, fetchChats]);
 
   // Show welcome screen only if:
   // 1. Not loading a chat AND
@@ -27,7 +48,6 @@ export default function Page() {
     !isLoadingChat &&
     messages.length === 0 &&
     (currentChatId === null || isPendingNewChat === true);
-
   return (
     <div className="relative flex h-full flex-col">
       <TopRightIconHolder />
@@ -48,5 +68,13 @@ export default function Page() {
         action={loginDialogAction ?? "send"}
       />
     </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <HomePage />
+    </Suspense>
   );
 }
