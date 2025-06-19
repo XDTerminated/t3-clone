@@ -95,7 +95,6 @@ Required environment variables:
 ```bash
 # Database
 DATABASE_URL="postgresql://username:password@host:5432/database?pgbouncer=true&connection_limit=1&pool_timeout=20&connect_timeout=60"
-DIRECT_DATABASE_URL="postgresql://username:password@host:5432/database"
 
 # Authentication (Clerk)
 CLERK_SECRET_KEY="sk_test_..."
@@ -105,7 +104,6 @@ NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_test_..."
 GEMINI_API_KEY="AIza..."
 
 # File Upload (UploadThing)
-UPLOADTHING_SECRET="sk_live_..."
 UPLOADTHING_TOKEN="eyJ..."
 
 # Optional - Additional AI Models
