@@ -101,7 +101,7 @@ export default function WelcomeScreen({ onPromptSelect }: WelcomeScreenProps) {
             <button
               key={index}
               onClick={() => onPromptSelect(prompt)}
-              className="text-secondary-foreground hover:bg-secondary/50 active:bg-secondary/70 w-full rounded-lg px-4 py-3 text-center transition-colors"
+              className="text-secondary-foreground w-full rounded-lg px-4 py-3 text-center transition-transform duration-200 ease-out hover:scale-105 active:scale-95"
             >
               <span>{prompt}</span>
             </button>

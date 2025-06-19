@@ -11,6 +11,7 @@ import {
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { useApiKey } from "~/contexts/ApiKeyContext";
+import { Settings } from "lucide-react";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -106,10 +107,15 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Settings</DialogTitle>{" "}
-          <DialogDescription>
+      <DialogContent className="bg-background border-border sm:max-w-md">
+        <DialogHeader className="text-center">
+          <div className="bg-primary/10 mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full">
+            <Settings className="text-primary h-6 w-6" />
+          </div>
+          <DialogTitle className="text-foreground text-lg font-semibold">
+            Settings
+          </DialogTitle>{" "}
+          <DialogDescription className="text-muted-foreground text-sm">
             Manage your API key settings. You can use OpenRouter for most
             models, Gemini for Google models, and Groq for fast inference.
           </DialogDescription>

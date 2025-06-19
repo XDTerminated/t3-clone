@@ -334,7 +334,7 @@ export default function MessageList({ messages }: MessageListProps) {
             <div
               role="article"
               aria-label="Your message"
-              className="group border-secondary/50 bg-muted relative inline-block max-w-[80%] rounded-xl border px-4 py-3 text-left break-words"
+              className="group theme-user-message relative inline-block max-w-[80%] rounded-xl border px-4 py-3 text-left break-words backdrop-blur-sm"
             >
               <span className="sr-only">Your message: </span>{" "}
               <div className="flex flex-col">

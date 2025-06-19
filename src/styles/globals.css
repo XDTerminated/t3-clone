@@ -82,8 +82,8 @@
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
   /* Rose themed sidebar */
-  --sidebar: #fdf2f8; /* Same as main background */
-  --sidebar-foreground: #881337;
+  --sidebar: #5c1e28; /* Darker red matching the chatbox border color */
+  --sidebar-foreground: #fce7f3;
   --sidebar-primary: #881337;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #fce7f3;
@@ -94,7 +94,107 @@
   /* Custom scrollbar variables for light mode - rose themed */
   --scrollbar-thumb-light: #f9a8d4;
   --scrollbar-thumb-hover-light: #e11d48;
-  --scrollbar-track-light: #fdf2f8;
+  --scrollbar-track-light: #fdf2f8; /* Button theme variables */
+  --button-primary: #5c1e28;
+  --button-primary-hover: #7c2935;
+  --button-primary-active: #380f15;
+  --button-border: rgba(92, 30, 40, 0.4);
+  --button-shadow: rgba(92, 30, 40, 0.3);
+  --button-shadow-hover: rgba(92, 30, 40, 0.4); /* Chatbox gradient variables */
+  --chatbox-gradient-from: #380f15;
+  --chatbox-gradient-to: #19100f;
+  --chatbox-border: #5c1e28;
+  /* Main chat gradient variables */
+  --main-chat-gradient-from: #2d0a0f;
+  --main-chat-gradient-to: #1a0609;
+}
+
+/* Black/Gray Theme */
+:root.theme-black {
+  --primary: #030712; /* Use sidebar color as primary */
+  --primary-foreground: #ffffff;
+  --secondary: #f3f4f6; /* Gray-100 */
+  --secondary-foreground: #030712;
+  --muted: #d1d5db; /* Gray-300 */
+  --muted-foreground: #374151;
+  --accent: #e5e7eb; /* Gray-200 */
+  --accent-foreground: #030712;
+  --border: rgba(3, 7, 18, 0.2);
+  --input: rgba(3, 7, 18, 0.2);
+  --ring: #030712;
+
+  --card: #f3f4f6;
+  --card-foreground: #030712;
+  --popover: #f3f4f6;
+  --popover-foreground: #030712;
+
+  --sidebar: #030712;
+  --sidebar-foreground: #f3f4f6;
+  --sidebar-primary: #374151;
+  --sidebar-accent: #f3f4f6;
+  --sidebar-accent-foreground: #030712;
+  --sidebar-border: #e5e7eb;
+  --sidebar-ring: #030712;
+
+  --scrollbar-thumb-light: #d1d5db;
+  --scrollbar-thumb-hover-light: #030712;
+  --background: #f9fafb; /* Light gray background */
+  --foreground: #1f2937; /* Dark gray text */
+  /* Button theme variables */
+  --button-primary: #374151; /* Gray-700 - brighter than before */
+  --button-primary-hover: #4b5563; /* Gray-600 - lighter on hover */
+  --button-primary-active: #1f2937; /* Gray-800 - darker when pressed */
+  --button-border: rgba(55, 65, 81, 0.3);
+  --button-shadow: rgba(55, 65, 81, 0.2);
+  --button-shadow-hover: rgba(55, 65, 81, 0.3);
+
+  /* Chatbox gradient variables */
+  --chatbox-gradient-from: #1f2937;
+  --chatbox-gradient-to: #030712;
+  --chatbox-border: #374151;
+  /* Main chat gradient variables */
+  --main-chat-gradient-from: #0f1419;
+  --main-chat-gradient-to: #020509;
+}
+
+:root.theme-black.dark {
+  --primary: #030712; /* Use sidebar color as primary */
+  --primary-foreground: #f3f4f6;
+  --secondary: #111827;
+  --secondary-foreground: #d1d5db;
+  --muted: #1f2937;
+  --muted-foreground: rgba(243, 244, 246, 0.7);
+  --accent: #111827;
+  --accent-foreground: #d1d5db;
+  --border: rgba(3, 7, 18, 0.3);
+  --input: rgba(3, 7, 18, 0.3);
+  --ring: #030712;
+
+  --card: #030712;
+  --card-foreground: #f3f4f6;
+  --popover: #030712;
+  --popover-foreground: #f3f4f6;
+
+  --sidebar: #030712;
+  --sidebar-foreground: #f3f4f6;
+  --sidebar-primary: #9ca3af;
+  --sidebar-primary-foreground: #1f2937;
+  --sidebar-accent: #111827;
+  --sidebar-accent-foreground: #d1d5db;
+  --sidebar-border: #1f2937;
+  --sidebar-ring: #030712;
+
+  --scrollbar-thumb-dark: #374151;
+  --scrollbar-thumb-hover-dark: #9ca3af;
+  --background: #111827; /* Very dark gray background */
+  --foreground: #f3f4f6; /* Light gray text */
+  /* Button theme variables for dark mode */
+  --button-primary: #374151; /* Gray-700 - same as light mode for consistency */
+  --button-primary-hover: #4b5563; /* Gray-600 - same as light mode */
+  --button-primary-active: #1f2937; /* Gray-800 - same as light mode */
+  --button-border: rgba(55, 65, 81, 0.4);
+  --button-shadow: rgba(55, 65, 81, 0.1);
+  --button-shadow-hover: rgba(55, 65, 81, 0.2);
 }
 
 .dark {
@@ -131,22 +231,26 @@
   --border: rgba(244, 63, 94, 0.2); /* Rose-500/20 matching dropdown exactly */
   --input: rgba(244, 63, 94, 0.2); /* Input field border matching dropdown */
   --ring: #fb7185; /* Rose-400 focus ring for dark mode */
-
   /* Dark rose themed sidebar */
-  --sidebar: #0f0508; /* Even darker rose for sidebar */
+  --sidebar: #19100f; /* Dark brown matching the chatbox gradient end */
   --sidebar-foreground: #fce7f3;
 
   --sidebar-primary: #fb7185; /* Rose-400 for sidebar primary */
   --sidebar-primary-foreground: #881337;
   --sidebar-accent: oklch(0.18 0.015 25); /* Dark rose accent */
   --sidebar-accent-foreground: #f9a8d4; /* Light rose text on accent */
-  --sidebar-border: rgba(244, 63, 94, 0.2); /* Matching dropdown border */
+  --sidebar-border: #5c1e28; /* Solid dark red border matching theme */
   --sidebar-ring: #fb7185; /* Rose-400 focus ring */
-
   /* Custom scrollbar variables for dark mode - rose themed */
   --scrollbar-thumb-dark: #be185d;
   --scrollbar-thumb-hover-dark: #fb7185;
-  --scrollbar-track-dark: #1a0b14;
+  --scrollbar-track-dark: #1a0b14; /* Button theme variables for dark mode */
+  --button-primary: #5c1e28;
+  --button-primary-hover: #7c2935;
+  --button-primary-active: #380f15;
+  --button-border: rgba(244, 63, 94, 0.4);
+  --button-shadow: rgba(251, 113, 133, 0.1);
+  --button-shadow-hover: rgba(251, 113, 133, 0.2);
 }
 
 /* Style custom scrollbar for Chatbox textarea */
@@ -591,9 +695,6 @@
   transition: none !important;
   animation: none !important;
   -webkit-transition: none !important;
-  
-  -webkit-appearance: none !important;
-  appearance: none !important;
 }
 
 .main-chat-container.scrolling::-webkit-scrollbar-thumb:hover {
@@ -806,116 +907,117 @@
   background-color: rgb(var(--muted) / 0.4);
 }
 
-/* Custom New Chat button colors - Matching dropdown rose theme */
+/* Custom New Chat button colors - Using theme variables */
 .new-chat-button {
-  background: linear-gradient(135deg, #e11d48 0%, #be185d 100%) !important;
+  background: linear-gradient(
+    135deg,
+    var(--button-primary) 0%,
+    var(--button-primary-active) 100%
+  ) !important;
   color: white !important;
-  border-color: rgba(225, 29, 72, 0.3) !important;
-  box-shadow: 0 4px 15px rgba(225, 29, 72, 0.2) !important;
+  border-color: var(--button-border) !important;
+  box-shadow: 0 4px 15px var(--button-shadow) !important;
 }
 
 .new-chat-button:hover {
-  background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%) !important;
-  box-shadow: 0 6px 20px rgba(225, 29, 72, 0.3) !important;
+  background: linear-gradient(
+    135deg,
+    var(--button-primary-hover) 0%,
+    var(--button-primary) 100%
+  ) !important;
+  box-shadow: 0 6px 20px var(--button-shadow-hover) !important;
   transform: translateY(-1px) !important;
   transition: all 0.2s ease !important;
 }
 
 .new-chat-button:active {
-  background: linear-gradient(135deg, #be185d 0%, #9f1239 100%) !important;
+  background: linear-gradient(
+    135deg,
+    var(--button-primary-active) 0%,
+    var(--button-primary) 100%
+  ) !important;
   transform: translateY(0) !important;
-  box-shadow: 0 2px 10px rgba(225, 29, 72, 0.2) !important;
+  box-shadow: 0 2px 10px var(--button-shadow) !important;
 }
 
-/* Dark mode styles for new chat button - matching dropdown theme */
+/* Dark mode styles for new chat button - using theme variables */
 .dark .new-chat-button {
   background: linear-gradient(
     135deg,
-    rgba(251, 113, 133, 0.3) 0%,
-    rgba(225, 29, 72, 0.3) 100%
+    var(--button-primary) 0%,
+    var(--button-primary-active) 100%
   ) !important;
-  border-color: rgba(244, 63, 94, 0.4) !important;
-  box-shadow: 0 4px 15px rgba(251, 113, 133, 0.1) !important;
+  border-color: var(--button-border) !important;
+  box-shadow: 0 4px 15px var(--button-shadow) !important;
 }
 
 .dark .new-chat-button:hover {
   background: linear-gradient(
     135deg,
-    rgba(251, 113, 133, 0.5) 0%,
-    rgba(225, 29, 72, 0.5) 100%
+    var(--button-primary-hover) 0%,
+    var(--button-primary) 100%
   ) !important;
-  box-shadow: 0 6px 20px rgba(251, 113, 133, 0.2) !important;
+  box-shadow: 0 6px 20px var(--button-shadow-hover) !important;
   transform: translateY(-1px) !important;
 }
 
 .dark .new-chat-button:active {
   background: linear-gradient(
     135deg,
-    rgba(251, 113, 133, 0.4) 0%,
-    rgba(225, 29, 72, 0.4) 100%
+    var(--button-primary-active) 0%,
+    var(--button-primary) 100%
   ) !important;
   transform: translateY(0) !important;
-  box-shadow: 0 2px 10px rgba(251, 113, 133, 0.1) !important;
+  box-shadow: 0 2px 10px var(--button-shadow) !important;
 }
 
-/* Welcome screen category buttons - matching dropdown rose theme */
+/* Welcome screen category buttons - using theme variables */
 .new-chat-button[data-selected="true"] {
-  background: linear-gradient(135deg, #e11d48 0%, #be185d 100%) !important;
+  background: linear-gradient(
+    135deg,
+    var(--button-primary) 0%,
+    var(--button-primary-active) 100%
+  ) !important;
   opacity: 1 !important;
-  box-shadow: 0 4px 15px rgba(225, 29, 72, 0.3) !important;
+  box-shadow: 0 4px 15px var(--button-shadow-hover) !important;
 }
 
 .new-chat-button[data-selected="false"] {
-  background: linear-gradient(
-    135deg,
-    rgba(225, 29, 72, 0.1) 0%,
-    rgba(190, 24, 93, 0.1) 100%
-  ) !important;
-  border: 1px solid rgba(225, 29, 72, 0.2) !important;
-  color: #e11d48 !important;
+  background: transparent !important;
+  border: 1px solid var(--button-border) !important;
+  color: var(--button-primary) !important;
   opacity: 0.7 !important;
 }
 
 .new-chat-button[data-selected="false"]:hover {
-  background: linear-gradient(
-    135deg,
-    rgba(225, 29, 72, 0.2) 0%,
-    rgba(190, 24, 93, 0.2) 100%
-  ) !important;
+  background: var(--button-primary) !important;
+  color: white !important;
   opacity: 0.9 !important;
   transform: translateY(-1px) !important;
-  box-shadow: 0 4px 12px rgba(225, 29, 72, 0.2) !important;
+  box-shadow: 0 4px 12px var(--button-shadow) !important;
 }
 
 /* Dark mode styles for welcome screen category buttons */
 .dark .new-chat-button[data-selected="true"] {
   background: linear-gradient(
     135deg,
-    rgba(251, 113, 133, 0.4) 0%,
-    rgba(225, 29, 72, 0.4) 100%
+    var(--button-primary) 0%,
+    var(--button-primary-active) 100%
   ) !important;
   color: white !important;
-  box-shadow: 0 4px 15px rgba(251, 113, 133, 0.2) !important;
+  box-shadow: 0 4px 15px var(--button-shadow-hover) !important;
 }
 
 .dark .new-chat-button[data-selected="false"] {
-  background: linear-gradient(
-    135deg,
-    rgba(251, 113, 133, 0.1) 0%,
-    rgba(225, 29, 72, 0.1) 100%
-  ) !important;
-  border: 1px solid rgba(251, 113, 133, 0.3) !important;
-  color: #f9a8d4 !important;
+  background: transparent !important;
+  border: 1px solid var(--button-border) !important;
+  color: var(--button-primary) !important;
 }
 
 .dark .new-chat-button[data-selected="false"]:hover {
-  background: linear-gradient(
-    135deg,
-    rgba(251, 113, 133, 0.2) 0%,
-    rgba(225, 29, 72, 0.2) 100%
-  ) !important;
-  color: #fce7f3 !important;
-  box-shadow: 0 4px 12px rgba(251, 113, 133, 0.15) !important;
+  background: var(--button-primary) !important;
+  color: white !important;
+  box-shadow: 0 4px 12px var(--button-shadow-hover) !important;
 }
 
 /* Reasoning section styles */
@@ -1120,4 +1222,47 @@ button {
 
 .dropdown-scroll-indicator.has-scroll::after {
   opacity: 1;
+}
+
+/* Theme-aware component styles */
+
+/* Default/Red Theme Chatbox - keep original colors */
+.theme-chatbox {
+  border-color: var(--chatbox-border);
+  background: linear-gradient(
+    to bottom right,
+    var(--chatbox-gradient-from),
+    var(--chatbox-gradient-to)
+  );
+}
+
+.theme-user-message {
+  border-color: var(--chatbox-border);
+  opacity: 0.7;
+  background: linear-gradient(
+    to bottom right,
+    var(--chatbox-gradient-from),
+    var(--chatbox-gradient-to)
+  );
+}
+
+/* Black Theme - Make chatbox and main chat similar to sidebar */
+:root.theme-black .theme-chatbox {
+  border-color: #374151;
+  background: linear-gradient(to bottom right, #1f2937, #030712) !important;
+}
+
+:root.theme-black .theme-user-message {
+  border-color: rgba(55, 65, 81, 0.3);
+  background: linear-gradient(
+    to bottom right,
+    rgba(31, 41, 55, 0.4),
+    rgba(3, 7, 18, 0.4)
+  ) !important;
+  opacity: 0.8;
+}
+
+/* Main chat - Override hardcoded colors for black theme only */
+:root.theme-black .main-chat-container.dark\:bg-gradient-to-br {
+  background: linear-gradient(to bottom right, #1a1d29, #030712) !important;
 }

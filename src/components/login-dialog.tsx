@@ -38,7 +38,11 @@ export function LoginDialog({ open, onOpenChange, action }: LoginDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-background border-border sm:max-w-[425px]">
-        <DialogHeader>
+        {" "}
+        <DialogHeader className="text-center">
+          <div className="bg-primary/10 mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full">
+            <LogIn className="text-primary h-6 w-6" />
+          </div>
           <DialogTitle className="text-foreground text-lg font-semibold">
             Sign In Required
           </DialogTitle>
@@ -54,12 +58,11 @@ export function LoginDialog({ open, onOpenChange, action }: LoginDialogProps) {
             className="hover:bg-muted/40 hover:text-foreground mt-2 sm:mt-0"
           >
             Cancel
-          </Button>
+          </Button>{" "}
           <Button
             onClick={handleSignIn}
             className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
           >
-            <LogIn className="mr-2 size-4" />
             Sign in with Google
           </Button>
         </DialogFooter>

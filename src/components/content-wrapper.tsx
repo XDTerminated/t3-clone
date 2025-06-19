@@ -49,17 +49,17 @@ export default function ContentWrapper({
       {/* Animated top gap for sidebar open/close */}
       <div
         className={cn(
-          "bg-sidebar w-full overflow-hidden transition-[height] duration-100 ease-linear",
+          "bg-sidebar relative z-30 w-full overflow-hidden transition-[height] duration-100 ease-linear",
           open ? "h-4" : "h-0",
         )}
       />
       {/* Wrapper row animates layout shift */}
       <div className="bg-sidebar flex w-full flex-1 overflow-hidden">
-        <AppSidebar />
+        <AppSidebar />{" "}
         <main
           ref={mainRef}
           className={cn(
-            "main-chat-container bg-background flex-grow overflow-y-scroll dark:bg-[radial-gradient(ellipse_at_center,var(--background)_20%,oklch(0.235_0.017_290)_100%)]",
+            "main-chat-container bg-background flex-grow overflow-y-scroll dark:bg-gradient-to-br dark:from-[#2d0a0f] dark:to-[#1a0609]",
             "border-t border-l transition-colors duration-100 ease-linear",
             open
               ? "border-sidebar-border rounded-tl-2xl"

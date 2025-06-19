@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "~/components/ui/dialog";
 import { Button } from "~/components/ui/button";
+import { Trash2 } from "lucide-react";
 
 interface DeleteChatDialogProps {
   open: boolean;
@@ -34,7 +35,11 @@ export function DeleteChatDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-background border-border sm:max-w-[425px]">
-        <DialogHeader>
+        {" "}
+        <DialogHeader className="text-center">
+          <div className="bg-destructive/10 mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full">
+            <Trash2 className="text-destructive h-6 w-6" />
+          </div>
           <DialogTitle className="text-foreground text-lg font-semibold">
             Delete Thread
           </DialogTitle>

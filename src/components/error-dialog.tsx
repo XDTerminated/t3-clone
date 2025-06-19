@@ -4,10 +4,12 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
 import { Button } from "~/components/ui/button";
+import { AlertTriangle } from "lucide-react";
 
 interface ErrorDialogProps {
   open: boolean;
@@ -27,13 +29,16 @@ export function ErrorDialog({
   const handleClose = () => {
     onOpenChange(false);
   };
-
   const getActionButtons = () => {
     switch (errorType) {
       case "RATE_LIMIT":
         return (
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={handleClose}>
+          <>
+            <Button
+              variant="outline"
+              onClick={handleClose}
+              className="hover:bg-muted/40 hover:text-foreground"
+            >
               Dismiss
             </Button>
             <Button
@@ -41,15 +46,20 @@ export function ErrorDialog({
                 handleClose();
                 // Could add retry logic here in the future
               }}
+              className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
             >
               Got it
             </Button>
-          </div>
+          </>
         );
       case "PAYMENT_REQUIRED":
         return (
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={handleClose}>
+          <>
+            <Button
+              variant="outline"
+              onClick={handleClose}
+              className="hover:bg-muted/40 hover:text-foreground"
+            >
               Dismiss
             </Button>
             <Button
@@ -57,16 +67,21 @@ export function ErrorDialog({
                 window.open("https://openrouter.ai/credits", "_blank");
                 handleClose();
               }}
+              className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
             >
               Check Account
             </Button>
-          </div>
+          </>
         );
       case "INVALID_API_KEY":
       case "FORBIDDEN":
         return (
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={handleClose}>
+          <>
+            <Button
+              variant="outline"
+              onClick={handleClose}
+              className="hover:bg-muted/40 hover:text-foreground"
+            >
               Dismiss
             </Button>
             <Button
@@ -74,26 +89,40 @@ export function ErrorDialog({
                 window.open("https://openrouter.ai/keys", "_blank");
                 handleClose();
               }}
+              className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
             >
               Check API Keys
             </Button>
-          </div>
+          </>
         );
       default:
-        return <Button onClick={handleClose}>OK</Button>;
+        return (
+          <Button
+            onClick={handleClose}
+            className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
+          >
+            OK
+          </Button>
+        );
     }
   };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-red-600">{title}</DialogTitle>
-          <DialogDescription className="text-gray-700">
+      <DialogContent className="bg-background border-border sm:max-w-md">
+        <DialogHeader className="text-center">
+          <div className="bg-destructive/10 mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full">
+            <AlertTriangle className="text-destructive h-6 w-6" />
+          </div>
+          <DialogTitle className="text-foreground text-lg font-semibold">
+            {title}
+          </DialogTitle>
+          <DialogDescription className="text-muted-foreground text-sm">
             {message}
           </DialogDescription>
         </DialogHeader>
-        <div className="mt-4 flex justify-end">{getActionButtons()}</div>
+        <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2">
+          {getActionButtons()}
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

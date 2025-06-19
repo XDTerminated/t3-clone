@@ -119,14 +119,24 @@ const ChatItem = ({
   };
   return (
     <li className="group/menu-item relative">
+      {" "}
       <div
         className={cn(
-          "group/link hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:text-sidebar-accent-foreground focus-visible:ring-sidebar-ring hover:focus-visible:bg-sidebar-accent relative flex h-9 w-full items-center overflow-hidden rounded-lg px-2 py-1 text-sm outline-none focus-visible:ring-2",
-          isActive && "bg-sidebar-accent text-sidebar-accent-foreground",
+          "group/link focus-visible:text-sidebar-accent-foreground focus-visible:ring-sidebar-ring relative flex h-9 w-full items-center overflow-hidden rounded-lg px-2 py-1 text-sm outline-none focus-visible:ring-2",
         )}
       >
-        {" "}
-        <div className="relative flex w-full items-center">
+        {/* Glow effects for active/hover state */}{" "}
+        <div
+          className={`${
+            isActive ? "opacity-100" : "opacity-0 group-hover/link:opacity-100"
+          } transition-opacity duration-150 ease-[cubic-bezier(0.25,1,0.5,1)]`}
+        >
+          <div className="bg-sidebar-primary/8 absolute inset-0"></div>
+          <div className="bg-sidebar-primary/20 absolute top-0 right-0 left-0 h-px"></div>
+          <div className="bg-sidebar-primary/20 absolute right-0 bottom-0 left-0 h-px"></div>
+          <div className="bg-sidebar-primary/3 absolute inset-x-0 top-1/2 h-4 -translate-y-1/2 blur-sm"></div>
+        </div>{" "}
+        <div className="relative z-10 flex w-full items-center">
           <button
             className="w-full text-left"
             onClick={() => !isEditing && onSelect(chat.id)}
@@ -156,10 +166,9 @@ const ChatItem = ({
                 />
               )}
             </div>
-          </button>
+          </button>{" "}
           {/* Hover actions */}
-          <div className="text-muted-foreground group-hover/link:bg-sidebar-accent pointer-events-auto absolute top-0 -right-1 bottom-0 z-50 flex translate-x-full items-center justify-end transition-transform group-hover/link:translate-x-0">
-            <div className="from-sidebar-accent pointer-events-none absolute top-0 right-[100%] bottom-0 h-12 w-8 bg-gradient-to-l to-transparent opacity-0 group-hover/link:opacity-100"></div>{" "}
+          <div className="text-muted-foreground pointer-events-auto absolute top-0 -right-1 bottom-0 z-50 flex h-full translate-x-full items-center justify-end bg-transparent backdrop-blur-sm transition-transform group-hover/link:translate-x-0">
             <button
               className={cn(
                 "sidebar-action-btn sidebar-pin-btn rounded-md p-1.5",
