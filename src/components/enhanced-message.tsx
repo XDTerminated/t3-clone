@@ -219,8 +219,30 @@ interface EnhancedMessageProps {
   text: string;
 }
 
+function preprocessMarkdownSetext(input: string): string {
+  if (!input) return input;
+
+  let result = input;
+
+  // Convert setext-style headings (underlines) to ATX-style
+  // H1: Title\n===== -> # Title
+  result = result.replace(/(^|\n)\s*([^\n]+)\n\s*=+\s*(?=\n|$)/g, (_m, p1, title) => `${p1}# ${title}`);
+
+  // H2: Title\n----- -> ## Title
+  result = result.replace(/(^|\n)\s*([^\n]+)\n\s*-+\s*(?=\n|$)/g, (_m, p1, title) => `${p1}## ${title}`);
+
+  // Single-line fallback like: "Heading -----" or "Heading ====="
+  result = result.replace(/(^|\n)\s*([^\n]+?)\s*-{3,}\s*$/gm, (_m, p1, title) => `${p1}## ${title}`);
+  result = result.replace(/(^|\n)\s*([^\n]+?)\s*={3,}\s*$/gm, (_m, p1, title) => `${p1}# ${title}`);
+
+  // Normalize horizontal rules to a clean '---' line
+  result = result.replace(/(^|\n)\s*([-*_])\2{2,}\s*(?=\n|$)/g, (_m, p1) => `${p1}---`);
+
+  return result;
+}
+
 export function EnhancedMessage({ text }: EnhancedMessageProps) {
-  const normalizedText = normalizeAIResponse(text);
+  const normalizedText = preprocessMarkdownSetext(normalizeAIResponse(text));
   const initialConfig = { ...editorConfig };
 
   return (

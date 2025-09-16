@@ -33,6 +33,20 @@ const colorThemes: Array<{
     primaryColor: "bg-gray-800",
     accentColor: "bg-gray-100 dark:bg-gray-900",
   },
+  {
+    id: "sakura",
+    name: "Sakura Dream",
+    description: "Vibrant pinks and cherry blossom tones with soft green accents",
+    primaryColor: "bg-pink-400",
+    accentColor: "bg-green-200 dark:bg-pink-900",
+  },
+  {
+    id: "grayscale",
+    name: "Grayscale",
+    description: "Clean white, grey, and darker grey professional theme",
+    primaryColor: "bg-gray-600",
+    accentColor: "bg-gray-100 dark:bg-gray-800",
+  },
 ];
 
 export function ThemeSelectorDialog() {

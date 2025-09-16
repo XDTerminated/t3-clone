@@ -8,6 +8,7 @@ import {
   FileText,
   X,
   Key,
+  Brain,
 } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import {
@@ -28,7 +29,8 @@ import { useAuth } from "@clerk/nextjs";
 import { useChat } from "~/contexts/ChatContext";
 import { useUploadThing } from "~/lib/uploadthing";
 import type { UploadFileResponse, ChatMessage } from "~/lib/types";
-import { isGeminiModel, isGroqModel } from "~/lib/openrouter";
+import { isGeminiModel, isGroqModel, isPartnerModel } from "~/lib/openrouter";
+import { SettingsDialog } from "~/components/settings-dialog";
 
 const INITIAL_TEXTAREA_HEIGHT = 48;
 
@@ -48,28 +50,39 @@ export function Chatbox({ onSend }: { onSend: (data: ChatMessage) => void }) {
   const messageRef = useRef("");
   const [sendDisabled, setSendDisabled] = useState(true);
   const [searchEnabled, setSearchEnabled] = useState(false);
+  const [thinkEnabled, setThinkEnabled] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<UploadFileResponse[]>([]);
   const [filesToUpload, setFilesToUpload] = useState<File[]>([]);
   const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
+  const [showSettingsDialog, setShowSettingsDialog] = useState(false);
 
   // Check if the current model is available with current API keys
   const isCurrentModelAvailable = () => {
     if (isGeminiModel(selectedModel.id)) {
-      return hasGeminiKey;
+      // Gemini models are always available (backend key provided by LeemerChat)
+      return true;
     }
     if (isGroqModel(selectedModel.id)) {
+      // Groq models require user's personal API key
       return hasGroqKey;
     }
+    if (isPartnerModel(selectedModel.id)) {
+      // Partner models are always available (backend OpenRouter key provided by LeemerChat)
+      return true;
+    }
+    // Premium OpenRouter models require user's personal API key
     return hasOpenRouterKey;
   };
   const getRequiredApiKeyForCurrentModel = () => {
-    if (isGeminiModel(selectedModel.id)) {
-      return "Gemini";
-    }
     if (isGroqModel(selectedModel.id)) {
       return "Groq";
     }
-    return "OpenRouter";
+    if (!isGeminiModel(selectedModel.id) && !isPartnerModel(selectedModel.id)) {
+      // Premium OpenRouter models require user keys
+      return "OpenRouter";
+    }
+    // Gemini and Partner models don't require user keys (backend keys available)
+    return null;
   };
 
   const { startUpload, isUploading } = useUploadThing("chatFiles", {
@@ -96,10 +109,16 @@ export function Chatbox({ onSend }: { onSend: (data: ChatMessage) => void }) {
   useEffect(() => {
     let modelAvailable = false;
     if (isGeminiModel(selectedModel.id)) {
-      modelAvailable = hasGeminiKey;
+      // Gemini models are always available (backend key provided by LeemerChat)
+      modelAvailable = true;
     } else if (isGroqModel(selectedModel.id)) {
+      // Groq models require user's personal API key
       modelAvailable = hasGroqKey;
+    } else if (isPartnerModel(selectedModel.id)) {
+      // Partner models are always available (backend OpenRouter key provided by LeemerChat)
+      modelAvailable = true;
     } else {
+      // Premium OpenRouter models require user's personal API key
       modelAvailable = hasOpenRouterKey;
     }
 
@@ -156,6 +175,7 @@ export function Chatbox({ onSend }: { onSend: (data: ChatMessage) => void }) {
         searchEnabled && selectedModel.capabilities?.includes("search"),
       files: uploadedFiles.length > 0 ? uploadedFiles : undefined,
       thinkingEnabled: selectedModel.capabilities?.includes("thinking"),
+      thinkEnabled: thinkEnabled,
     });
 
     const ta = textareaRef.current!;
@@ -414,6 +434,29 @@ export function Chatbox({ onSend }: { onSend: (data: ChatMessage) => void }) {
                   <Globe className="h-4 w-4" />
                   <span className="max-sm:hidden">Search</span>
                 </button>
+              )}
+              
+              {/* Think button - show for compatible models */}
+              {(selectedModel.id.includes("qwen3") || 
+                selectedModel.id.includes("hermes") || 
+                selectedModel.id.includes("glm") || 
+                selectedModel.id.includes("gpt-oss") || 
+                selectedModel.id.includes("deepseek")) && (
+                <button
+                  type="button"
+                  onClick={() => setThinkEnabled(!thinkEnabled)}
+                  className={cn(
+                    "focus-visible:ring-ring hover:bg-muted/40 hover:text-foreground disabled:hover:text-foreground/50 border-secondary-foreground/10 text-muted-foreground -mb-1.5 inline-flex h-auto items-center justify-center gap-2 rounded-full border border-solid px-3 py-1.5 pr-2.5 pl-2 text-xs font-medium whitespace-nowrap transition-colors focus-visible:ring-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent max-sm:p-2",
+                    thinkEnabled &&
+                      "bg-muted/40 border-secondary-foreground/10 text-foreground",
+                  )}
+                  aria-label={
+                    thinkEnabled ? "Disable thinking mode" : "Enable thinking mode"
+                  }
+                >
+                  <Brain className="h-4 w-4" />
+                  <span className="max-sm:hidden">Think</span>
+                </button>
               )}{" "}
               {/* Attach button - show if model has vision, pdf, or image capabilities */}
               {selectedModel.capabilities &&
@@ -479,11 +522,22 @@ export function Chatbox({ onSend }: { onSend: (data: ChatMessage) => void }) {
               API Key Required
             </DialogTitle>
             <DialogDescription className="text-muted-foreground text-sm">
-              You need a {getRequiredApiKeyForCurrentModel()} API key to use{" "}
-              <span className="font-medium">{selectedModel.name}</span>.
-              <br />
-              <br />
-              Please add your API key in the settings to continue.
+              {getRequiredApiKeyForCurrentModel() ? (
+                <>
+                  You need a {getRequiredApiKeyForCurrentModel()} API key to use{" "}
+                  <span className="font-medium">{selectedModel.name}</span>.
+                  <br />
+                  <br />
+                  Please add your API key in the settings to continue.
+                </>
+              ) : (
+                <>
+                  <span className="font-medium">{selectedModel.name}</span> should be available.
+                  <br />
+                  <br />
+                  If you're seeing this dialog, please try refreshing the page.
+                </>
+              )}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2">
@@ -497,7 +551,7 @@ export function Chatbox({ onSend }: { onSend: (data: ChatMessage) => void }) {
             <Button
               onClick={() => {
                 setShowApiKeyDialog(false);
-                // You might want to trigger opening settings here
+                setShowSettingsDialog(true);
               }}
               className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
             >
@@ -506,6 +560,12 @@ export function Chatbox({ onSend }: { onSend: (data: ChatMessage) => void }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      {/* Settings Dialog */}
+      <SettingsDialog
+        open={showSettingsDialog}
+        onOpenChange={setShowSettingsDialog}
+      />
     </div>
   );
 }

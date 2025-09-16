@@ -27,46 +27,25 @@ export interface OpenRouterModel {
 // Gemini models that will use the official Google SDK
 export const GEMINI_MODELS: OpenRouterModel[] = [
   {
-    id: "gemini-2.0-flash-exp",
-    name: "Gemini 2.0 Flash",
-    contextLength: 1048576,
-    provider: "Google",
-    capabilities: ["search"],
-  },
-  {
-    id: "gemini-2.0-flash-lite-exp",
-    name: "Gemini 2.0 Flash Lite",
-    contextLength: 1048576,
-    provider: "Google",
-    capabilities: [],
-  },
-  {
-    id: "gemini-2.0-flash-thinking-exp",
-    name: "Gemini 2.0 Flash Thinking",
-    contextLength: 1048576,
-    provider: "Google",
-    capabilities: ["reasoning", "thinking"],
-  },
-  {
-    id: "gemini-2.0-flash-preview-image-generation",
-    name: "Gemini 2.0 Flash Image Generation",
+    id: "gemini-2.5-flash-image-preview",
+    name: "Gemini 2.5 Flash Image",
     contextLength: 1048576,
     provider: "Google",
     capabilities: ["image"],
   },
   {
-    id: "gemini-2.5-flash-preview-05-20",
+    id: "gemini-2.5-flash",
     name: "Gemini 2.5 Flash",
     contextLength: 1048576,
     provider: "Google",
-    capabilities: ["vision", "search", "pdf", "files", "thinking"],
+    capabilities: ["vision", "search", "pdf", "files"],
   },
   {
-    id: "gemini-2.5-pro-preview-06-05",
+    id: "gemini-2.5-pro",
     name: "Gemini 2.5 Pro",
     contextLength: 2097152,
     provider: "Google",
-    capabilities: ["vision", "search", "pdf", "files", "reasoning", "thinking"],
+    capabilities: ["vision", "search", "pdf", "files", "reasoning"],
   },
 ];
 
@@ -141,64 +120,122 @@ export const ALL_MODELS = [
   ...OPENROUTER_MODELS,
 ];
 
-// Free models section (rename OTHER_MODELS to FREE_MODELS)
-export const FREE_MODELS: OpenRouterModel[] = [
+// Function to get all models including custom ones
+export function getAllModelsWithCustom(customModels: string[] = []): OpenRouterModel[] {
+  const customOpenRouterModels: OpenRouterModel[] = customModels.map(modelId => ({
+    id: modelId,
+    name: modelId.split('/').pop() || modelId, // Use the last part after '/' as name
+    contextLength: 128000, // Default context length
+    provider: "Custom",
+    capabilities: ["reasoning"], // Default capabilities
+  }));
+
+  return [
+    ...ALL_MODELS,
+    ...customOpenRouterModels,
+  ];
+}
+
+// Partner models section
+export const PARTNER_MODELS: OpenRouterModel[] = [
   {
-    id: "deepseek/deepseek-chat-v3-0324:free",
-    name: "DeepSeek V3 Free",
+    id: "deepseek/deepseek-chat-v3.1:nitro",
+    name: "DeepSeek-v3.1",
     contextLength: 163840,
     provider: "DeepSeek",
     capabilities: ["reasoning"],
   },
   {
-    id: "qwen/qwq-32b:free",
-    name: "Qwen 32B Free",
-    contextLength: 40000,
+    id: "openai/gpt-oss-120b:nitro",
+    name: "GPT-OSS-120B",
+    contextLength: 128000,
+    provider: "OpenAI",
+    capabilities: ["reasoning"],
+  },
+  {
+    id: "qwen/qwen3-next-80b-a3b-instruct:nitro",
+    name: "Qwen3 Next-80B",
+    contextLength: 131072,
     provider: "Qwen",
     capabilities: ["reasoning"],
   },
   {
-    id: "meta-llama/llama-4-maverick:free",
-    name: "Llama 4 Maverick Free",
-    contextLength: 128000,
-    provider: "Meta",
-    capabilities: [],
-  },
-  {
-    id: "meta-llama/llama-4-scout:free",
-    name: "Llama 4 Scout Free",
-    contextLength: 200000,
-    provider: "Meta",
-    capabilities: [],
-  },
-  {
-    id: "meta-llama/llama-3.3-70b-instruct:free",
-    name: "Llama 3.3 70B Free",
+    id: "qwen/qwen3-coder",
+    name: "Qwen3 Coder",
     contextLength: 131072,
-    provider: "Meta",
+    provider: "Qwen",
+    capabilities: ["reasoning"],
+  },
+  {
+    id: "moonshotai/kimi-k2-0905:nitro",
+    name: "Kimi K2",
+    contextLength: 200000,
+    provider: "Moonshot",
     capabilities: [],
   },
   {
-    id: "qwen/qwen3-32b:free",
-    name: "Qwen3 32B Free",
-    contextLength: 40960,
-    provider: "Qwen",
-    capabilities: [],
+    id: "nousresearch/hermes-4-405b",
+    name: "Hermes-4 405B",
+    contextLength: 200000,
+    provider: "NousResearch",
+    capabilities: ["reasoning"],
+  },
+  {
+    id: "z-ai/glm-4.5v",
+    name: "GLM-4.5",
+    contextLength: 131072,
+    provider: "Z.AI",
+    capabilities: ["reasoning"],
+  },
+  {
+    id: "openai/gpt-5-chat",
+    name: "ChatGPT-5",
+    contextLength: 200000,
+    provider: "OpenAI",
+    capabilities: ["reasoning", "vision"],
   },
 ];
 
-// Models grouped by provider for the dropdown UI
+// Models grouped by provider for the dropdown UI (partner models first)
 export const MODEL_GROUPS = {
+  partner: PARTNER_MODELS,
   gemini: GEMINI_MODELS,
   groq: GROQ_MODELS,
   openrouter: OPENROUTER_MODELS,
-  free: FREE_MODELS,
 };
 
-// Legacy export for backward compatibility
-export const OTHER_MODELS = FREE_MODELS;
+// Function to get model groups including custom models
+export function getModelGroupsWithCustom(customModels: string[] = []) {
+  const customOpenRouterModels: OpenRouterModel[] = customModels.map(modelId => ({
+    id: modelId,
+    name: modelId.split('/').pop() || modelId, // Use the last part after '/' as name
+    contextLength: 128000, // Default context length
+    provider: "Custom",
+    capabilities: ["reasoning"], // Default capabilities
+  }));
 
-export const DEFAULT_MODEL = GEMINI_MODELS[0]!; // Gemini 2.0 Flash as default
+  const groups = {
+    partner: PARTNER_MODELS,
+    gemini: GEMINI_MODELS,
+    groq: GROQ_MODELS,
+    openrouter: OPENROUTER_MODELS,
+  };
+
+  if (customOpenRouterModels.length > 0) {
+    return {
+      ...groups,
+      custom: customOpenRouterModels,
+    };
+  }
+
+  return groups;
+}
+
+// Legacy export for backward compatibility
+export const OTHER_MODELS = PARTNER_MODELS;
+export const FREE_MODELS = PARTNER_MODELS; // Alias for backward compatibility
+
+export const DEFAULT_MODEL = PARTNER_MODELS[2]!; // Qwen3 Next-80B as default
 
 // Helper functions to identify model types
 export function isGeminiModel(modelId: string): boolean {
@@ -206,7 +243,7 @@ export function isGeminiModel(modelId: string): boolean {
 }
 
 export function isImageGenerationModel(modelId: string): boolean {
-  return modelId === "gemini-2.0-flash-preview-image-generation";
+  return modelId === "gemini-2.5-flash-image-preview";
 }
 
 // Gemini API using the official Google Generative AI SDK
@@ -605,9 +642,7 @@ export class GeminiAPI {
   }
   private modelSupportsThinking(modelId: string): boolean {
     const thinkingModels = [
-      "gemini-2.0-flash-thinking-exp",
-      "gemini-2.5-flash-preview-05-20",
-      "gemini-2.5-pro-preview-06-05",
+      "gemini-2.5-pro", // Pro version supports thinking
     ];
     return thinkingModels.includes(modelId);
   }
@@ -615,18 +650,14 @@ export class GeminiAPI {
   private mapToGeminiModelName(modelId: string): string {
     // Map our model IDs to actual Gemini model names
     switch (modelId) {
-      case "gemini-2.0-flash-exp":
-        return "gemini-2.0-flash-exp";
-      case "gemini-2.0-flash-thinking-exp":
-        return "gemini-2.0-flash-thinking-exp";
-      case "gemini-2.5-flash-preview-05-20":
-        return "gemini-2.5-flash-preview-05-20";
-      case "gemini-2.5-pro-preview-06-05":
-        return "gemini-2.5-pro-preview-06-05";
-      case "gemini-2.0-flash-preview-image-generation":
-        return "gemini-2.0-flash-preview-image-generation";
+      case "gemini-2.5-flash-image-preview":
+        return "gemini-2.0-flash-preview-image-generation"; // Use existing image generation model
+      case "gemini-2.5-flash":
+        return "gemini-2.5-flash-preview-05-20"; // Use existing flash model
+      case "gemini-2.5-pro":
+        return "gemini-2.5-pro-preview-06-05"; // Use existing pro model
       default:
-        return "gemini-2.0-flash-exp";
+        return "gemini-2.5-flash-preview-05-20";
     }
   }
 
@@ -1143,8 +1174,8 @@ export class OpenRouterAPI {
       headers: {
         Authorization: `Bearer ${this.apiKey}`,
         "Content-Type": "application/json",
-        "HTTP-Referer": "http://localhost:3000", // Optional: for analytics
-        "X-Title": "T3 Clone Chat App", // Optional: for analytics
+        "HTTP-Referer": "https://leemerchat.com", // Optional: for analytics
+        "X-Title": "LeemerChat", // Optional: for analytics
       },
       body: JSON.stringify(requestBody),
     });
@@ -1166,8 +1197,8 @@ export class OpenRouterAPI {
       headers: {
         Authorization: `Bearer ${this.apiKey}`,
         "Content-Type": "application/json",
-        "HTTP-Referer": "http://localhost:3000",
-        "X-Title": "T3 Clone Chat App",
+        "HTTP-Referer": "https://leemerchat.com",
+        "X-Title": "LeemerChat",
       },
       body: JSON.stringify({
         model,
@@ -1215,8 +1246,8 @@ export class OpenRouterAPI {
       headers: {
         Authorization: `Bearer ${this.apiKey}`,
         "Content-Type": "application/json",
-        "HTTP-Referer": "http://localhost:3000",
-        "X-Title": "T3 Clone Chat App",
+        "HTTP-Referer": "https://leemerchat.com",
+        "X-Title": "LeemerChat",
       },
       body: JSON.stringify(requestBody),
     });
@@ -1441,4 +1472,13 @@ export function isGroqModel(modelId: string): boolean {
     "qwen/qwen3-32b",
   ];
   return groqModels.includes(modelId);
+}
+
+export function isPartnerModel(modelId: string): boolean {
+  return PARTNER_MODELS.some((model) => model.id === modelId);
+}
+
+// Legacy function for backward compatibility
+export function isFreeModel(modelId: string): boolean {
+  return isPartnerModel(modelId);
 }

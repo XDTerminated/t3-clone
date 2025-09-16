@@ -13,4 +13,5 @@ export interface ChatMessage {
   files?: UploadFileResponse[];
   thinkingEnabled?: boolean;
   thinkingBudget?: number;
+  thinkEnabled?: boolean;
 }

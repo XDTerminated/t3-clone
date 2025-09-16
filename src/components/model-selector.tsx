@@ -11,9 +11,11 @@ import {
 } from "lucide-react";
 import {
   MODEL_GROUPS,
+  getModelGroupsWithCustom,
   type OpenRouterModel,
   isGeminiModel,
   isGroqModel,
+  isPartnerModel,
 } from "~/lib/openrouter";
 import { CapabilityTooltip } from "./capability-tooltip";
 import { useApiKey } from "~/contexts/ApiKeyContext";
@@ -32,29 +34,37 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
   const [hasScroll, setHasScroll] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { hasOpenRouterKey, hasGeminiKey, hasGroqKey } = useApiKey();
+  const { hasOpenRouterKey, hasGeminiKey, hasGroqKey, customOpenRouterModels } = useApiKey();
 
   // Helper function to determine if a model is available based on API keys
   const isModelAvailable = (model: OpenRouterModel) => {
     if (isGeminiModel(model.id)) {
-      return hasGeminiKey;
+      // Gemini models are always available (backend key provided by LeemerChat)
+      return true;
     }
     if (isGroqModel(model.id)) {
+      // Groq models require user's personal API key
       return hasGroqKey;
     }
-    // All other models (including free models) require OpenRouter key
+    if (isPartnerModel(model.id)) {
+      // Partner models are always available (backend OpenRouter key provided by LeemerChat)
+      return true;
+    }
+    // Premium OpenRouter models require user's personal API key
     return hasOpenRouterKey;
   };
 
-  // Helper function to get the required API key name for a model
+  // Helper function to get the required API key name for models that need user keys
   const getRequiredApiKey = (model: OpenRouterModel) => {
-    if (isGeminiModel(model.id)) {
-      return "Gemini";
-    }
     if (isGroqModel(model.id)) {
       return "Groq";
     }
-    return "OpenRouter";
+    if (!isGeminiModel(model.id) && !isPartnerModel(model.id)) {
+      // Premium OpenRouter models require user keys
+      return "OpenRouter";
+    }
+    // Gemini and Partner models don't require user keys (backend keys available)
+    return null;
   };
 
   const toggleDropdown = () => {
@@ -196,7 +206,14 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
               className={`dropdown-hide-scrollbar max-h-[300px] overflow-x-visible overflow-y-auto`}
             >
               {" "}
-              {Object.entries(MODEL_GROUPS).map(([provider, models]) => (
+              {Object.entries(getModelGroupsWithCustom(customOpenRouterModels)).filter(([provider]) => {
+                // Only show model groups based on API key availability
+                if (provider === 'groq') return hasGroqKey;
+                if (provider === 'openrouter') return hasOpenRouterKey;
+                if (provider === 'custom') return hasOpenRouterKey; // Custom models require OpenRouter key
+                // Always show partner and gemini models
+                return provider === 'partner' || provider === 'gemini';
+              }).map(([provider, models]) => (
                 <div
                   key={provider}
                   className="border-b p-2 last:border-b-0"
@@ -204,8 +221,8 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
                 >
                   {/* Provider Header */}
                   <div className="mb-1.5 flex items-center gap-1.5">
-                    <span className="text-muted-foreground text-xs font-medium capitalize">
-                      {provider}
+                    <span className="text-muted-foreground text-xs font-medium">
+                      {provider === 'partner' ? 'Partner Models' : provider === 'gemini' ? 'Gemini' : provider === 'groq' ? 'Groq' : provider === 'openrouter' ? 'OpenRouter' : provider === 'custom' ? 'Custom Models' : provider}
                     </span>
                     <span className="text-muted-foreground text-xs opacity-60">
                       ({models.length})
@@ -234,7 +251,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
                                 : "text-popover-foreground cursor-not-allowed opacity-40"
                           }`}
                           title={
-                            !isAvailable
+                            !isAvailable && requiredApiKey
                               ? `Requires ${requiredApiKey} API key`
                               : undefined
                           }

@@ -35,6 +35,8 @@ A modern, theme-aware AI chat application built with the [T3 Stack](https://crea
 ### 🎨 Theme System
 
 - **Rose Red Theme**: Elegant gradient-based design (default)
+- **Sakura Dream Theme**: Vibrant pinks and cherry blossom tones with soft green accents
+- **Grayscale Theme**: Clean white, grey, and darker grey professional theme
 - **Midnight Black Theme**: Dark theme (under development)
 - **Theme-aware Components**: All UI elements adapt to selected theme
 - **Consistent Color System**: CSS variables ensure perfect color consistency

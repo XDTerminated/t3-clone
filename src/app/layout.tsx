@@ -10,12 +10,28 @@ import { DataProvider } from "~/contexts/DataContext";
 import { ChatProvider } from "~/contexts/ChatContext";
 import { ModelProvider } from "~/contexts/ModelContext";
 import { ApiKeyProvider } from "~/contexts/ApiKeyContext";
+import { CustomizationProvider } from "~/contexts/CustomizationContext";
 import { ThemeProvider } from "~/contexts/ThemeContext";
 import { ToastProvider } from "~/components/toast";
 
 export const metadata: Metadata = {
-  title: "T3 Chat",
-  icons: [{ rel: "icon", url: "/favicon.ico" }],
+  title: "LeemerChat",
+  description:
+    "LeemerChat unifies your favorite AI models in one flexible workspace designed to keep up with the way you think.",
+  manifest: "/site.webmanifest",
+  icons: {
+    icon: [
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/android-chrome-192x192.png", sizes: "192x192", type: "image/png" },
+      { url: "/android-chrome-512x512.png", sizes: "512x512", type: "image/png" },
+      { url: "/favicon.ico" },
+    ],
+    apple: [
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+    shortcut: [{ url: "/favicon.ico" }],
+  },
 };
 
 const montserrat = Montserrat({
@@ -44,13 +60,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <SidebarProvider>
               <DataProvider>
                 <ApiKeyProvider>
-                  <ModelProvider>
-                    <ToastProvider>
-                      <ChatProvider>
-                        <ContentWrapper>{children}</ContentWrapper>
-                      </ChatProvider>
-                    </ToastProvider>
-                  </ModelProvider>
+                  <CustomizationProvider>
+                    <ModelProvider>
+                      <ToastProvider>
+                        <ChatProvider>
+                          <ContentWrapper>{children}</ContentWrapper>
+                        </ChatProvider>
+                      </ToastProvider>
+                    </ModelProvider>
+                  </CustomizationProvider>
                 </ApiKeyProvider>
               </DataProvider>
             </SidebarProvider>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useUser } from "@clerk/nextjs";
 import { Sparkles, Newspaper, Code, GraduationCap } from "lucide-react";
 
 interface WelcomeScreenProps {
@@ -60,6 +61,16 @@ const categories = [
 
 export default function WelcomeScreen({ onPromptSelect }: WelcomeScreenProps) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const { user } = useUser();
+  const primaryEmail =
+    user?.primaryEmailAddress?.emailAddress ??
+    user?.emailAddresses?.[0]?.emailAddress ??
+    null;
+  const userName =
+    user?.firstName ??
+    user?.fullName ??
+    user?.username ??
+    (primaryEmail ? primaryEmail.split("@")[0] : undefined);
 
   // Show "create" prompts by default, but don't highlight the button
   const currentCategory = categories.find(
@@ -69,7 +80,7 @@ export default function WelcomeScreen({ onPromptSelect }: WelcomeScreenProps) {
     <div className="flex h-full items-start justify-center pt-24">
       <div className="animate-in fade-in-50 zoom-in-95 w-full max-w-3xl space-y-6 px-2 duration-100 sm:px-8">
         <h2 className="text-center text-3xl font-semibold">
-          How can I help you today?
+          {`How can I help you${userName ? ` ${userName}` : " today"}?`}
         </h2>{" "}
         {/* Category Buttons */}
         <div className="flex flex-row flex-wrap justify-center gap-2.5 text-sm max-sm:justify-evenly">

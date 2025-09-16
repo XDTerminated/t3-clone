@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 
-export type ColorTheme = "red" | "black";
+export type ColorTheme = "red" | "black" | "sakura" | "grayscale";
 export type ColorMode = "light" | "dark";
 
 interface ThemeContextType {
@@ -52,6 +52,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
       "theme-black",
       "theme-white",
       "theme-pink",
+      "theme-sakura",
+      "theme-grayscale",
     );
 
     html.classList.add(`theme-${colorTheme}`);

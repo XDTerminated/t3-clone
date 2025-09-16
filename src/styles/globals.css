@@ -197,6 +197,218 @@
   --button-shadow-hover: rgba(92, 30, 40, 0.2);
 }
 
+/* Sakura Dream Theme - Light theme with cherry blossom pinks and soft green accents */
+:root.theme-sakura {
+  --primary: #ec4899; /* Pink-500 for primary actions */
+  --primary-foreground: #ffffff;
+  --secondary: #fdf2f8; /* Pink-50 for secondary */
+  --secondary-foreground: #be185d;
+  --muted: #dcfce7; /* Green-100 for soft green accents */
+  --muted-foreground: #166534; /* Green-800 for good contrast */
+  --accent: #f0fdf4; /* Green-50 for subtle green accent */
+  --accent-foreground: #15803d;
+  --border: rgba(236, 72, 153, 0.2); /* Pink-500/20 */
+  --input: rgba(236, 72, 153, 0.2);
+  --ring: #ec4899; /* Pink-500 focus ring */
+
+  --card: #ffffff; /* Pure white cards */
+  --card-foreground: #1f2937;
+  --popover: #ffffff;
+  --popover-foreground: #1f2937;
+
+  /* Sakura themed sidebar - white with pink accents */
+  --sidebar: #fefcff; /* Very light pink */
+  --sidebar-foreground: #1f2937;
+  --sidebar-primary: #ec4899; /* Pink-500 */
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #fdf2f8; /* Pink-50 */
+  --sidebar-accent-foreground: #be185d;
+  --sidebar-border: rgba(236, 72, 153, 0.2);
+  --sidebar-ring: #ec4899;
+
+  /* Light scrollbar for sakura theme */
+  --scrollbar-thumb-light: #f9a8d4; /* Pink-300 */
+  --scrollbar-thumb-hover-light: #ec4899; /* Pink-500 */
+  --background: #fefcff; /* Very light pink-tinted white */
+  --foreground: #1f2937; /* Dark gray for good readability */
+
+  /* Sakura button theme variables */
+  --button-primary: #ec4899; /* Cherry blossom pink */
+  --button-primary-hover: #db2777; /* Pink-600 */
+  --button-primary-active: #be185d; /* Pink-700 */
+  --button-border: rgba(236, 72, 153, 0.3);
+  --button-shadow: rgba(236, 72, 153, 0.2);
+  --button-shadow-hover: rgba(236, 72, 153, 0.3);
+
+  /* Sakura chatbox gradient - soft pink gradients */
+  --chatbox-gradient-from: #fce7f3; /* Pink-100 */
+  --chatbox-gradient-to: #ffffff;
+  --chatbox-border: rgba(236, 72, 153, 0.3);
+
+  /* Main chat gradient - very subtle pink to white */
+  --main-chat-gradient-from: #fefcff;
+  --main-chat-gradient-to: #ffffff;
+}
+
+/* Dark mode for Sakura theme */
+:root.theme-sakura.dark {
+  --primary: #f472b6; /* Pink-400 for dark mode */
+  --primary-foreground: #ffffff;
+  --secondary: #4a044e; /* Pink-950 */
+  --secondary-foreground: #f9a8d4; /* Pink-300 */
+  --muted: #052e16; /* Green-950 for dark green accents */
+  --muted-foreground: rgba(187, 247, 208, 0.7); /* Green-200/70 */
+  --accent: #064e3b; /* Green-900 */
+  --accent-foreground: #bbf7d0; /* Green-200 */
+  --border: rgba(244, 114, 182, 0.2); /* Pink-400/20 */
+  --input: rgba(244, 114, 182, 0.2);
+  --ring: #f472b6; /* Pink-400 focus ring */
+
+  --card: #1a0b2e; /* Very dark purple-pink */
+  --card-foreground: #fce7f3;
+  --popover: #1a0b2e;
+  --popover-foreground: #fce7f3;
+
+  /* Dark sakura themed sidebar */
+  --sidebar: #1a0b2e; /* Dark pink-purple */
+  --sidebar-foreground: #fce7f3;
+  --sidebar-primary: #f472b6; /* Pink-400 */
+  --sidebar-primary-foreground: #4a044e;
+  --sidebar-accent: #4a044e; /* Pink-950 */
+  --sidebar-accent-foreground: #f9a8d4;
+  --sidebar-border: rgba(244, 114, 182, 0.2);
+  --sidebar-ring: #f472b6;
+
+  /* Dark scrollbar for sakura theme */
+  --scrollbar-thumb-dark: #be185d; /* Pink-700 */
+  --scrollbar-thumb-hover-dark: #f472b6; /* Pink-400 */
+  --background: #0f0a0f; /* Very dark with slight pink tint */
+  --foreground: #fce7f3; /* Light pink text */
+
+  /* Dark mode sakura button variables */
+  --button-primary: #ec4899; /* Cherry blossom pink */
+  --button-primary-hover: #f472b6; /* Pink-400 */
+  --button-primary-active: #db2777; /* Pink-600 */
+  --button-border: rgba(244, 114, 182, 0.3);
+  --button-shadow: rgba(244, 114, 182, 0.1);
+  --button-shadow-hover: rgba(244, 114, 182, 0.2);
+
+  /* Dark sakura chatbox gradient */
+  --chatbox-gradient-from: #1a0b2e;
+  --chatbox-gradient-to: #0f0a0f;
+  --chatbox-border: rgba(244, 114, 182, 0.3);
+
+  /* Dark main chat gradient */
+  --main-chat-gradient-from: #1a0b2e;
+  --main-chat-gradient-to: #0f0a0f;
+}
+
+/* Grayscale Theme - Clean professional white/grey theme */
+:root.theme-grayscale {
+  --primary: #374151; /* Gray-700 for primary actions */
+  --primary-foreground: #ffffff;
+  --secondary: #f3f4f6; /* Gray-100 for secondary */
+  --secondary-foreground: #1f2937;
+  --muted: #e5e7eb; /* Gray-200 for muted areas */
+  --muted-foreground: #6b7280; /* Gray-500 for muted text */
+  --accent: #f9fafb; /* Gray-50 for subtle accents */
+  --accent-foreground: #374151;
+  --border: rgba(55, 65, 81, 0.2); /* Gray-700/20 */
+  --input: rgba(55, 65, 81, 0.2);
+  --ring: #374151; /* Gray-700 focus ring */
+
+  --card: #ffffff; /* Pure white cards */
+  --card-foreground: #1f2937;
+  --popover: #ffffff;
+  --popover-foreground: #1f2937;
+
+  /* Grayscale themed sidebar */
+  --sidebar: #f8fafc; /* Very light gray */
+  --sidebar-foreground: #1f2937;
+  --sidebar-primary: #374151; /* Gray-700 */
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f1f5f9; /* Slate-50 */
+  --sidebar-accent-foreground: #475569;
+  --sidebar-border: rgba(55, 65, 81, 0.15);
+  --sidebar-ring: #374151;
+
+  /* Light scrollbar for grayscale theme */
+  --scrollbar-thumb-light: #d1d5db; /* Gray-300 */
+  --scrollbar-thumb-hover-light: #9ca3af; /* Gray-400 */
+  --background: #ffffff; /* Pure white background */
+  --foreground: #111827; /* Very dark gray text */
+
+  /* Grayscale button theme variables */
+  --button-primary: #374151; /* Gray-700 */
+  --button-primary-hover: #4b5563; /* Gray-600 */
+  --button-primary-active: #1f2937; /* Gray-800 */
+  --button-border: rgba(55, 65, 81, 0.3);
+  --button-shadow: rgba(55, 65, 81, 0.2);
+  --button-shadow-hover: rgba(55, 65, 81, 0.3);
+
+  /* Grayscale chatbox gradient - light to white */
+  --chatbox-gradient-from: #f3f4f6; /* Gray-100 */
+  --chatbox-gradient-to: #ffffff;
+  --chatbox-border: rgba(55, 65, 81, 0.25);
+
+  /* Main chat gradient - very subtle gray to white */
+  --main-chat-gradient-from: #fafbfc;
+  --main-chat-gradient-to: #ffffff;
+}
+
+/* Dark mode for Grayscale theme */
+:root.theme-grayscale.dark {
+  --primary: #9ca3af; /* Gray-400 for dark mode */
+  --primary-foreground: #111827;
+  --secondary: #1f2937; /* Gray-800 */
+  --secondary-foreground: #d1d5db; /* Gray-300 */
+  --muted: #374151; /* Gray-700 for dark muted areas */
+  --muted-foreground: rgba(209, 213, 219, 0.7); /* Gray-300/70 */
+  --accent: #4b5563; /* Gray-600 */
+  --accent-foreground: #e5e7eb; /* Gray-200 */
+  --border: rgba(156, 163, 175, 0.2); /* Gray-400/20 */
+  --input: rgba(156, 163, 175, 0.2);
+  --ring: #9ca3af; /* Gray-400 focus ring */
+
+  --card: #1f2937; /* Gray-800 for dark cards */
+  --card-foreground: #f9fafb;
+  --popover: #1f2937;
+  --popover-foreground: #f9fafb;
+
+  /* Dark grayscale themed sidebar */
+  --sidebar: #111827; /* Gray-900 */
+  --sidebar-foreground: #f3f4f6;
+  --sidebar-primary: #9ca3af; /* Gray-400 */
+  --sidebar-primary-foreground: #111827;
+  --sidebar-accent: #374151; /* Gray-700 */
+  --sidebar-accent-foreground: #d1d5db;
+  --sidebar-border: rgba(156, 163, 175, 0.2);
+  --sidebar-ring: #9ca3af;
+
+  /* Dark scrollbar for grayscale theme */
+  --scrollbar-thumb-dark: #4b5563; /* Gray-600 */
+  --scrollbar-thumb-hover-dark: #6b7280; /* Gray-500 */
+  --background: #0f1419; /* Very dark gray-blue */
+  --foreground: #f9fafb; /* Light gray text */
+
+  /* Dark mode grayscale button variables */
+  --button-primary: #4b5563; /* Gray-600 */
+  --button-primary-hover: #6b7280; /* Gray-500 */
+  --button-primary-active: #374151; /* Gray-700 */
+  --button-border: rgba(156, 163, 175, 0.3);
+  --button-shadow: rgba(156, 163, 175, 0.1);
+  --button-shadow-hover: rgba(156, 163, 175, 0.2);
+
+  /* Dark grayscale chatbox gradient */
+  --chatbox-gradient-from: #1f2937;
+  --chatbox-gradient-to: #111827;
+  --chatbox-border: rgba(156, 163, 175, 0.3);
+
+  /* Dark main chat gradient */
+  --main-chat-gradient-from: #1a202c;
+  --main-chat-gradient-to: #111827;
+}
+
 .dark {
   /* Dark rose/pink themed mode - matching dropdown exactly */
   --background: #1a0b14; /* Very dark rose background */
@@ -1246,6 +1458,15 @@ button {
   );
 }
 
+/* Settings: match main chat gradient background */
+.settings-gradient {
+  background: linear-gradient(
+    to bottom right,
+    var(--main-chat-gradient-from),
+    var(--main-chat-gradient-to)
+  );
+}
+
 /* Black Theme - Make chatbox and main chat similar to sidebar */
 :root.theme-black .theme-chatbox {
   border-color: #374151;
@@ -1265,4 +1486,86 @@ button {
 /* Main chat - Override hardcoded colors for black theme only */
 :root.theme-black .main-chat-container.dark\:bg-gradient-to-br {
   background: linear-gradient(to bottom right, #1a1d29, #030712) !important;
+}
+
+/* Sakura Dream Theme - Chatbox and component styling */
+:root.theme-sakura .theme-chatbox {
+  border-color: rgba(236, 72, 153, 0.3);
+  background: linear-gradient(to bottom right, #fce7f3, #ffffff) !important;
+}
+
+:root.theme-sakura .theme-user-message {
+  border-color: rgba(236, 72, 153, 0.2);
+  background: linear-gradient(
+    to bottom right,
+    rgba(252, 231, 243, 0.6),
+    rgba(255, 255, 255, 0.8)
+  ) !important;
+  opacity: 0.9;
+}
+
+/* Main chat - Override colors for sakura theme */
+:root.theme-sakura .main-chat-container {
+  background: linear-gradient(to bottom right, #fefcff, #ffffff) !important;
+}
+
+/* Dark mode sakura chatbox styling */
+:root.theme-sakura.dark .theme-chatbox {
+  border-color: rgba(244, 114, 182, 0.3);
+  background: linear-gradient(to bottom right, #1a0b2e, #0f0a0f) !important;
+}
+
+:root.theme-sakura.dark .theme-user-message {
+  border-color: rgba(244, 114, 182, 0.2);
+  background: linear-gradient(
+    to bottom right,
+    rgba(26, 11, 46, 0.6),
+    rgba(15, 10, 15, 0.8)
+  ) !important;
+  opacity: 0.9;
+}
+
+:root.theme-sakura.dark .main-chat-container {
+  background: linear-gradient(to bottom right, #1a0b2e, #0f0a0f) !important;
+}
+
+/* Grayscale Theme - Chatbox and component styling */
+:root.theme-grayscale .theme-chatbox {
+  border-color: rgba(55, 65, 81, 0.25);
+  background: linear-gradient(to bottom right, #f3f4f6, #ffffff) !important;
+}
+
+:root.theme-grayscale .theme-user-message {
+  border-color: rgba(55, 65, 81, 0.2);
+  background: linear-gradient(
+    to bottom right,
+    rgba(243, 244, 246, 0.6),
+    rgba(255, 255, 255, 0.8)
+  ) !important;
+  opacity: 0.9;
+}
+
+/* Main chat - Override colors for grayscale theme */
+:root.theme-grayscale .main-chat-container {
+  background: linear-gradient(to bottom right, #fafbfc, #ffffff) !important;
+}
+
+/* Dark mode grayscale chatbox styling */
+:root.theme-grayscale.dark .theme-chatbox {
+  border-color: rgba(156, 163, 175, 0.3);
+  background: linear-gradient(to bottom right, #1f2937, #111827) !important;
+}
+
+:root.theme-grayscale.dark .theme-user-message {
+  border-color: rgba(156, 163, 175, 0.2);
+  background: linear-gradient(
+    to bottom right,
+    rgba(31, 41, 55, 0.6),
+    rgba(17, 24, 39, 0.8)
+  ) !important;
+  opacity: 0.9;
+}
+
+:root.theme-grayscale.dark .main-chat-container {
+  background: linear-gradient(to bottom right, #1a202c, #111827) !important;
 }

@@ -11,6 +11,7 @@ import {
 import { useModel } from "./ModelContext";
 import { useAuth } from "@clerk/nextjs";
 import { useApiKey } from "./ApiKeyContext";
+import { useCustomization } from "./CustomizationContext";
 import { useToast } from "~/components/toast";
 import type { UploadFileResponse, ChatMessage } from "~/lib/types";
 
@@ -141,6 +142,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     groqApiKey,
     isLoaded: apiKeyLoaded,
   } = useApiKey();
+  
+  const { userName, userRole, userInterests } = useCustomization();
+  
   const [chats, setChats] = useState<Chat[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const [messages, setMessages] = useState<
@@ -220,11 +224,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       setLoginDialogAction("chat");
       setLoginDialogOpen(true);
       return;
-    } // Check if user has API key
-    if (!hasAnyKey) {
-      setApiKeyDialogOpen(true);
-      return;
-    }
+    }     // Users can now use the app with backend keys, so no need to force API key dialog
+    // Only show API key dialog if they specifically want to use models that require personal keys
 
     // Don't do anything if we're already in a pending new chat state
     // OR if we're already on the welcome screen (no current chat and no messages)
@@ -697,10 +698,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         setLoginDialogOpen(true);
         return Promise.resolve();
       }
-      if (!hasAnyKey) {
-        setApiKeyDialogOpen(true);
-        return Promise.resolve();
-      }
+      // Users can now send messages with backend keys, no need to force API key dialog
+      // Only show API key dialog if they specifically want to use models that require personal keys
 
       // If AI is currently generating, add to queue
       if (isGeneratingResponse) {
@@ -800,6 +799,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               chatId,
               thinkingEnabled: finalThinkingEnabled,
               thinkingBudget,
+              // Add customization data
+              customization: {
+                userName,
+                userRole,
+                userInterests,
+              },
             }),
           });
           if (!response.ok || !response.body) {
@@ -1475,6 +1480,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                 groqApiKey: groqApiKey, // Send user's Groq API key
                 files: allConversationFiles, // Include all files from conversation history
                 thinkingEnabled: supportsThinking, // Always enable for thinking-capable models
+                // Add customization data
+                customization: {
+                  userName,
+                  userRole,
+                  userInterests,
+                },
               }),
             });
 
@@ -1829,12 +1840,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
     return () => clearTimeout(timeoutId);
   }, [branches, currentBranchId, isLoadingChat, messageAlternatives]);
-  // Auto-show API key dialog when user is signed in but has no API key
-  useEffect(() => {
-    if (apiKeyLoaded && isLoaded && isSignedIn && !hasAnyKey) {
-      setApiKeyDialogOpen(true);
-    }
-  }, [apiKeyLoaded, isLoaded, isSignedIn, hasAnyKey]);
+  // Removed auto-show API key dialog - users can now use the app with backend keys
+  // API keys are optional for enhanced functionality
 
   // Handle API key submission
   const handleApiKeySubmit = useCallback(

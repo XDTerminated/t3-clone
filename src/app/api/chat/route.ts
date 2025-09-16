@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma, withRetry } from "~/lib/prisma";
+import { env } from "~/env";
 import {
   OpenRouterAPI,
   GeminiAPI,
@@ -10,6 +11,7 @@ import {
   isGeminiModel,
   isImageGenerationModel,
   isGroqModel,
+  isPartnerModel,
 } from "~/lib/openrouter";
 
 // HACK: Manual type definition to avoid client-side import issues
@@ -33,6 +35,12 @@ type ChatRequest = {
   files?: UploadFileResponse[];
   thinkingEnabled?: boolean;
   thinkingBudget?: number;
+  thinkEnabled?: boolean;
+  customization?: {
+    userName?: string;
+    userRole?: string;
+    userInterests?: string;
+  };
 };
 
 // Helper function to check if a model supports thinking
@@ -43,6 +51,7 @@ function modelSupportsThinking(modelId: string): boolean {
     "gemini-2.5-pro-preview-06-05",
     "deepseek-r1-distill-llama-70b",
     "qwen/qwen3-32b",
+    "qwen/qwen3-next-80b-a3b-thinking", // Add the thinking variant
   ];
   return thinkingModels.includes(modelId);
 }
@@ -160,17 +169,26 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ error: "Malformed JSON" }, { status: 400 });
   } // Use the specified model or default
-  const selectedModel = requestBody.model ?? DEFAULT_MODEL.id;
+  let selectedModel = requestBody.model ?? DEFAULT_MODEL.id;
+  
+  // Handle think enabled - change model for qwen3-next
+  if (requestBody.thinkEnabled) {
+    if (selectedModel.includes("qwen3-next-80b-a3b-instruct")) {
+      selectedModel = "qwen/qwen3-next-80b-a3b-thinking";
+    }
+  }
   // Determine which API to use based on the model
   const useGeminiAPI = isGeminiModel(selectedModel);
   const useGroqAPI = isGroqModel(selectedModel);
   const isImageGen = isImageGenerationModel(selectedModel);
 
-  // Validate that we have the appropriate API key
-  if (useGeminiAPI && !requestBody.geminiApiKey) {
+  // For Gemini models, use user's key if provided, otherwise use backend key
+  const geminiApiKey = requestBody.geminiApiKey || env.GEMINI_API_KEY;
+  
+  if (useGeminiAPI && !geminiApiKey) {
     return NextResponse.json(
-      { error: "Gemini API key is required for Gemini models" },
-      { status: 400 },
+      { error: "Gemini service is temporarily unavailable" },
+      { status: 500 },
     );
   }
 
@@ -181,28 +199,31 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!useGeminiAPI && !useGroqAPI && !requestBody.openRouterApiKey) {
+  // For OpenRouter models, use user's key if provided, otherwise use backend key
+  const openRouterApiKey = requestBody.openRouterApiKey || env.OPENROUTER_API_KEY;
+  
+  if (!useGeminiAPI && !useGroqAPI && !openRouterApiKey) {
     return NextResponse.json(
       {
-        error: "OpenRouter API key is required for non-Gemini/non-Groq models",
+        error: "OpenRouter service is temporarily unavailable",
       },
-      { status: 400 },
+      { status: 500 },
     );
   }
   try {
     // Check if this is an image generation request
     if (isImageGen) {
       // Handle image generation with Google Gemini
-      if (!requestBody.geminiApiKey?.trim()) {
+      if (!geminiApiKey) {
         return NextResponse.json(
           {
-            error: "Google API key is required for image generation.",
+            error: "Image generation service is temporarily unavailable.",
           },
-          { status: 400 },
+          { status: 500 },
         );
       }
 
-      const geminiApi = new GoogleGeminiAPI(requestBody.geminiApiKey);
+      const geminiApi = new GoogleGeminiAPI(geminiApiKey);
 
       // Get the latest user message as the image prompt
       const userPrompt =
@@ -252,29 +273,66 @@ export async function POST(request: Request) {
       }
     }
 
-    // Create model-aware system prompt
-    const getModelIdentity = (modelId: string) => {
+    // Create model-aware system prompt with customization
+    const getModelIdentity = (modelId: string, customization?: ChatRequest['customization'], thinkEnabled?: boolean) => {
+      let baseIdentity: string;
+      
       if (modelId.includes("deepseek")) {
-        return "You are DeepSeek, an AI assistant created by DeepSeek. You are helpful, harmless, and honest.";
+        baseIdentity = "You are DeepSeek, an AI assistant created by DeepSeek. You are helpful, harmless, and honest.";
       } else if (modelId.includes("gemini")) {
-        return "You are Gemini, Google's AI assistant. You are helpful, harmless, and honest.";
+        baseIdentity = "You are Gemini, Google's AI assistant. You are helpful, harmless, and honest.";
       } else if (modelId.includes("llama")) {
-        return "You are Llama, Meta's AI assistant. You are helpful, harmless, and honest.";
+        baseIdentity = "You are Llama, Meta's AI assistant. You are helpful, harmless, and honest.";
       } else if (modelId.includes("mistral")) {
-        return "You are Mistral AI, a helpful AI assistant created by Mistral AI.";
+        baseIdentity = "You are Mistral AI, a helpful AI assistant created by Mistral AI.";
       } else if (modelId.includes("qwen")) {
-        return "You are Qwen, an AI assistant created by Alibaba Cloud. You are helpful, harmless, and honest.";
+        baseIdentity = "You are Qwen, an AI assistant created by Alibaba Cloud. You are helpful, harmless, and honest.";
       } else if (modelId.includes("microsoft") || modelId.includes("phi")) {
-        return "You are Phi, Microsoft's AI assistant. You are helpful, harmless, and honest. IMPORTANT: Do not show your internal reasoning, chain-of-thought, or thinking process in your response. Only provide the final answer directly without any internal monologue, analysis steps, or reasoning explanations.";
+        baseIdentity = "You are Phi, Microsoft's AI assistant. You are helpful, harmless, and honest. IMPORTANT: Do not show your internal reasoning, chain-of-thought, or thinking process in your response. Only provide the final answer directly without any internal monologue, analysis steps, or reasoning explanations.";
       } else {
-        return "You are a helpful AI assistant.";
+        baseIdentity = "You are a helpful AI assistant.";
       }
+
+      // Add customization information if available
+      let customizationText = "";
+      if (customization) {
+        const parts: string[] = [];
+        
+        if (customization.userName?.trim()) {
+          parts.push(`The user's name is ${customization.userName.trim()}`);
+        }
+        
+        if (customization.userRole?.trim()) {
+          parts.push(`they work as ${customization.userRole.trim()}`);
+        }
+        
+        if (customization.userInterests?.trim()) {
+          parts.push(`Additional context about them: ${customization.userInterests.trim()}`);
+        }
+        
+      if (parts.length > 0) {
+        customizationText = " " + parts.join(", and ") + ". Use this information to provide more personalized and relevant responses.";
+      }
+    }
+
+    // Add thinking instruction if thinkEnabled is true for specific models
+    let thinkingText = "";
+    if (thinkEnabled && (
+      modelId.includes("hermes") || 
+      modelId.includes("glm") || 
+      modelId.includes("gpt-oss") || 
+      modelId.includes("deepseek")
+    )) {
+      thinkingText = " Please think step by step in <thinking> tags before giving your full answer.";
+    }
+
+    return baseIdentity + customizationText + thinkingText;
     };
 
     // Route to appropriate API based on model
     if (useGeminiAPI) {
       // Use Gemini API for Gemini models
-      const geminiApi = new GeminiAPI(requestBody.geminiApiKey!);
+      const geminiApi = new GeminiAPI(geminiApiKey);
 
       // Convert conversation history to Gemini format
       const messages: Array<{
@@ -283,7 +341,7 @@ export async function POST(request: Request) {
       }> = [
         {
           role: "system",
-          content: `${getModelIdentity(selectedModel)} Use the conversation history to provide clear, accurate, and detailed answers. Respond naturally without adding any role prefixes or labels, and only output the answer text. Follow the tone of the user.`,
+          content: `${getModelIdentity(selectedModel, requestBody.customization, requestBody.thinkEnabled)} Use the conversation history to provide clear, accurate, and detailed answers. Respond naturally without adding any role prefixes or labels, and only output the answer text. Follow the tone of the user.`,
         },
       ];
 
@@ -326,7 +384,7 @@ export async function POST(request: Request) {
       }> = [
         {
           role: "system",
-          content: `${getModelIdentity(selectedModel)} Use the conversation history to provide clear, accurate, and detailed answers. Respond naturally without adding any role prefixes or labels, and only output the answer text. Follow the tone of the user.`,
+          content: `${getModelIdentity(selectedModel, requestBody.customization, requestBody.thinkEnabled)} Use the conversation history to provide clear, accurate, and detailed answers. Respond naturally without adding any role prefixes or labels, and only output the answer text. Follow the tone of the user.`,
         },
       ];
 
@@ -491,7 +549,7 @@ export async function POST(request: Request) {
       });
     } else {
       // Use OpenRouter for other models
-      const openRouter = new OpenRouterAPI(requestBody.openRouterApiKey!);
+      const openRouter = new OpenRouterAPI(openRouterApiKey);
 
       // Convert conversation history to OpenRouter format
       const messages: Array<{
@@ -500,7 +558,7 @@ export async function POST(request: Request) {
       }> = [
         {
           role: "system",
-          content: `${getModelIdentity(selectedModel)} Use the conversation history to provide clear, accurate, and detailed answers. Respond naturally without adding any role prefixes or labels, and only output the answer text. Follow the tone of the user.`,
+          content: `${getModelIdentity(selectedModel, requestBody.customization, requestBody.thinkEnabled)} Use the conversation history to provide clear, accurate, and detailed answers. Respond naturally without adding any role prefixes or labels, and only output the answer text. Follow the tone of the user.`,
         },
       ];
 
