@@ -1415,7 +1415,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         setMessages(initialMessages);
         isSwitchingBranch.current = false; // Generate new AI response directly without using sendMessage
         const lastUserMessage = initialMessages[userMessageIndex];
-        if (lastUserMessage && lastUserMessage.sender === "User") {
+        if (lastUserMessage?.sender === "User") {
           // Add empty AI message to UI
           const emptyAIMsg = { sender: "AI", text: "", files: undefined };
           setMessages((prev) => [...prev, emptyAIMsg]); // Track that this AI message (at userMessageIndex + 1) is regenerated
@@ -1433,7 +1433,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             // add the original message as the first alternative
             if (alternatives.length === 0) {
               const originalMessage = currentMessages[aiMessageIndex];
-              if (originalMessage && originalMessage.sender === "AI") {
+              if (originalMessage?.sender === "AI") {
                 alternatives = [
                   {
                     branchId: currentBranchId || "unknown", // Use current branch as the source

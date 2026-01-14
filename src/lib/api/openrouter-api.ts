@@ -1,4 +1,3 @@
-import type { UploadFileResponse } from "../types";
 import type { MessageContent, ChatStreamOptions, ChatMessage } from "./types";
 import { DEFAULT_MODEL } from "./models";
 
@@ -19,8 +18,7 @@ export class OpenRouterAPI {
     if (options?.files && options.files.length > 0) {
       const lastMessage = messages[messages.length - 1];
       if (
-        lastMessage &&
-        lastMessage.role === "user" &&
+        lastMessage?.role === "user" &&
         typeof lastMessage.content === "string"
       ) {
         const messageContent: MessageContent[] = [

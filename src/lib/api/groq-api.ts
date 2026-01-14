@@ -1,4 +1,3 @@
-import type { UploadFileResponse } from "../types";
 import type { MessageContent, ChatStreamOptions, ChatMessage } from "./types";
 
 export class GroqAPI {
