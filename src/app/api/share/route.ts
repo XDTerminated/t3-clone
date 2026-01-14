@@ -32,7 +32,6 @@ export async function POST(req: Request) {
   }
 
   try {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     const sharedChat = await prisma.sharedChat.create({
       data: {
         chatId: chatId,
@@ -41,7 +40,6 @@ export async function POST(req: Request) {
       },
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
     return NextResponse.json({ token: sharedChat.token });
   } catch (error) {
     console.error("Failed to create shared chat:", error);

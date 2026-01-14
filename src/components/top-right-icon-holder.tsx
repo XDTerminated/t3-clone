@@ -7,7 +7,7 @@ import { useSidebar } from "~/components/ui/sidebar";
 import { useAuth } from "@clerk/nextjs";
 import { useChat } from "~/contexts/ChatContext";
 import { useTheme } from "~/contexts/ThemeContext";
-import { ThemeSelectorDialog } from "~/components/theme-selector-dialog";
+import { ThemeSelectorDialog } from "~/components/dialogs";
 
 export default function TopRightIconHolder({
   children,

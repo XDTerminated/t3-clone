@@ -2,6 +2,12 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma, withRetry } from "~/lib/prisma";
 import {
+  checkRateLimit,
+  getClientIdentifier,
+  createRateLimitResponse,
+  RATE_LIMITS,
+} from "~/lib/rate-limit";
+import {
   OpenRouterAPI,
   GeminiAPI,
   GoogleGeminiAPI,
@@ -48,6 +54,16 @@ function modelSupportsThinking(modelId: string): boolean {
 }
 
 export async function POST(request: Request) {
+  // Rate limiting check (expensive operation: 10 req/min)
+  const clientId = getClientIdentifier(request);
+  const rateLimitResult = checkRateLimit(
+    `chat:${clientId}`,
+    RATE_LIMITS.expensive
+  );
+  if (!rateLimitResult.success) {
+    return createRateLimitResponse(rateLimitResult);
+  }
+
   let promptContents: string[];
   let requestBody: ChatRequest;
 

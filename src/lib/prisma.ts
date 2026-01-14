@@ -1,4 +1,5 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "../generated/prisma/client";
 
 declare global {
   // eslint-disable-next-line no-var
@@ -9,22 +10,39 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-// Create Prisma client with connection pooling and timeout configurations
-const createPrismaClient = () => {
-  return new PrismaClient({
-    datasources: {
-      db: {
-        url: process.env.DATABASE_URL,
-      },
-    },
+// Lazy initialization - only create client when actually used
+const getPrismaClient = (): PrismaClient => {
+  if (globalForPrisma.prisma) {
+    return globalForPrisma.prisma;
+  }
+
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    throw new Error("DATABASE_URL environment variable is required");
+  }
+
+  const adapter = new PrismaPg({
+    connectionString,
+    max: 20, // Connection pool size - prevents exhaustion under load
+  });
+
+  const client = new PrismaClient({
+    adapter,
     log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
   });
+
+  // Cache client globally to reuse connections across requests
+  globalForPrisma.prisma = client;
+
+  return client;
 };
 
-export const prisma: PrismaClient =
-  globalForPrisma.prisma ?? createPrismaClient();
-
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+// Export a proxy that lazily initializes the client
+export const prisma = new Proxy({} as PrismaClient, {
+  get(_target, prop: keyof PrismaClient) {
+    return getPrismaClient()[prop];
+  },
+});
 
 // Utility function to retry database operations
 export async function withRetry<T>(

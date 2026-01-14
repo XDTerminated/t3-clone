@@ -257,6 +257,7 @@ export function Chatbox({ onSend }: { onSend: (data: ChatMessage) => void }) {
       const supportsImages = selectedModel.capabilities?.includes("vision");
       const supportsPDF = selectedModel.capabilities?.includes("pdf");
 
+      // Boolean OR is intentional - we want to accept if EITHER condition is true
       // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
       return (isImage && supportsImages) || (isPDF && supportsPDF);
     });

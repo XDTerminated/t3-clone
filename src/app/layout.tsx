@@ -6,7 +6,6 @@ import { Montserrat } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { SidebarProvider } from "~/components/ui/sidebar";
 import ContentWrapper from "~/components/content-wrapper";
-import { DataProvider } from "~/contexts/DataContext";
 import { ChatProvider } from "~/contexts/ChatContext";
 import { ModelProvider } from "~/contexts/ModelContext";
 import { ApiKeyProvider } from "~/contexts/ApiKeyContext";
@@ -42,17 +41,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         >
           <ThemeProvider>
             <SidebarProvider>
-              <DataProvider>
-                <ApiKeyProvider>
-                  <ModelProvider>
-                    <ToastProvider>
-                      <ChatProvider>
-                        <ContentWrapper>{children}</ContentWrapper>
-                      </ChatProvider>
-                    </ToastProvider>
-                  </ModelProvider>
-                </ApiKeyProvider>
-              </DataProvider>
+              <ApiKeyProvider>
+                <ModelProvider>
+                  <ToastProvider>
+                    <ChatProvider>
+                      <ContentWrapper>{children}</ContentWrapper>
+                    </ChatProvider>
+                  </ToastProvider>
+                </ModelProvider>
+              </ApiKeyProvider>
             </SidebarProvider>
           </ThemeProvider>
         </body>

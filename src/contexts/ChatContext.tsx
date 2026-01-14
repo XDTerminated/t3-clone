@@ -286,81 +286,64 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       setCurrentBranchId(null);
 
       // Add a small delay to ensure smooth transition
-      await new Promise((resolve) => setTimeout(resolve, 150)); // Load branches for the chat
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      // Load branches with messages in a single query (eliminates N+1)
       let firstBranchId: string | null = null;
       try {
-        const branchRes = await fetch(`/api/branches?chatId=${chatId}`);
+        const branchRes = await fetch(
+          `/api/branches?chatId=${chatId}&include=messages`
+        );
         if (branchRes.ok) {
           const data = (await branchRes.json()) as {
-            branches: Array<{ id: string; name: string }>;
-          }; // Load messages for ALL branches to ensure persistence
-          const branchesWithMessages = await Promise.all(
-            data.branches.map(async (branch) => {
+            branches: Array<{
+              id: string;
+              name: string;
+              messages?: Array<{
+                role: string;
+                content: string;
+                files?: unknown;
+                reasoning?: string;
+                createdAt: string;
+              }>;
+            }>;
+          };
+
+          // Transform messages to UI format
+          const branchesWithMessages = data.branches.map((branch) => {
+            const rawMessages = branch.messages ?? [];
+
+            // Sort by createdAt timestamp
+            const sortedMessages = [...rawMessages].sort((a, b) => {
+              const dateA = new Date(a.createdAt).getTime();
+              const dateB = new Date(b.createdAt).getTime();
+              return dateA - dateB;
+            });
+
+            const uiMessages = sortedMessages.map((msg) => {
+              let parsedFiles: UploadFileResponse[] | undefined;
               try {
-                console.log(`Loading messages for branch ${branch.id}`);
-                const msgRes = await fetch(
-                  `/api/messages?chatId=${chatId}&branchId=${branch.id}`,
-                );
-                if (msgRes.ok) {
-                  const msgData = (await msgRes.json()) as {
-                    messages: Array<{
-                      role: string;
-                      content: string;
-                      files?: string; // JSON string from database
-                      reasoning?: string; // Add reasoning field
-                      createdAt: string;
-                    }>;
-                  };
-
-                  // Simple sort by createdAt timestamp
-                  const sortedMessages = [...msgData.messages];
-                  sortedMessages.sort((a, b) => {
-                    const dateA = new Date(a.createdAt).getTime();
-                    const dateB = new Date(b.createdAt).getTime();
-                    return dateA - dateB;
-                  });
-
-                  const uiMessages = sortedMessages.map((msg) => {
-                    let parsedFiles: UploadFileResponse[] | undefined;
-                    try {
-                      parsedFiles = msg.files
-                        ? typeof msg.files === "string"
-                          ? (JSON.parse(msg.files) as UploadFileResponse[])
-                          : (msg.files as UploadFileResponse[])
-                        : undefined;
-                    } catch (error) {
-                      console.error(
-                        "Failed to parse files for message:",
-                        error,
-                      );
-                      parsedFiles = undefined;
-                    }
-                    return {
-                      sender: msg.role === "user" ? "User" : "AI",
-                      text: msg.content,
-                      files: parsedFiles,
-                      reasoning: msg.reasoning, // Include reasoning from database
-                    };
-                  });
-                  console.log(
-                    `Loaded ${uiMessages.length} messages for branch ${branch.id}`,
-                  );
-                  return { ...branch, messages: uiMessages };
-                } else {
-                  console.error(
-                    `Failed to load messages for branch ${branch.id}: ${msgRes.status} ${msgRes.statusText}`,
-                  );
+                if (msg.files) {
+                  parsedFiles =
+                    typeof msg.files === "string"
+                      ? (JSON.parse(msg.files) as UploadFileResponse[])
+                      : (msg.files as UploadFileResponse[]);
                 }
-              } catch (err) {
-                console.error(
-                  `Failed to load messages for branch ${branch.id}:`,
-                  err,
-                );
+              } catch (error) {
+                console.error("Failed to parse files for message:", error);
+                parsedFiles = undefined;
               }
-              console.log(`Returning empty messages for branch ${branch.id}`);
-              return { ...branch, messages: [] };
-            }),
-          );
+              return {
+                sender: msg.role === "user" ? "User" : "AI",
+                text: msg.content,
+                files: parsedFiles,
+                reasoning: msg.reasoning,
+              };
+            });
+
+            return { id: branch.id, name: branch.name, messages: uiMessages };
+          });
+
           setBranches(branchesWithMessages);
 
           if (branchesWithMessages.length > 0) {
@@ -568,45 +551,66 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       wasRegenerated = false,
       reasoning?: string,
     ) => {
-      try {
-        console.log("Saving message:", {
-          chatId,
-          content: content.substring(0, 50) + "...",
-          role,
-          currentBranchId: currentBranchId,
-          branchId: branchId, // Log the branch ID being used
-          hasReasoning: !!reasoning,
-        });
+      const maxRetries = 3;
+      let lastError: Error | null = null;
 
-        const response = await fetch("/api/messages", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          console.log("Saving message:", {
             chatId,
-            content,
+            content: content.substring(0, 50) + "...",
             role,
             branchId,
-            files: files ? JSON.stringify(files) : undefined,
-            wasRegenerated,
-            reasoning,
-          }),
-        });
+            hasReasoning: !!reasoning,
+            attempt,
+          });
 
-        if (!response.ok) {
-          const errorText = await response.text();
+          const response = await fetch("/api/messages", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              chatId,
+              content,
+              role,
+              branchId,
+              files: files ? JSON.stringify(files) : undefined,
+              wasRegenerated,
+              reasoning,
+            }),
+          });
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(
+              `Failed to save message: ${response.status} ${response.statusText} - ${errorText}`
+            );
+          }
+
+          console.log("Message saved successfully");
+          return; // Success, exit the retry loop
+        } catch (error) {
+          lastError = error as Error;
           console.error(
-            `Failed to save message: ${response.status} ${response.statusText} - ${errorText}`,
+            `Error saving message (attempt ${attempt}/${maxRetries}):`,
+            error
           );
-          throw new Error("Failed to save message");
-        }
 
-        console.log("Message saved successfully");
-      } catch (error) {
-        console.error("Error saving message:", error);
-        throw error;
+          // Don't retry on the last attempt
+          if (attempt < maxRetries) {
+            // Exponential backoff: 1s, 2s, 4s
+            const delay = 1000 * Math.pow(2, attempt - 1);
+            await new Promise((resolve) => setTimeout(resolve, delay));
+          }
+        }
       }
+
+      // All retries failed
+      console.error(
+        `Failed to save message after ${maxRetries} attempts:`,
+        lastError
+      );
     },
-    [currentBranchId],
+    [],
   );
 
   const showErrorDialog = useCallback(
@@ -926,6 +930,37 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           let completeAiText = "";
           let completeReasoning = "";
 
+          // Batched UI updates - only update every 50ms to reduce re-renders
+          let lastUpdateTime = 0;
+          let pendingUpdate = false;
+          const UPDATE_INTERVAL = 50; // ms
+
+          const flushUpdate = () => {
+            pendingUpdate = false;
+            setMessages((prev) => {
+              const newMessages = [...prev];
+              const lastMessage = newMessages[newMessages.length - 1];
+              if (lastMessage?.sender === "AI") {
+                lastMessage.text = completeAiText;
+                if (completeReasoning) {
+                  lastMessage.reasoning = completeReasoning;
+                }
+              }
+              return newMessages;
+            });
+          };
+
+          const scheduleUpdate = () => {
+            const now = Date.now();
+            if (now - lastUpdateTime >= UPDATE_INTERVAL) {
+              lastUpdateTime = now;
+              flushUpdate();
+            } else if (!pendingUpdate) {
+              pendingUpdate = true;
+              setTimeout(flushUpdate, UPDATE_INTERVAL - (now - lastUpdateTime));
+            }
+          };
+
           while (true) {
             const { done, value } = await reader.read();
             if (done) break;
@@ -985,22 +1020,18 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                     completeReasoning += reasoningToken;
                   }
 
-                  setMessages((prev) => {
-                    const newMessages = [...prev];
-                    const lastMessage = newMessages[newMessages.length - 1];
-                    if (lastMessage?.sender === "AI") {
-                      lastMessage.text = completeAiText;
-                      if (completeReasoning) {
-                        lastMessage.reasoning = completeReasoning;
-                      }
-                    }
-                    return newMessages;
-                  });
+                  // Schedule batched UI update instead of updating on every token
+                  scheduleUpdate();
                 } catch (e) {
                   console.warn("Failed to parse stream chunk:", dataStr, e);
                 }
               }
             }
+          }
+
+          // Ensure final update is flushed
+          if (pendingUpdate) {
+            flushUpdate();
           }
 
           // Save complete AI message in the background

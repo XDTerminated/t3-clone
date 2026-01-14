@@ -1,7 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
 import {
@@ -9,10 +5,26 @@ import {
   HarmCategory,
   HarmBlockThreshold,
 } from "@google/generative-ai";
+import {
+  checkRateLimit,
+  getClientIdentifier,
+  createRateLimitResponse,
+  RATE_LIMITS,
+} from "~/lib/rate-limit";
 
-const MODEL_NAME = "gemini-1.5-flash"; // Faster model for quick title generation
+const MODEL_NAME = "gemini-2.0-flash-exp"; // Fast model for quick title generation
 
 export async function POST(request: Request) {
+  // Rate limiting check (expensive operation: 10 req/min)
+  const clientId = getClientIdentifier(request);
+  const rateLimitResult = checkRateLimit(
+    `generate-title:${clientId}`,
+    RATE_LIMITS.expensive
+  );
+  if (!rateLimitResult.success) {
+    return createRateLimitResponse(rateLimitResult);
+  }
+
   let requestBody: unknown;
   try {
     requestBody = (await request.json()) as unknown;

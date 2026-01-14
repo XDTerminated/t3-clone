@@ -1,7 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { prisma } from "~/lib/prisma";
-import type { JsonValue } from "@prisma/client/runtime/library";
+import { type Prisma } from "~/generated/prisma/client";
 
 type SharePageProps = {
   params: Promise<{
@@ -28,7 +28,7 @@ type SharedChatWithDetails = {
       role: string;
       chatId: string;
       branchId: string | null;
-      files: JsonValue;
+      files: Prisma.JsonValue;
       reasoning: string | null;
       createdAt: Date;
     }>;
@@ -48,7 +48,6 @@ export default async function SharePage({ params }: SharePageProps) {
   if (!userId) {
     return redirect("/sign-in");
   }
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
   const sharedChat = (await prisma.sharedChat.findUnique({
     where: {
       token: token,

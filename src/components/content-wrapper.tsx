@@ -5,10 +5,12 @@ import { useSidebar } from "~/components/ui/sidebar";
 import { AppSidebar } from "~/components/app-sidebar";
 import { cn } from "~/lib/utils";
 import { useChat } from "~/contexts/ChatContext";
-import { ApiKeyDialog } from "~/components/api-key-dialog";
-import { ErrorDialog } from "~/components/error-dialog";
-import { SettingsDialog } from "~/components/settings-dialog";
-import { LoginDialog } from "~/components/login-dialog";
+import {
+  ApiKeyDialog,
+  ErrorDialog,
+  SettingsDialog,
+  LoginDialog,
+} from "~/components/dialogs";
 
 /**
  * Client-side wrapper that renders the sidebar and main content with a conditional border

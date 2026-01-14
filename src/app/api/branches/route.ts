@@ -10,6 +10,8 @@ export async function GET(request: Request) {
     }
     const { searchParams } = new URL(request.url);
     const chatId = searchParams.get("chatId");
+    const includeMessages = searchParams.get("include") === "messages";
+
     if (!chatId) {
       return NextResponse.json({ error: "Missing chatId" }, { status: 400 });
     }
@@ -18,9 +20,27 @@ export async function GET(request: Request) {
     if (!chat) {
       return NextResponse.json({ error: "Chat not found" }, { status: 404 });
     }
+
+    // Fetch branches with optional messages include (single query instead of N+1)
     const branches = await prisma.branch.findMany({
       where: { chatId },
       orderBy: { createdAt: "asc" },
+      include: includeMessages
+        ? {
+            messages: {
+              orderBy: { createdAt: "asc" },
+              select: {
+                id: true,
+                content: true,
+                role: true,
+                files: true,
+                reasoning: true,
+                createdAt: true,
+                branchId: true,
+              },
+            },
+          }
+        : undefined,
     });
     return NextResponse.json({ branches });
   } catch (error) {
@@ -67,22 +87,24 @@ export async function POST(request: Request) {
       },
     });
 
-    // If parentBranchId provided, copy messages from parent branch
+    // If parentBranchId provided, copy messages from parent branch using batch insert
     if (parentBranchId) {
       const parentMessages = await prisma.message.findMany({
         where: { chatId, branchId: parentBranchId },
         orderBy: { createdAt: "asc" },
       });
 
-      // Copy messages to new branch
-      for (const message of parentMessages) {
-        await prisma.message.create({
-          data: {
+      // Batch create all messages at once (instead of N+1 individual inserts)
+      if (parentMessages.length > 0) {
+        await prisma.message.createMany({
+          data: parentMessages.map((message) => ({
             content: message.content,
             role: message.role,
             chatId: message.chatId,
             branchId: branch.id,
-          },
+            files: message.files ?? undefined,
+            reasoning: message.reasoning ?? undefined,
+          })),
         });
       }
     }

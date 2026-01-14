@@ -6,7 +6,7 @@ import { Chatbox } from "~/components/chatbox";
 import MessageList from "~/components/message-list";
 import WelcomeScreen from "~/components/welcome-screen";
 import TopRightIconHolder from "~/components/top-right-icon-holder";
-import { LoginDialog } from "~/components/login-dialog";
+import { LoginDialog } from "~/components/dialogs";
 import { useChat } from "~/contexts/ChatContext";
 
 function HomePage() {

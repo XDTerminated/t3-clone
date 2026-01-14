@@ -13,13 +13,21 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const chatId = searchParams.get("chatId");
     const branchId = searchParams.get("branchId");
+    // Pagination parameters
+    const limit = Math.min(
+      parseInt(searchParams.get("limit") ?? "100", 10),
+      500
+    ); // Max 500 messages
+    const cursor = searchParams.get("cursor"); // Message ID to start after
 
     if (!chatId) {
       return NextResponse.json(
         { error: "Missing chatId parameter" },
         { status: 400 },
       );
-    } // Verify the chat belongs to the user
+    }
+
+    // Verify the chat belongs to the user
     const chat = await withRetry(async () => {
       return await prisma.chat.findFirst({
         where: { id: chatId, userId },
@@ -28,24 +36,45 @@ export async function GET(request: Request) {
 
     if (!chat) {
       return NextResponse.json({ error: "Chat not found" }, { status: 404 });
-    } // Get messages for the chat
+    }
+
+    // Build query with optional cursor-based pagination
+    const whereClause = branchId ? { chatId, branchId } : { chatId };
+
+    // Get messages for the chat with pagination
     const messages = await withRetry(async () => {
       return await prisma.message.findMany({
-        where: branchId ? { chatId, branchId } : { chatId },
+        where: whereClause,
         select: {
           id: true,
           content: true,
           role: true,
           files: true,
-          reasoning: true, // Include reasoning field
+          reasoning: true,
           createdAt: true,
           branchId: true,
         },
         orderBy: { createdAt: "asc" },
+        take: limit + 1, // Fetch one extra to check if there are more
+        ...(cursor
+          ? {
+              cursor: { id: cursor },
+              skip: 1, // Skip the cursor itself
+            }
+          : {}),
       });
     });
 
-    return NextResponse.json({ messages });
+    // Check if there are more messages
+    const hasMore = messages.length > limit;
+    const returnMessages = hasMore ? messages.slice(0, limit) : messages;
+    const nextCursor = hasMore ? returnMessages[returnMessages.length - 1]?.id : null;
+
+    return NextResponse.json({
+      messages: returnMessages,
+      nextCursor,
+      hasMore,
+    });
   } catch (error) {
     console.error("Error fetching messages:", error);
     return NextResponse.json(
